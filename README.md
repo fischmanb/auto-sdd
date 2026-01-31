@@ -5,21 +5,62 @@ A framework for AI-assisted development that combines:
 - **Compound Learning** - Agent gets smarter from every session
 - **Overnight Automation** - Wake up to draft PRs from Slack/Jira items
 
-## Quick Start
+Works with both **Cursor** and **Claude Code**.
+
+## Installation
+
+### Option 1: Git Alias (Recommended)
+
+Add to your `~/.gitconfig`:
+
+```ini
+[alias]
+    sdd = "!f() { git clone --depth 1 https://github.com/AdrianRogowski/auto-sdd.git .sdd-temp && rm -rf .sdd-temp/.git && cp -r .sdd-temp/. . && rm -rf .sdd-temp && echo 'SDD installed! Run /spec-first to create your first feature spec.'; }; f"
+```
+
+Then in any project:
 
 ```bash
-# Install Cursor CLI (required for automation)
-curl https://cursor.com/install -fsS | bash
+git sdd
+```
 
-# Install yq for YAML parsing
-brew install yq
+This copies all SDD files into your current project:
+- `.cursor/` - Cursor rules, commands, hooks
+- `.claude/` - Claude Code commands
+- `.specs/` - Feature specs, learnings, design system
+- `scripts/` - Automation scripts
+- `CLAUDE.md` - Agent instructions
 
-# Configure overnight automation
+### Option 2: Manual Clone
+
+```bash
+git clone https://github.com/AdrianRogowski/auto-sdd.git
+cp -r auto-sdd/.cursor auto-sdd/.claude auto-sdd/.specs auto-sdd/scripts auto-sdd/CLAUDE.md .
+rm -rf auto-sdd
+```
+
+### Post-Install (Optional: Overnight Automation)
+
+```bash
+# Install dependencies
+brew install yq gh
+
+# Configure Slack/Jira integration
 cp .env.local.example .env.local
-nano .env.local  # Set your Slack channel and Jira project
+nano .env.local
 
-# Set up scheduled jobs (optional)
+# Set up scheduled jobs
 ./scripts/setup-overnight.sh
+```
+
+## Quick Start
+
+After installing, just use the slash commands:
+
+```
+/spec-first user authentication    # Create a feature spec
+/compound                          # Extract learnings after implementing
+/spec-init                         # Bootstrap SDD on existing codebase
 ```
 
 ## The Workflow
@@ -85,8 +126,15 @@ nano .env.local  # Set your Slack channel and Jira project
 │   │       └── {feature}.feature.md
 │   ├── test-suites/        # Test documentation
 │   ├── design-system/      # Design tokens + component docs
-│   ├── mapping.md          # AUTO-GENERATED routing table
-│   └── learnings.md        # Cross-cutting patterns
+│   ├── learnings/          # Cross-cutting patterns by category
+│   │   ├── index.md        # Summary + recent learnings
+│   │   ├── testing.md
+│   │   ├── performance.md
+│   │   ├── security.md
+│   │   ├── api.md
+│   │   ├── design.md
+│   │   └── general.md
+│   └── mapping.md          # AUTO-GENERATED routing table
 │
 ├── scripts/
 │   ├── generate-mapping.sh        # Regenerate mapping.md
@@ -96,7 +144,7 @@ nano .env.local  # Set your Slack channel and Jira project
 │   └── launchd/                   # macOS scheduling plists
 │
 ├── logs/                   # Overnight automation logs
-├── CLAUDE.md               # Agent instructions + learned patterns
+├── CLAUDE.md               # Agent instructions (universal)
 └── .env.local              # Configuration (Slack, Jira, etc.)
 ```
 
@@ -172,7 +220,7 @@ The `.specs/mapping.md` file is generated from spec frontmatter:
 
 ### Compound Learning
 
-Learnings are extracted and persisted at three levels:
+Learnings are extracted and persisted at two levels:
 
 | Level | Location | Example |
 |-------|----------|---------|
@@ -202,11 +250,19 @@ Categories: `testing.md`, `performance.md`, `security.md`, `api.md`, `design.md`
 
 ## Requirements
 
-- **Cursor** with CLI (`agent` command)
+- **Cursor** or **Claude Code**
 - **GitHub CLI** (`gh`) for PR creation
 - **yq** for YAML parsing (`brew install yq`)
 - **jq** for JSON parsing (usually pre-installed)
 
+For overnight automation:
+- **Cursor CLI** (`agent` command)
+- macOS (for launchd scheduling)
+
 ## Credits
 
-Inspired by [Ryan Carson's Compound Engineering](https://x.com/ryancarson/status/2016520542723924279) approach, adapted for Cursor and the SDD workflow.
+Inspired by [Ryan Carson's Compound Engineering](https://x.com/ryancarson) approach, adapted for Cursor/Claude Code and the SDD workflow.
+
+## License
+
+MIT
