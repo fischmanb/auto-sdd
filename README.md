@@ -41,19 +41,25 @@ rm -rf auto-sdd
 
 ### Migrating from SDD 1.0
 
-If you have an existing project using SDD 1.0 (`git sdd`), migrate to 2.0:
+If you have an existing project using SDD 1.0 (`git sdd`), **do NOT run `git auto`** - it would overwrite your files.
+
+Instead, use the migration command:
 
 ```bash
 /sdd-migrate
 ```
 
-This will:
-- Create `.specs/learnings/` folder (compound learning)
-- Add YAML frontmatter to existing feature specs
-- Add `/compound` command and hooks
-- Add automation scripts
-- Regenerate `mapping.md` (now auto-generated)
-- Create version file (`.specs/.sdd-version`)
+This safely upgrades by:
+- **Preserving custom commands** you've added
+- **Preserving custom rules** you've created
+- Adding `.specs/learnings/` folder (compound learning)
+- Adding YAML frontmatter to existing specs (without changing content)
+- Updating only "stock" SDD commands to 2.0 versions
+- Adding `/compound` command and hooks
+- Adding automation scripts
+- Regenerating `mapping.md` (now auto-generated)
+
+**Note**: Existing feature specs without ASCII mockups will continue to work. New specs created with `/spec-first` will include them.
 
 ### Post-Install (Optional: Overnight Automation)
 
