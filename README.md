@@ -15,13 +15,13 @@ Add to your `~/.gitconfig`:
 
 ```ini
 [alias]
-    sdd = "!f() { git clone --depth 1 https://github.com/AdrianRogowski/auto-sdd.git .sdd-temp && rm -rf .sdd-temp/.git && cp -r .sdd-temp/. . && rm -rf .sdd-temp && echo 'SDD installed! Run /spec-first to create your first feature spec.'; }; f"
+    auto = "!f() { git clone --depth 1 https://github.com/AdrianRogowski/auto-sdd.git .sdd-temp && rm -rf .sdd-temp/.git && cp -r .sdd-temp/. . && rm -rf .sdd-temp && echo 'SDD 2.0 installed! Run /spec-first to create your first feature spec.'; }; f"
 ```
 
 Then in any project:
 
 ```bash
-git sdd
+git auto
 ```
 
 This copies all SDD files into your current project:
