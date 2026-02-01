@@ -3,7 +3,8 @@
 A framework for AI-assisted development that combines:
 - **Spec-Driven Development (SDD)** - Define behavior before implementing
 - **Compound Learning** - Agent gets smarter from every session
-- **Overnight Automation** - Wake up to draft PRs from Slack/Jira items
+- **Roadmap-Driven Automation** - Build entire apps feature-by-feature
+- **Overnight Automation** - Wake up to draft PRs
 
 Works with both **Cursor** and **Claude Code**.
 
@@ -27,7 +28,7 @@ git auto
 This copies all SDD files into your current project:
 - `.cursor/` - Cursor rules, commands, hooks
 - `.claude/` - Claude Code commands
-- `.specs/` - Feature specs, learnings, design system
+- `.specs/` - Feature specs, learnings, design system, roadmap
 - `scripts/` - Automation scripts
 - `CLAUDE.md` - Agent instructions
 
@@ -53,26 +54,12 @@ git auto-upgrade
 /sdd-migrate
 ```
 
-**How it works:**
-
-1. `git auto-upgrade` downloads all SDD 2.0 files into a staging directory (`.sdd-upgrade/`)
-2. `/sdd-migrate` reads from staging and intelligently upgrades your project:
-   - **Preserves custom commands** you've added
-   - **Preserves custom rules** you've created
-   - Only replaces "stock" SDD commands with 2.0 versions
-   - Adds YAML frontmatter to existing specs (without changing content)
-   - Adds new files (learnings/, hooks, scripts)
-   - Regenerates `mapping.md` (now auto-generated)
-3. Staging directory is deleted after successful migration
-
 **Git alias for `auto-upgrade`** (add to `~/.gitconfig`):
 
 ```ini
 [alias]
     auto-upgrade = "!f() { git clone --depth 1 https://github.com/AdrianRogowski/auto-sdd.git .sdd-temp && rm -rf .sdd-temp/.git && mkdir -p .sdd-upgrade && cp -r .sdd-temp/. .sdd-upgrade/ && rm -rf .sdd-temp && echo 'SDD 2.0 files staged in .sdd-upgrade/' && echo 'Now run /sdd-migrate to upgrade'; }; f"
 ```
-
-**Note**: Existing feature specs without ASCII mockups will continue to work. New specs created with `/spec-first` will include them.
 
 ### Post-Install (Optional: Overnight Automation)
 
@@ -90,17 +77,18 @@ nano .env.local
 
 ## Quick Start
 
-After installing, just use the slash commands:
+After installing, use the slash commands:
 
 ```
 /spec-first user authentication    # Create a feature spec
 /compound                          # Extract learnings after implementing
-/spec-init                         # Bootstrap SDD on existing codebase
+/clone-app https://example.com     # Clone an app into roadmap
+/build-next                        # Build next feature from roadmap
 ```
 
-## The Workflow
+## The Workflows
 
-### Daytime: Manual SDD
+### Manual: Single Feature
 
 ```
 ┌─────────────┐     ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
@@ -115,28 +103,47 @@ After installing, just use the slash commands:
                                                             └─────────────┘
 ```
 
-1. **`/spec-first {feature}`** - Creates spec with Gherkin scenarios + ASCII mockups
-2. **Review & approve** - Human checkpoint before implementation
-3. **Write tests** - Failing tests from scenarios
-4. **Implement** - Code until tests pass
-5. **`/compound`** - Extract learnings (optional, end of session)
-
-### Overnight: Autonomous Implementation
+### Roadmap: Full App Build
 
 ```
-10:00 PM  Mac stays awake (caffeinate)
-10:30 PM  Extract learnings from today's commits
-11:00 PM  Scan Slack/Jira → Create specs → Implement → Open draft PRs
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│  /clone-app │ ──▶ │ vision.md + │ ──▶ │ /build-next │ ──repeat──▶ App Built!
+│  (analyze)  │     │ roadmap.md  │     │  (loop)     │
+└─────────────┘     └─────────────┘     └─────────────┘
+```
+
+### Overnight: Autonomous
+
+```
+11:00 PM  /roadmap-triage (scan Slack/Jira → add to roadmap)
+          /build-next × MAX_FEATURES (build from roadmap)
+          Create draft PRs
  7:00 AM  You review 3-4 draft PRs
 ```
 
 ## Slash Commands
 
+### Core Workflow
+
 | Command | Purpose |
 |---------|---------|
 | `/spec-first` | Create feature spec with Gherkin + ASCII mockup |
+| `/spec-first --full` | Create spec AND build without pauses |
 | `/compound` | Extract learnings from current session |
 | `/spec-init` | Bootstrap SDD on existing codebase |
+
+### Roadmap Commands
+
+| Command | Purpose |
+|---------|---------|
+| `/clone-app <url>` | Analyze app → create vision.md + roadmap.md |
+| `/build-next` | Build next pending feature from roadmap |
+| `/roadmap-triage` | Scan Slack/Jira → add to roadmap |
+
+### Maintenance
+
+| Command | Purpose |
+|---------|---------|
 | `/sdd-migrate` | Migrate from SDD 1.0 to 2.0 |
 | `/catch-drift` | Detect spec ↔ code misalignment |
 | `/check-coverage` | Find gaps in spec/test coverage |
@@ -157,6 +164,8 @@ After installing, just use the slash commands:
 │   └── commands/           # Claude Code command definitions
 │
 ├── .specs/
+│   ├── vision.md           # App vision (created by /clone-app)
+│   ├── roadmap.md          # Feature roadmap (single source of truth)
 │   ├── features/           # Feature specs (Gherkin + ASCII mockups)
 │   │   └── {domain}/
 │   │       └── {feature}.feature.md
@@ -184,9 +193,93 @@ After installing, just use the slash commands:
 └── .env.local              # Configuration (Slack, Jira, etc.)
 ```
 
+## Roadmap System
+
+The roadmap is the **single source of truth** for what to build.
+
+### vision.md
+
+High-level app description created by `/clone-app`:
+- What the app does
+- Target users
+- Key screens
+- Tech stack
+- Design principles
+
+### roadmap.md
+
+Ordered list of features with dependencies:
+
+```markdown
+## Phase 1: Foundation
+
+| # | Feature | Source | Jira | Complexity | Deps | Status |
+|---|---------|--------|------|------------|------|--------|
+| 1 | Project setup | clone-app | PROJ-101 | S | - | ✅ |
+| 2 | Auth: Signup | clone-app | PROJ-102 | M | 1 | 🔄 |
+| 3 | Auth: Login | clone-app | PROJ-103 | M | 1 | ⬜ |
+
+## Ad-hoc Requests
+
+| # | Feature | Source | Jira | Complexity | Deps | Status |
+|---|---------|--------|------|------------|------|--------|
+| 100 | Dark mode | slack:C123/ts | PROJ-200 | M | - | ⬜ |
+```
+
+### How Features Flow In
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                     ROADMAP (Single Source)                     │
+├─────────────────────────────────────────────────────────────────┤
+│                              ▲                                  │
+│          ┌───────────────────┼───────────────────┐              │
+│          │                   │                   │              │
+│    ┌─────┴─────┐       ┌─────┴─────┐       ┌─────┴─────┐        │
+│    │ /clone-app │       │   Slack   │       │   Jira    │        │
+│    │  (bulk)    │       │ (triage)  │       │ (triage)  │        │
+│    └───────────┘       └───────────┘       └───────────┘        │
+│                                                                 │
+│                              │                                  │
+│                              ▼                                  │
+│                       ┌─────────────┐                           │
+│                       │ /build-next │ ──▶ Picks next pending    │
+│                       └─────────────┘     feature, builds it    │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+## Jira/Slack Integration
+
+The system integrates with Jira and Slack via MCPs:
+
+| Action | Jira | Slack |
+|--------|------|-------|
+| **Triage** | Search by label | Search channel |
+| **Track** | Create tickets for features | Reply with Jira link |
+| **Start** | Transition to "In Progress" | - |
+| **Complete** | Transition to "Done" + PR link | Reply with ✅ |
+
+Configure in `.env.local`:
+
+```bash
+# Slack
+SLACK_FEATURE_CHANNEL="#feature-requests"
+SLACK_REPORT_CHANNEL="#dev-updates"
+
+# Jira
+JIRA_CLOUD_ID="yoursite.atlassian.net"
+JIRA_PROJECT_KEY="PROJ"
+JIRA_AUTO_LABEL="auto-ok"
+
+# Options
+CREATE_JIRA_FOR_SLACK=true    # Create Jira tickets for Slack requests
+SYNC_JIRA_STATUS=true         # Keep Jira status in sync
+MAX_FEATURES=4                # Features per overnight run
+```
+
 ## Feature Spec Format
 
-Every feature spec has YAML frontmatter that powers the auto-generated mapping:
+Every feature spec has YAML frontmatter:
 
 ```markdown
 ---
@@ -227,52 +320,16 @@ Then user is redirected to dashboard
 - **Gotcha**: Safari autofill needs onBlur handler
 ```
 
-## Configuration
+## Compound Learning
 
-Copy `.env.local.example` to `.env.local` and configure:
-
-```bash
-# Slack channel to scan for feature requests
-SLACK_CHANNEL=feature-requests
-
-# Jira project and label for auto-ok items
-JIRA_PROJECT=PROJ
-JIRA_AUTO_LABEL=auto-ok
-
-# Max features per night
-MAX_FEATURES=4
-```
-
-## How It Works
-
-### Auto-Generated Mapping
-
-The `.specs/mapping.md` file is generated from spec frontmatter:
-
-1. You update a spec's YAML frontmatter
-2. Cursor hook runs `generate-mapping.sh`
-3. `mapping.md` is regenerated
-4. No merge conflicts (each PR only touches its own spec)
-
-### Compound Learning
-
-Learnings are extracted and persisted at two levels:
+Learnings are persisted at two levels:
 
 | Level | Location | Example |
 |-------|----------|---------|
-| Feature-specific | Spec's `## Learnings` | "Login: Safari needs onBlur" |
+| Feature-specific | Spec's `## Learnings` section | "Login: Safari needs onBlur" |
 | Cross-cutting | `.specs/learnings/{category}.md` | "All forms need loading states" |
 
 Categories: `testing.md`, `performance.md`, `security.md`, `api.md`, `design.md`, `general.md`
-
-### Overnight Automation
-
-1. **Scan**: Agent searches Slack/Jira for feature requests
-2. **Filter**: Only items in configured channel/with configured label
-3. **Spec**: Creates full spec with Gherkin + mockup
-4. **Implement**: Writes tests, implements, runs tests
-5. **PR**: Creates draft PR with spec embedded
-6. **Mark**: Adds ✅ to Slack or transitions Jira issue
 
 ## Scripts
 
@@ -289,11 +346,34 @@ Categories: `testing.md`, `performance.md`, `security.md`, `api.md`, `design.md`
 - **Cursor** or **Claude Code**
 - **GitHub CLI** (`gh`) for PR creation
 - **yq** for YAML parsing (`brew install yq`)
-- **jq** for JSON parsing (usually pre-installed)
 
 For overnight automation:
 - **Cursor CLI** (`agent` command)
 - macOS (for launchd scheduling)
+
+## Example: Building a Full App
+
+```bash
+# 1. Initialize project
+mkdir my-app && cd my-app
+git init
+git auto
+
+# 2. Clone an existing app into roadmap
+/clone-app https://todoist.com
+
+# Creates:
+# - .specs/vision.md (app description)
+# - .specs/roadmap.md (20 features across 3 phases)
+
+# 3. Build feature by feature
+/build-next    # Builds feature #1
+/build-next    # Builds feature #2
+# ...or let overnight automation handle it
+
+# 4. Check progress
+cat .specs/roadmap.md | grep -E "✅|🔄|⬜"
+```
 
 ## Credits
 

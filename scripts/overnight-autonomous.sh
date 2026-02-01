@@ -1,14 +1,20 @@
 #!/bin/bash
 # overnight-autonomous.sh
-# Autonomous overnight feature implementation
-# Scans Slack/Jira → creates specs → implements → opens draft PRs
+# Autonomous overnight feature implementation using roadmap
 #
-# CONFIGURATION (set these in .env.local or export before running):
-#   SLACK_CHANNEL      - Slack channel to scan (e.g., "feature-requests")
-#   JIRA_PROJECT       - Jira project key (e.g., "PROJ")
-#   JIRA_AUTO_LABEL    - Jira label marking items as auto-ok (default: "auto-ok")
-#   MAX_FEATURES       - Max features to implement per night (default: 4)
-#   PROJECT_DIR        - Project directory (default: current directory)
+# Flow:
+#   1. Sync with main branch
+#   2. Rebase existing auto PRs
+#   3. Triage Slack/Jira → add to roadmap
+#   4. Build features from roadmap (up to MAX_FEATURES)
+#   5. Report summary
+#
+# CONFIGURATION (set in .env.local):
+#   SLACK_FEATURE_CHANNEL  - Slack channel to scan
+#   JIRA_PROJECT_KEY       - Jira project key
+#   JIRA_AUTO_LABEL        - Label marking auto-ok items
+#   MAX_FEATURES           - Max features per night (default: 4)
+#   PROJECT_DIR            - Project directory
 
 set -e
 
@@ -17,12 +23,14 @@ RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
+CYAN='\033[0;36m'
 NC='\033[0m'
 
 log() { echo -e "${BLUE}[$(date '+%H:%M:%S')]${NC} $1"; }
 success() { echo -e "${GREEN}[$(date '+%H:%M:%S')] ✓${NC} $1"; }
 warn() { echo -e "${YELLOW}[$(date '+%H:%M:%S')] ⚠${NC} $1"; }
 error() { echo -e "${RED}[$(date '+%H:%M:%S')] ✗${NC} $1"; }
+section() { echo -e "\n${CYAN}═══════════════════════════════════════════════════════════${NC}"; echo -e "${CYAN}  $1${NC}"; echo -e "${CYAN}═══════════════════════════════════════════════════════════${NC}\n"; }
 
 # Load configuration
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -33,195 +41,194 @@ if [ -f "$PROJECT_DIR/.env.local" ]; then
 fi
 
 # Defaults
-SLACK_CHANNEL="${SLACK_CHANNEL:-feature-requests}"
-JIRA_PROJECT="${JIRA_PROJECT:-}"
-JIRA_AUTO_LABEL="${JIRA_AUTO_LABEL:-auto-ok}"
 MAX_FEATURES="${MAX_FEATURES:-4}"
+SLACK_FEATURE_CHANNEL="${SLACK_FEATURE_CHANNEL:-#feature-requests}"
+SLACK_REPORT_CHANNEL="${SLACK_REPORT_CHANNEL:-}"
+JIRA_PROJECT_KEY="${JIRA_PROJECT_KEY:-}"
 
-log "Starting overnight autonomous run"
+section "OVERNIGHT AUTONOMOUS RUN"
 log "Project: $PROJECT_DIR"
-log "Slack channel: #$SLACK_CHANNEL"
-log "Jira project: ${JIRA_PROJECT:-not configured}"
 log "Max features: $MAX_FEATURES"
+log "Slack channel: $SLACK_FEATURE_CHANNEL"
+log "Jira project: ${JIRA_PROJECT_KEY:-not configured}"
 
 cd "$PROJECT_DIR"
+
+# Check prerequisites
+if ! command -v agent &> /dev/null; then
+    error "Cursor CLI (agent) not found. Install from: https://cursor.com/cli"
+    exit 1
+fi
+
+if ! command -v gh &> /dev/null; then
+    warn "GitHub CLI (gh) not found - PRs won't be created"
+fi
 
 # ─────────────────────────────────────────────
 # STEP 0: Ensure we're on main and up to date
 # ─────────────────────────────────────────────
 
-log "Syncing with main branch..."
+section "STEP 0: Sync with main"
+
 git checkout main 2>/dev/null || git checkout master 2>/dev/null
-git pull origin "$(git branch --show-current)"
-success "Synced with remote"
+MAIN_BRANCH=$(git branch --show-current)
+git pull origin "$MAIN_BRANCH"
+success "Synced with $MAIN_BRANCH"
 
 # ─────────────────────────────────────────────
 # STEP 1: Rebase any existing auto PRs
 # ─────────────────────────────────────────────
 
+section "STEP 1: Rebase existing auto PRs"
+
 if command -v gh &> /dev/null; then
-    log "Checking for existing auto PRs to rebase..."
-    
-    for pr_branch in $(gh pr list --search "head:auto/" --json headRefName --jq '.[].headRefName' 2>/dev/null); do
-        log "Rebasing $pr_branch..."
-        git fetch origin "$pr_branch" 2>/dev/null || continue
-        git checkout "$pr_branch" 2>/dev/null || continue
-        
-        if git rebase origin/main 2>/dev/null; then
-            git push --force-with-lease origin "$pr_branch" 2>/dev/null && success "Rebased $pr_branch"
-        else
-            git rebase --abort 2>/dev/null
-            warn "Could not rebase $pr_branch - may need manual intervention"
+    REBASED=0
+    for pr_branch in $(gh pr list --search "head:auto/" --json headRefName --jq '.[].headRefName' 2>/dev/null || echo ""); do
+        if [ -n "$pr_branch" ]; then
+            log "Rebasing $pr_branch..."
+            git fetch origin "$pr_branch" 2>/dev/null || continue
+            git checkout "$pr_branch" 2>/dev/null || continue
+            
+            if git rebase "origin/$MAIN_BRANCH" 2>/dev/null; then
+                git push --force-with-lease origin "$pr_branch" 2>/dev/null && {
+                    success "Rebased $pr_branch"
+                    REBASED=$((REBASED + 1))
+                }
+            else
+                git rebase --abort 2>/dev/null
+                warn "Could not rebase $pr_branch - may need manual intervention"
+            fi
         fi
     done
     
-    git checkout main 2>/dev/null || git checkout master 2>/dev/null
+    git checkout "$MAIN_BRANCH" 2>/dev/null
+    
+    if [ "$REBASED" -gt 0 ]; then
+        success "Rebased $REBASED existing PRs"
+    else
+        log "No existing auto PRs to rebase"
+    fi
+else
+    log "Skipping rebase (gh CLI not available)"
 fi
 
 # ─────────────────────────────────────────────
-# STEP 2: Scan for feature candidates
+# STEP 2: Triage Slack/Jira → Roadmap
 # ─────────────────────────────────────────────
 
-log "Scanning for feature candidates..."
+section "STEP 2: Triage new requests"
 
-CANDIDATES_FILE=$(mktemp)
-echo "[]" > "$CANDIDATES_FILE"
+log "Running /roadmap-triage to scan Slack/Jira..."
 
-# Check if Cursor CLI (agent) is available
-if ! command -v agent &> /dev/null; then
-    error "Cursor CLI (agent) not found. Install from: https://cursor.com/cli"
-    error "Run: curl https://cursor.com/install -fsS | bash"
-    exit 1
-fi
-
-# Use Cursor agent to scan sources
 agent -p --force --output-format text "
-You have access to Slack and Jira MCPs.
+Run the /roadmap-triage command to:
+1. Scan Slack channel $SLACK_FEATURE_CHANNEL for feature requests
+2. Scan Jira project $JIRA_PROJECT_KEY for tickets with label 'auto-ok'
+3. Add new items to .specs/roadmap.md in the Ad-hoc Requests section
+4. Create Jira tickets for Slack items (if configured)
+5. Mark sources as triaged (reply to Slack, comment on Jira)
+6. Commit the roadmap changes
 
-TASK: Find feature candidates for overnight implementation.
-
-1. SLACK (if configured):
-   - Search channel #$SLACK_CHANNEL for feature requests from last 7 days
-   - Look for messages that describe features, improvements, or bug fixes
-   - Exclude messages that already have a ✅ reaction (already handled)
-   - Extract: message ID, summary of the request
-
-2. JIRA (if configured, project: $JIRA_PROJECT):
-   - Search for issues with label '$JIRA_AUTO_LABEL' in 'To Do' status
-   - Extract: issue key, summary
-
-3. OUTPUT:
-   Save to $CANDIDATES_FILE as JSON array:
-   [
-     {\"source\": \"slack\", \"id\": \"message-id\", \"summary\": \"Feature description\"},
-     {\"source\": \"jira\", \"id\": \"PROJ-123\", \"summary\": \"Issue summary\"}
-   ]
-
-   Maximum $MAX_FEATURES candidates.
-   If no candidates found, save empty array [].
-
-4. Do NOT implement anything yet - just gather candidates.
+If no new requests found, that's fine - continue.
 "
 
-# Read candidates
-CANDIDATE_COUNT=$(jq length "$CANDIDATES_FILE" 2>/dev/null || echo "0")
-log "Found $CANDIDATE_COUNT candidates"
-
-if [ "$CANDIDATE_COUNT" -eq 0 ]; then
-    success "No candidates to implement. Exiting."
-    rm "$CANDIDATES_FILE"
-    exit 0
-fi
+success "Triage complete"
 
 # ─────────────────────────────────────────────
-# STEP 3: Implement each candidate
+# STEP 3: Build features from roadmap
 # ─────────────────────────────────────────────
 
-CREATED_PRS=0
+section "STEP 3: Build features from roadmap"
 
-for i in $(seq 0 $((CANDIDATE_COUNT - 1))); do
-    candidate=$(jq -r ".[$i]" "$CANDIDATES_FILE")
-    source=$(echo "$candidate" | jq -r '.source')
-    id=$(echo "$candidate" | jq -r '.id')
-    summary=$(echo "$candidate" | jq -r '.summary')
+BUILT=0
+FAILED=0
+
+for i in $(seq 1 "$MAX_FEATURES"); do
+    log "Build iteration $i/$MAX_FEATURES..."
     
-    log "Processing [$((i+1))/$CANDIDATE_COUNT]: $summary"
+    # Create a new branch for this feature
+    TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+    BRANCH_NAME="auto/feature-$TIMESTAMP"
     
-    # Create branch name (sanitize for git)
-    BRANCH_NAME="auto/${id}-$(date +%Y%m%d)"
-    BRANCH_NAME=$(echo "$BRANCH_NAME" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9\-]/-/g' | sed 's/--*/-/g')
+    git checkout "$MAIN_BRANCH"
+    git checkout -b "$BRANCH_NAME"
     
-    # Check if branch already exists
-    if git show-ref --verify --quiet "refs/heads/$BRANCH_NAME" 2>/dev/null; then
-        warn "Branch $BRANCH_NAME already exists, skipping"
+    # Run /build-next
+    BUILD_OUTPUT=$(mktemp)
+    
+    agent -p --force --output-format text "
+Run the /build-next command to:
+1. Read .specs/roadmap.md and find the next pending feature
+2. Check that all dependencies are completed
+3. If a feature is ready:
+   - Update roadmap to mark it 🔄 in progress
+   - Run /spec-first {feature} --full to build it (includes /compound)
+   - Update roadmap to mark it ✅ completed
+   - Sync Jira status if configured
+4. If no features are ready, output: NO_FEATURES_READY
+5. If build fails, output: BUILD_FAILED: {reason}
+
+After completion, output:
+FEATURE_BUILT: {feature name}
+or
+NO_FEATURES_READY
+or
+BUILD_FAILED: {reason}
+" > "$BUILD_OUTPUT" 2>&1 || true
+    
+    BUILD_RESULT=$(cat "$BUILD_OUTPUT")
+    rm "$BUILD_OUTPUT"
+    
+    # Check result
+    if echo "$BUILD_RESULT" | grep -q "NO_FEATURES_READY"; then
+        log "No more features ready to build"
+        git checkout "$MAIN_BRANCH"
+        git branch -D "$BRANCH_NAME" 2>/dev/null || true
+        break
+    fi
+    
+    if echo "$BUILD_RESULT" | grep -q "BUILD_FAILED"; then
+        REASON=$(echo "$BUILD_RESULT" | grep "BUILD_FAILED" | cut -d: -f2-)
+        warn "Build failed: $REASON"
+        FAILED=$((FAILED + 1))
+        git checkout "$MAIN_BRANCH"
+        git branch -D "$BRANCH_NAME" 2>/dev/null || true
         continue
     fi
     
-    # Create feature branch
-    git checkout main 2>/dev/null || git checkout master 2>/dev/null
-    git checkout -b "$BRANCH_NAME"
-    
-    # Run agent to implement
-    log "Creating spec and implementing..."
-    
-    agent -p --force --output-format text "
-    FEATURE REQUEST:
-    Source: $source ($id)
-    Summary: $summary
-    
-    INSTRUCTIONS:
-    1. Create feature spec at .specs/features/auto/${id}.feature.md
-       - Include YAML frontmatter (feature, domain, source, tests, components, status: stub)
-       - Write Gherkin scenarios covering happy path, edge cases, errors
-       - Include ASCII UI mockup if user-facing
-       - Include empty ## Learnings section
-    
-    2. Update frontmatter to status: specced
-    
-    3. Write failing tests based on scenarios
-       - Update frontmatter: status: tested, add test files to tests: []
-    
-    4. Implement until tests pass
-       - Update frontmatter: status: implemented, add components to components: []
-       - Use design tokens from .specs/design-system/tokens.md
-    
-    5. Commit all changes with message:
-       'feat(auto): $summary'
-    
-    IMPORTANT:
-    - Do NOT edit .specs/mapping.md directly (it auto-regenerates)
-    - Follow existing code patterns in this codebase
-    - If you get stuck or tests won't pass after 3 attempts, commit what you have and note the issue
-    "
-    
-    # Check if there are changes to commit
+    # Feature built - check for changes
     if [ -n "$(git status --porcelain)" ]; then
         git add -A
-        git commit -m "feat(auto): $summary" 2>/dev/null || true
-    fi
-    
-    # Push branch
-    if git push -u origin "$BRANCH_NAME" 2>/dev/null; then
-        success "Pushed branch $BRANCH_NAME"
         
-        # Create draft PR
-        if command -v gh &> /dev/null; then
-            SPEC_FILE=".specs/features/auto/${id}.feature.md"
-            SPEC_CONTENT=""
-            if [ -f "$SPEC_FILE" ]; then
-                SPEC_CONTENT=$(cat "$SPEC_FILE")
-            fi
+        # Extract feature name from output
+        FEATURE_NAME=$(echo "$BUILD_RESULT" | grep "FEATURE_BUILT" | cut -d: -f2- | xargs || echo "feature")
+        FEATURE_NAME="${FEATURE_NAME:-feature}"
+        
+        git commit -m "feat(auto): $FEATURE_NAME" 2>/dev/null || true
+        
+        # Push and create PR
+        if git push -u origin "$BRANCH_NAME" 2>/dev/null; then
+            success "Pushed branch $BRANCH_NAME"
             
-            PR_URL=$(gh pr create --draft \
-                --title "Auto: $summary" \
-                --body "$(cat <<EOF
-## Source
-**$source**: \`$id\`
+            if command -v gh &> /dev/null; then
+                # Get spec content if available
+                SPEC_FILE=$(find .specs/features -name "*.feature.md" -newer .git/HEAD 2>/dev/null | head -1)
+                SPEC_CONTENT=""
+                if [ -f "$SPEC_FILE" ]; then
+                    SPEC_CONTENT=$(cat "$SPEC_FILE")
+                fi
+                
+                PR_URL=$(gh pr create --draft \
+                    --title "Auto: $FEATURE_NAME" \
+                    --body "$(cat <<EOF
+## Feature
+
+$FEATURE_NAME
 
 ## Generated Spec
 
 <details>
-<summary>Click to expand spec</summary>
+<summary>Click to expand</summary>
 
 \`\`\`markdown
 $SPEC_CONTENT
@@ -231,7 +238,7 @@ $SPEC_CONTENT
 
 ## Review Checklist
 
-- [ ] Spec makes sense for the request
+- [ ] Spec makes sense
 - [ ] Implementation matches spec
 - [ ] Tests are adequate
 - [ ] No security issues
@@ -239,52 +246,67 @@ $SPEC_CONTENT
 
 ---
 
-_Generated automatically by overnight-autonomous.sh_
+_Generated by overnight-autonomous.sh_
 EOF
-)" 2>/dev/null)
-            
-            if [ -n "$PR_URL" ]; then
-                success "Created PR: $PR_URL"
-                CREATED_PRS=$((CREATED_PRS + 1))
+)" 2>/dev/null || echo "")
                 
-                # Mark source as handled
-                agent -p --force --output-format text "
-                Mark this item as handled:
-                - Source: $source
-                - ID: $id
-                
-                If Slack: Add ✅ reaction to the message
-                If Jira: Transition issue to 'In Review' or add comment 'PR created: $PR_URL'
-                "
+                if [ -n "$PR_URL" ]; then
+                    success "Created PR: $PR_URL"
+                    BUILT=$((BUILT + 1))
+                fi
+            else
+                success "Branch pushed (PR not created - gh CLI unavailable)"
+                BUILT=$((BUILT + 1))
             fi
         else
-            warn "gh CLI not available - PR not created"
+            error "Failed to push branch $BRANCH_NAME"
         fi
     else
-        error "Failed to push branch $BRANCH_NAME"
+        log "No changes to commit"
+        git checkout "$MAIN_BRANCH"
+        git branch -D "$BRANCH_NAME" 2>/dev/null || true
     fi
     
     # Return to main for next iteration
-    git checkout main 2>/dev/null || git checkout master 2>/dev/null
+    git checkout "$MAIN_BRANCH" 2>/dev/null
 done
 
 # ─────────────────────────────────────────────
 # STEP 4: Summary
 # ─────────────────────────────────────────────
 
-rm "$CANDIDATES_FILE"
+section "SUMMARY"
 
-echo ""
-echo "═══════════════════════════════════════════════════════════"
-success "Overnight run complete!"
-echo "  Candidates found: $CANDIDATE_COUNT"
-echo "  PRs created: $CREATED_PRS"
-echo "═══════════════════════════════════════════════════════════"
+echo "Features built: $BUILT"
+echo "Features failed: $FAILED"
 
-# Optionally notify via Slack
-if [ "$CREATED_PRS" -gt 0 ] && [ -n "$SLACK_NOTIFY_CHANNEL" ]; then
-    agent -p --force --output-format text "
-    Post to Slack channel #$SLACK_NOTIFY_CHANNEL:
-    '🤖 Overnight run complete! Created $CREATED_PRS draft PRs. Check GitHub for review.'
-    "
+# Get roadmap status
+if [ -f ".specs/roadmap.md" ]; then
+    COMPLETED=$(grep -c "| ✅ |" .specs/roadmap.md 2>/dev/null || echo "0")
+    PENDING=$(grep -c "| ⬜ |" .specs/roadmap.md 2>/dev/null || echo "0")
+    IN_PROGRESS=$(grep -c "| 🔄 |" .specs/roadmap.md 2>/dev/null || echo "0")
+    
+    echo ""
+    echo "Roadmap status:"
+    echo "  ✅ Completed: $COMPLETED"
+    echo "  🔄 In Progress: $IN_PROGRESS"
+    echo "  ⬜ Pending: $PENDING"
 fi
+
+# Notify via Slack if configured
+if [ "$BUILT" -gt 0 ] && [ -n "$SLACK_REPORT_CHANNEL" ]; then
+    agent -p --force --output-format text "
+Post a message to Slack channel $SLACK_REPORT_CHANNEL:
+
+🌙 **Overnight Run Complete**
+
+Features built: $BUILT
+Features failed: $FAILED
+
+Roadmap: $COMPLETED completed, $PENDING pending
+
+Check GitHub for draft PRs to review.
+"
+fi
+
+success "Overnight run complete!"
