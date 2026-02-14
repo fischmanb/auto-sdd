@@ -48,6 +48,22 @@ success() { echo "[$(date '+%H:%M:%S')] ✓ $1"; }
 warn() { echo "[$(date '+%H:%M:%S')] ⚠ $1"; }
 fail() { echo "[$(date '+%H:%M:%S')] ✗ $1"; }
 
+format_duration() {
+    local total_seconds=$1
+    local hours=$((total_seconds / 3600))
+    local minutes=$(((total_seconds % 3600) / 60))
+    local seconds=$((total_seconds % 60))
+    if [ "$hours" -gt 0 ]; then
+        printf "%dh %dm %ds" "$hours" "$minutes" "$seconds"
+    elif [ "$minutes" -gt 0 ]; then
+        printf "%dm %ds" "$minutes" "$seconds"
+    else
+        printf "%ds" "$seconds"
+    fi
+}
+
+SCRIPT_START=$(date +%s)
+
 cd "$PROJECT_DIR"
 
 # Validate BRANCH_STRATEGY
@@ -263,14 +279,18 @@ run_build_loop() {
     LOOP_BUILT=0
     LOOP_FAILED=0
     LOOP_SKIPPED=""
+    LOOP_TIMINGS=()
     LAST_FEATURE_BRANCH=""
     CURRENT_FEATURE_BRANCH=""
     CURRENT_WORKTREE_PATH=""
 
     for i in $(seq 1 "$MAX_FEATURES"); do
+        FEATURE_START=$(date +%s)
+        local elapsed_so_far=$(( FEATURE_START - SCRIPT_START ))
+
         echo ""
         echo "═══════════════════════════════════════════════════════════"
-        log "[$strategy] Build $i/$MAX_FEATURES (built: $LOOP_BUILT, failed: $LOOP_FAILED)"
+        log "[$strategy] Build $i/$MAX_FEATURES (built: $LOOP_BUILT, failed: $LOOP_FAILED) | elapsed: $(format_duration $elapsed_so_far)"
         echo "═══════════════════════════════════════════════════════════"
         echo ""
 
@@ -341,7 +361,10 @@ run_build_loop() {
                     # Verify: does it actually build?
                     if check_build; then
                         LOOP_BUILT=$((LOOP_BUILT + 1))
-                        success "Feature $LOOP_BUILT built: $feature_name"
+                        local feature_end=$(date +%s)
+                        local feature_duration=$((feature_end - FEATURE_START))
+                        success "Feature $LOOP_BUILT built: $feature_name ($(format_duration $feature_duration))"
+                        LOOP_TIMINGS+=("✓ $feature_name: $(format_duration $feature_duration)")
                         feature_done=true
 
                         # Track feature name for 'both' mode
@@ -378,8 +401,11 @@ run_build_loop() {
         else
             # Feature failed
             LOOP_FAILED=$((LOOP_FAILED + 1))
-            LOOP_SKIPPED="${LOOP_SKIPPED}\n  - feature $i"
-            fail "Feature failed after $((MAX_RETRIES + 1)) attempt(s). Skipping."
+            local feature_end=$(date +%s)
+            local feature_duration=$((feature_end - FEATURE_START))
+            LOOP_SKIPPED="${LOOP_SKIPPED}\n  - feature $i ($(format_duration $feature_duration))"
+            LOOP_TIMINGS+=("✗ feature $i: $(format_duration $feature_duration)")
+            fail "Feature failed after $((MAX_RETRIES + 1)) attempt(s). Skipping. ($(format_duration $feature_duration))"
             clean_working_tree
 
             case "$strategy" in
@@ -446,6 +472,7 @@ if [ "$BRANCH_STRATEGY" = "both" ]; then
     CHAINED_BUILT=$LOOP_BUILT
     CHAINED_FAILED=$LOOP_FAILED
     CHAINED_SKIPPED="$LOOP_SKIPPED"
+    CHAINED_TIMINGS=("${LOOP_TIMINGS[@]}")
     CHAINED_LAST_BRANCH="$LAST_FEATURE_BRANCH"
     CHAINED_FEATURE_NAMES=("${BUILT_FEATURE_NAMES[@]}")
 
@@ -473,10 +500,15 @@ if [ "$BRANCH_STRATEGY" = "both" ]; then
         INDEPENDENT_BUILT=0
         INDEPENDENT_FAILED=0
 
+        INDEPENDENT_TIMINGS=()
+
         for fn in "${CHAINED_FEATURE_NAMES[@]}"; do
+            INDEP_FEATURE_START=$(date +%s)
+            local elapsed_so_far=$(( INDEP_FEATURE_START - SCRIPT_START ))
+
             echo ""
             echo "═══════════════════════════════════════════════════════════"
-            log "[independent] Building: $fn"
+            log "[independent] Building: $fn | elapsed: $(format_duration $elapsed_so_far)"
             echo "═══════════════════════════════════════════════════════════"
             echo ""
 
@@ -527,17 +559,23 @@ BUILD_FAILED: {reason}
             BUILD_RESULT=$(cat "$BUILD_OUTPUT")
             rm -f "$BUILD_OUTPUT"
 
+            local indep_feature_end=$(date +%s)
+            local indep_feature_duration=$((indep_feature_end - INDEP_FEATURE_START))
+
             if echo "$BUILD_RESULT" | grep -q "FEATURE_BUILT"; then
                 if check_working_tree_clean; then
                     INDEPENDENT_BUILT=$((INDEPENDENT_BUILT + 1))
-                    success "Independently built: $fn (branch: $branch_name)"
+                    success "Independently built: $fn (branch: $branch_name) ($(format_duration $indep_feature_duration))"
+                    INDEPENDENT_TIMINGS+=("✓ $fn: $(format_duration $indep_feature_duration)")
                 else
-                    warn "Agent said FEATURE_BUILT but left uncommitted changes"
+                    warn "Agent said FEATURE_BUILT but left uncommitted changes ($(format_duration $indep_feature_duration))"
                     INDEPENDENT_FAILED=$((INDEPENDENT_FAILED + 1))
+                    INDEPENDENT_TIMINGS+=("✗ $fn: $(format_duration $indep_feature_duration)")
                 fi
             else
-                warn "Independent build failed for: $fn"
+                warn "Independent build failed for: $fn ($(format_duration $indep_feature_duration))"
                 INDEPENDENT_FAILED=$((INDEPENDENT_FAILED + 1))
+                INDEPENDENT_TIMINGS+=("✗ $fn: $(format_duration $indep_feature_duration)")
             fi
 
             # Clean up worktree but keep the branch
@@ -554,14 +592,30 @@ BUILD_FAILED: {reason}
     cd "$PROJECT_DIR"
     git checkout "$MAIN_BRANCH" 2>/dev/null || true
 
+    local total_elapsed=$(( $(date +%s) - SCRIPT_START ))
+
     echo ""
     echo "═══════════════════════════════════════════════════════════"
     echo ""
-    success "BOTH PASSES COMPLETE"
+    success "BOTH PASSES COMPLETE (total: $(format_duration $total_elapsed))"
     echo ""
     echo "  Chained pass:      $CHAINED_BUILT built, $CHAINED_FAILED failed"
     echo "  Independent pass:  ${INDEPENDENT_BUILT:-0} built, ${INDEPENDENT_FAILED:-0} failed"
     echo ""
+    if [ ${#CHAINED_TIMINGS[@]} -gt 0 ]; then
+        echo "  Chained timings:"
+        for t in "${CHAINED_TIMINGS[@]}"; do
+            echo "    $t"
+        done
+        echo ""
+    fi
+    if [ ${#INDEPENDENT_TIMINGS[@]} -gt 0 ]; then
+        echo "  Independent timings:"
+        for t in "${INDEPENDENT_TIMINGS[@]}"; do
+            echo "    $t"
+        done
+        echo ""
+    fi
     if [ -n "$CHAINED_LAST_BRANCH" ]; then
         echo "  Chained branches (full app with deps):"
         echo "    Last branch: $CHAINED_LAST_BRANCH"
@@ -582,6 +636,8 @@ BUILD_FAILED: {reason}
         echo -e "$CHAINED_SKIPPED"
     fi
     echo ""
+    echo "  Total time: $(format_duration $total_elapsed)"
+    echo ""
     echo "═══════════════════════════════════════════════════════════"
     echo ""
 
@@ -599,19 +655,30 @@ else
         cleanup_all_worktrees
     fi
 
+    local total_elapsed=$(( $(date +%s) - SCRIPT_START ))
+
     echo ""
     echo "═══════════════════════════════════════════════════════════"
-    success "Done. Built: $LOOP_BUILT, Failed: $LOOP_FAILED"
-    if [ -n "$LOOP_SKIPPED" ]; then
+    success "Done. Built: $LOOP_BUILT, Failed: $LOOP_FAILED (total: $(format_duration $total_elapsed))"
+    echo ""
+    if [ ${#LOOP_TIMINGS[@]} -gt 0 ]; then
+        echo "  Per-feature timings:"
+        for t in "${LOOP_TIMINGS[@]}"; do
+            echo "    $t"
+        done
         echo ""
+    fi
+    if [ -n "$LOOP_SKIPPED" ]; then
         warn "Skipped features (check git stash list for their partial work):"
         echo -e "$LOOP_SKIPPED"
+        echo ""
     fi
     if [ "$BRANCH_STRATEGY" = "chained" ] && [ -n "$LAST_FEATURE_BRANCH" ]; then
-        echo ""
         log "Last feature branch: $LAST_FEATURE_BRANCH"
         log "You can review/merge branches or reset to $MAIN_BRANCH"
+        echo ""
     fi
+    echo "  Total time: $(format_duration $total_elapsed)"
     echo "═══════════════════════════════════════════════════════════"
     echo ""
 fi

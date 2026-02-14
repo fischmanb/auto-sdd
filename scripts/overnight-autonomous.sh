@@ -32,6 +32,22 @@ warn() { echo -e "${YELLOW}[$(date '+%H:%M:%S')] ⚠${NC} $1"; }
 error() { echo -e "${RED}[$(date '+%H:%M:%S')] ✗${NC} $1"; }
 section() { echo -e "\n${CYAN}═══════════════════════════════════════════════════════════${NC}"; echo -e "${CYAN}  $1${NC}"; echo -e "${CYAN}═══════════════════════════════════════════════════════════${NC}\n"; }
 
+format_duration() {
+    local total_seconds=$1
+    local hours=$((total_seconds / 3600))
+    local minutes=$(((total_seconds % 3600) / 60))
+    local seconds=$((total_seconds % 60))
+    if [ "$hours" -gt 0 ]; then
+        printf "%dh %dm %ds" "$hours" "$minutes" "$seconds"
+    elif [ "$minutes" -gt 0 ]; then
+        printf "%dm %ds" "$minutes" "$seconds"
+    else
+        printf "%ds" "$seconds"
+    fi
+}
+
+SCRIPT_START=$(date +%s)
+
 # Load configuration
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="${PROJECT_DIR:-$(dirname "$SCRIPT_DIR")}"
@@ -78,17 +94,22 @@ fi
 # ─────────────────────────────────────────────
 
 section "STEP 0: Sync with main"
+STEP_START=$(date +%s)
 
 git checkout main 2>/dev/null || git checkout master 2>/dev/null
 MAIN_BRANCH=$(git branch --show-current)
 git pull origin "$MAIN_BRANCH"
-success "Synced with $MAIN_BRANCH"
+
+STEP_DURATION=$(( $(date +%s) - STEP_START ))
+success "Synced with $MAIN_BRANCH ($(format_duration $STEP_DURATION))"
+STEP_TIMINGS=("Step 0 - Sync: $(format_duration $STEP_DURATION)")
 
 # ─────────────────────────────────────────────
 # STEP 1: Rebase any existing auto PRs
 # ─────────────────────────────────────────────
 
 section "STEP 1: Rebase existing auto PRs"
+STEP_START=$(date +%s)
 
 if command -v gh &> /dev/null; then
     REBASED=0
@@ -121,11 +142,15 @@ else
     log "Skipping rebase (gh CLI not available)"
 fi
 
+STEP_DURATION=$(( $(date +%s) - STEP_START ))
+STEP_TIMINGS+=("Step 1 - Rebase PRs: $(format_duration $STEP_DURATION)")
+
 # ─────────────────────────────────────────────
 # STEP 2: Triage Slack/Jira → Roadmap
 # ─────────────────────────────────────────────
 
 section "STEP 2: Triage new requests"
+STEP_START=$(date +%s)
 
 log "Running /roadmap-triage to scan Slack/Jira..."
 
@@ -141,20 +166,26 @@ Run the /roadmap-triage command to:
 If no new requests found, that's fine - continue.
 "
 
-success "Triage complete"
+STEP_DURATION=$(( $(date +%s) - STEP_START ))
+success "Triage complete ($(format_duration $STEP_DURATION))"
+STEP_TIMINGS+=("Step 2 - Triage: $(format_duration $STEP_DURATION)")
 
 # ─────────────────────────────────────────────
 # STEP 3: Build features from roadmap
 # ─────────────────────────────────────────────
 
 section "STEP 3: Build features from roadmap"
+STEP_START=$(date +%s)
 
 BUILT=0
 FAILED=0
 LAST_FEATURE_BRANCH=""
+FEATURE_TIMINGS=()
 
 for i in $(seq 1 "$MAX_FEATURES"); do
-    log "Build iteration $i/$MAX_FEATURES..."
+    FEATURE_START=$(date +%s)
+    elapsed_so_far=$(( FEATURE_START - SCRIPT_START ))
+    log "Build iteration $i/$MAX_FEATURES... (elapsed: $(format_duration $elapsed_so_far))"
     
     # Create a new branch for this feature based on strategy
     TIMESTAMP=$(date +%Y%m%d-%H%M%S)
@@ -217,7 +248,9 @@ BUILD_FAILED: {reason}
     
     if echo "$BUILD_RESULT" | grep -q "BUILD_FAILED"; then
         REASON=$(echo "$BUILD_RESULT" | grep "BUILD_FAILED" | cut -d: -f2-)
-        warn "Build failed: $REASON"
+        FEATURE_DURATION=$(( $(date +%s) - FEATURE_START ))
+        warn "Build failed: $REASON ($(format_duration $FEATURE_DURATION))"
+        FEATURE_TIMINGS+=("✗ feature $i: $(format_duration $FEATURE_DURATION)")
         FAILED=$((FAILED + 1))
         git checkout "$MAIN_BRANCH"
         git branch -D "$BRANCH_NAME" 2>/dev/null || true
@@ -279,7 +312,9 @@ EOF
 )" 2>/dev/null || echo "")
                 
                 if [ -n "$PR_URL" ]; then
-                    success "Created PR: $PR_URL"
+                    FEATURE_DURATION=$(( $(date +%s) - FEATURE_START ))
+                    success "Created PR: $PR_URL ($(format_duration $FEATURE_DURATION))"
+                    FEATURE_TIMINGS+=("✓ $FEATURE_NAME: $(format_duration $FEATURE_DURATION)")
                     BUILT=$((BUILT + 1))
                     # Track branch for chained mode
                     if [ "$BRANCH_STRATEGY" = "chained" ]; then
@@ -287,7 +322,9 @@ EOF
                     fi
                 fi
             else
-                success "Branch pushed (PR not created - gh CLI unavailable)"
+                FEATURE_DURATION=$(( $(date +%s) - FEATURE_START ))
+                success "Branch pushed (PR not created - gh CLI unavailable) ($(format_duration $FEATURE_DURATION))"
+                FEATURE_TIMINGS+=("✓ $FEATURE_NAME: $(format_duration $FEATURE_DURATION)")
                 BUILT=$((BUILT + 1))
                 # Track branch for chained mode
                 if [ "$BRANCH_STRATEGY" = "chained" ]; then
@@ -313,7 +350,12 @@ done
 # STEP 4: Summary
 # ─────────────────────────────────────────────
 
-section "SUMMARY"
+STEP_DURATION=$(( $(date +%s) - STEP_START ))
+STEP_TIMINGS+=("Step 3 - Build features: $(format_duration $STEP_DURATION)")
+
+TOTAL_ELAPSED=$(( $(date +%s) - SCRIPT_START ))
+
+section "SUMMARY (total: $(format_duration $TOTAL_ELAPSED))"
 
 echo "Features built: $BUILT"
 echo "Features failed: $FAILED"
@@ -330,6 +372,23 @@ if [ -f ".specs/roadmap.md" ]; then
     echo "  🔄 In Progress: $IN_PROGRESS"
     echo "  ⬜ Pending: $PENDING"
 fi
+
+echo ""
+echo "Step timings:"
+for t in "${STEP_TIMINGS[@]}"; do
+    echo "  $t"
+done
+
+if [ ${#FEATURE_TIMINGS[@]} -gt 0 ]; then
+    echo ""
+    echo "Per-feature timings:"
+    for t in "${FEATURE_TIMINGS[@]}"; do
+        echo "  $t"
+    done
+fi
+
+echo ""
+echo "Total time: $(format_duration $TOTAL_ELAPSED)"
 
 # Notify via Slack if configured
 if [ "$BUILT" -gt 0 ] && [ -n "$SLACK_REPORT_CHANNEL" ]; then
