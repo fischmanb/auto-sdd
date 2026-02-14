@@ -3,6 +3,18 @@
 > Ordered list of features to implement. Each feature should be completable within a single agent context window.
 > Updated by `/clone-app`, `/roadmap-triage`, and `/build-next`.
 
+## Implementation Rules
+
+**Every feature in this roadmap must be implemented with real data, real API calls, and real database operations.** No exceptions.
+
+- **No mock data** — never use hardcoded arrays, fake JSON, or placeholder content to simulate functionality. If a feature needs data, it reads from the database or calls a real API.
+- **No fake API endpoints** — every endpoint must do real work. No routes that return static JSON.
+- **No placeholder UI** — components must be wired to real data sources. If the data isn't available yet, show a proper empty state, not fake data.
+- **No "demo mode"** — features either work end-to-end or they aren't done. A feature is only ✅ when a real user can use it with their real data.
+- **Real validation** — forms validate against real constraints, not just "is this field filled in?"
+- **Real error handling** — API failures, empty results, rate limits, and edge cases must be handled, not ignored.
+- **Test against real flows** — when verifying a feature, use the app as a user would. Trigger real API calls, see real results.
+
 ---
 
 ## Progress

@@ -67,4 +67,5 @@ Check if `--full` or `--auto` flag is present in the arguments:
 2. Update `.specs/learnings/{category}.md`
 
 **Step 5: Commit (Full Mode only)**
-1. Commit all changes: `feat: {feature name} (full TDD cycle)`
+1. Regenerate mapping: `./scripts/generate-mapping.sh`
+2. Commit all changes: `feat: {feature name} (full TDD cycle)`

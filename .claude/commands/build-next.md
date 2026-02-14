@@ -128,7 +128,7 @@ Where:
 
 ---
 
-## Step 7: Update Roadmap on Completion
+## Step 7: Update Roadmap and Mapping on Completion
 
 After `/spec-first --full` completes:
 
@@ -148,6 +148,11 @@ Update the Progress section:
 | ⏸️ Blocked | 0 |
 
 **Last updated**: [current timestamp]
+```
+
+Regenerate the mapping file:
+```bash
+./scripts/generate-mapping.sh
 ```
 
 Commit: `chore: complete feature #5 - Dashboard`

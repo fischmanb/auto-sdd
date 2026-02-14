@@ -268,7 +268,7 @@ After creating the spec, provide this summary:
 2. Tests should **FAIL** initially (no implementation yet)
 3. Document tests in `.specs/test-suites/{path}.tests.md`
 4. Update spec frontmatter: `status: tested`, add test files to `tests: []`
-5. mapping.md will auto-regenerate via hook
+5. Regenerate mapping: run `./scripts/generate-mapping.sh`
 6. **Normal Mode**: Ask: "Tests written (failing). Ready to implement?"
 7. **Full Mode**: Skip asking, proceed immediately to Step 3
 
@@ -299,9 +299,10 @@ After implementation:
 ### Step 6: Commit (Full Mode Only)
 
 **Full Mode only** - after /compound completes:
-1. Stage all changes: `git add .specs/ src/ tests/`
-2. Commit with message: `feat: {feature name} (full TDD cycle)`
-3. Report completion to user
+1. Regenerate mapping: `./scripts/generate-mapping.sh`
+2. Stage all changes: `git add .specs/ src/ tests/`
+3. Commit with message: `feat: {feature name} (full TDD cycle)`
+4. Report completion to user
 
 ---
 

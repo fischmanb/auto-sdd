@@ -24,14 +24,23 @@ else
     USE_YQ=true
 fi
 
+# Function to extract ONLY the first frontmatter block (between first two --- markers)
+# Fixes a bug where sed -n '/^---$/,/^---$/p' could match --- horizontal rules
+# deeper in the file body, causing incorrect parsing.
+extract_frontmatter() {
+    local file="$1"
+    awk 'BEGIN{c=0} /^---$/{c++; if(c==2) exit; next} c==1{print}' "$file"
+}
+
 # Function to extract frontmatter value using yq
 extract_with_yq() {
     local file="$1"
     local key="$2"
     local default="$3"
     
-    # Extract YAML frontmatter (between --- markers) and parse
-    value=$(sed -n '/^---$/,/^---$/p' "$file" | sed '1d;$d' | yq -r ".$key // \"$default\"" 2>/dev/null)
+    value=$(extract_frontmatter "$file" | yq -r ".$key // \"$default\"" 2>/dev/null)
+    # Strip leading/trailing whitespace and newlines
+    value=$(echo "$value" | head -1 | xargs)
     echo "${value:-$default}"
 }
 
@@ -41,8 +50,8 @@ extract_with_grep() {
     local key="$2"
     local default="$3"
     
-    # Simple grep-based extraction (works for simple key: value pairs)
-    value=$(sed -n '/^---$/,/^---$/p' "$file" | grep "^$key:" | head -1 | sed "s/^$key: *//")
+    value=$(extract_frontmatter "$file" | grep "^$key:" | head -1 | sed "s/^$key: *//")
+    value=$(echo "$value" | head -1 | xargs)
     echo "${value:-$default}"
 }
 
@@ -52,7 +61,7 @@ extract_array() {
     local key="$2"
     
     if [ "$USE_YQ" = true ]; then
-        sed -n '/^---$/,/^---$/p' "$file" | sed '1d;$d' | yq -r ".$key // [] | join(\", \")" 2>/dev/null
+        extract_frontmatter "$file" | yq -r ".$key // [] | join(\", \")" 2>/dev/null
     else
         # Fallback: just show "see spec"
         echo "see spec"
