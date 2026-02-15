@@ -10,7 +10,7 @@ Upgrade this project from SDD 1.0 to SDD 2.0.
 
 1. Check `.sdd-upgrade/` exists → if missing, error: "Run 'git auto-upgrade' first"
 2. Check `.specs/` exists → if missing, error: "Not an SDD project, use 'git auto'"
-3. Check `.specs/.sdd-version` → if "2.0", already migrated
+3. Check `.specs/.sdd-version` or `VERSION` → if "2.0", "2.0.0", or starts with "2.", already migrated
 
 ## Stock Commands (safe to replace)
 
@@ -34,7 +34,7 @@ Any other commands are CUSTOM → preserve them.
 7. **Scripts**: `cp -r .sdd-upgrade/scripts .`
 8. **Mapping**: Backup mapping.md, run `./scripts/generate-mapping.sh`
 9. **CLAUDE.md**: Copy from staging
-10. **Version**: `echo "2.0" > .specs/.sdd-version`
+10. **Version**: `cp .sdd-upgrade/VERSION . 2>/dev/null || echo "2.0.0" > VERSION`; `echo "2.0.0" > .specs/.sdd-version`
 11. **Cleanup**: `rm -rf .sdd-upgrade`
 
 ## Frontmatter Format

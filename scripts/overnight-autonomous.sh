@@ -10,6 +10,8 @@
 #   5. Report summary
 #
 # CONFIGURATION (set in .env.local):
+#   BASE_BRANCH            - Branch to sync and branch from (default: main)
+#                           Use develop, main, or current branch
 #   SLACK_FEATURE_CHANNEL  - Slack channel to scan
 #   JIRA_PROJECT_KEY       - Jira project key
 #   JIRA_AUTO_LABEL        - Label marking auto-ok items
@@ -59,6 +61,8 @@ fi
 # Defaults
 MAX_FEATURES="${MAX_FEATURES:-4}"
 BRANCH_STRATEGY="${BRANCH_STRATEGY:-chained}"
+# BASE_BRANCH: develop, main, or "current" (use git branch --show-current)
+BASE_BRANCH="${BASE_BRANCH:-main}"
 DRIFT_CHECK="${DRIFT_CHECK:-true}"
 MAX_DRIFT_RETRIES="${MAX_DRIFT_RETRIES:-1}"
 SLACK_FEATURE_CHANNEL="${SLACK_FEATURE_CHANNEL:-#feature-requests}"
@@ -74,6 +78,7 @@ fi
 
 section "OVERNIGHT AUTONOMOUS RUN"
 log "Project: $PROJECT_DIR"
+log "Base branch: $BASE_BRANCH"
 log "Branch strategy: $BRANCH_STRATEGY"
 log "Max features: $MAX_FEATURES"
 log "Slack channel: $SLACK_FEATURE_CHANNEL"
@@ -304,14 +309,24 @@ DRIFT_UNRESOLVABLE: {what needs human attention}
 }
 
 # ─────────────────────────────────────────────
-# STEP 0: Ensure we're on main and up to date
+# STEP 0: Ensure we're on BASE_BRANCH and up to date
 # ─────────────────────────────────────────────
 
-section "STEP 0: Sync with main"
+# Resolve BASE_BRANCH: "current" = use current branch
+SYNC_BRANCH="$BASE_BRANCH"
+if [ "$BASE_BRANCH" = "current" ]; then
+    SYNC_BRANCH=$(git branch --show-current 2>/dev/null || echo "main")
+fi
+
+section "STEP 0: Sync with $SYNC_BRANCH"
 STEP_START=$(date +%s)
 
-git checkout main 2>/dev/null || git checkout master 2>/dev/null
-MAIN_BRANCH=$(git branch --show-current)
+if ! git rev-parse --verify "$SYNC_BRANCH" >/dev/null 2>&1; then
+    error "BASE_BRANCH=$BASE_BRANCH (resolved: $SYNC_BRANCH) does not exist"
+    exit 1
+fi
+git checkout "$SYNC_BRANCH"
+MAIN_BRANCH="$SYNC_BRANCH"
 git pull origin "$MAIN_BRANCH"
 
 STEP_DURATION=$(( $(date +%s) - STEP_START ))

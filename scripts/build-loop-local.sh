@@ -11,13 +11,19 @@
 # CONFIG: set MAX_FEATURES, MAX_RETRIES, BUILD_CHECK_CMD, BRANCH_STRATEGY in .env.local
 # or pass in env.
 #
+# BASE_BRANCH: Branch to sync from and create feature branches from (default: current)
+#   - Unset or empty: Use current branch (git branch --show-current)
+#   - develop: Always use develop
+#   - main: Always use main
+#   Examples: BASE_BRANCH=develop  BASE_BRANCH=main
+#
 # BRANCH_STRATEGY: How to handle branches (default: chained)
 #   - chained: Each feature branches from the previous feature's branch
 #              (Feature #2 has Feature #1's code even if not merged)
-#   - independent: Each feature builds in a separate git worktree from main
+#   - independent: Each feature builds in a separate git worktree from BASE_BRANCH
 #                  (Features are isolated, no shared code until merged)
 #   - both: Run chained first (full build), then rebuild each feature
-#           independently from main (sequential, not parallel)
+#           independently from BASE_BRANCH (sequential, not parallel)
 #   - sequential: All features on one branch (original behavior)
 #
 # BUILD_CHECK_CMD: command to verify the build after each feature.
@@ -131,12 +137,20 @@ if [[ ! "$BRANCH_STRATEGY" =~ ^(chained|independent|both|sequential)$ ]]; then
     exit 1
 fi
 
-# Get main branch name
-MAIN_BRANCH=$(git branch --show-current 2>/dev/null || echo "main")
-if git rev-parse --verify main >/dev/null 2>&1; then
-    MAIN_BRANCH="main"
-elif git rev-parse --verify master >/dev/null 2>&1; then
-    MAIN_BRANCH="master"
+# Get base branch (sync target and branch-from target)
+# BASE_BRANCH: explicit (e.g. develop, main); unset = current branch
+if [ -n "$BASE_BRANCH" ]; then
+    if git rev-parse --verify "$BASE_BRANCH" >/dev/null 2>&1; then
+        MAIN_BRANCH="$BASE_BRANCH"
+    else
+        echo "Error: BASE_BRANCH=$BASE_BRANCH does not exist"
+        exit 1
+    fi
+else
+    MAIN_BRANCH=$(git branch --show-current 2>/dev/null || echo "main")
+    if [ -z "$MAIN_BRANCH" ]; then
+        MAIN_BRANCH="main"
+    fi
 fi
 
 if ! command -v agent &> /dev/null; then
@@ -805,6 +819,7 @@ cleanup_all_worktrees() {
 
 echo ""
 echo "Build loop (local only, no remote/push/PR)"
+echo "Base branch: $MAIN_BRANCH"
 echo "Branch strategy: $BRANCH_STRATEGY"
 echo "Max features: $MAX_FEATURES | Max retries per feature: $MAX_RETRIES"
 if [ -n "$BUILD_CMD" ]; then

@@ -23,8 +23,8 @@ Check for .specs/ directory
 
 Check version:
 ```
-Check .specs/.sdd-version
-├── If "2.0" → Already migrated, nothing to do
+Check .specs/.sdd-version (or VERSION)
+├── If "2.0" or "2.0.0" or starts with "2." → Already migrated, nothing to do
 ├── If missing → SDD 1.0, proceed with migration
 └── If other → Future version, warn user
 ```
@@ -206,7 +206,9 @@ cp .sdd-upgrade/CLAUDE.md CLAUDE.md
 ## Step 11: Create Version File
 
 ```bash
-echo "2.0" > .specs/.sdd-version
+# Copy VERSION from template (single source of truth), or create if missing
+cp .sdd-upgrade/VERSION . 2>/dev/null || echo "2.0.0" > VERSION
+echo "2.0.0" > .specs/.sdd-version
 ```
 
 ---
@@ -225,7 +227,7 @@ Output final summary:
 
 ```
 ═══════════════════════════════════════════════════════════════════
-                    MIGRATION COMPLETE: 1.0 → 2.0
+                    MIGRATION COMPLETE: 1.0 → 2.0.0
 ═══════════════════════════════════════════════════════════════════
 
 ✓ Created .specs/learnings/ (7 files)
@@ -240,7 +242,7 @@ Output final summary:
 ✓ Regenerated mapping.md
 ✓ Updated CLAUDE.md
 ✓ Cleaned up staging directory
-✓ Version: 2.0
+✓ Version: 2.0.0
 
 Custom commands preserved (untouched):
   • [list any custom commands]
@@ -266,7 +268,7 @@ frontmatter. They don't need ASCII mockups to work.
 |-------|---------|
 | No `.sdd-upgrade/` | "Run 'git auto-upgrade' first to stage the 2.0 files" |
 | No `.specs/` | "Not an SDD project. Use 'git auto' for fresh install" |
-| Already 2.0 | "Already on SDD 2.0. No migration needed." |
+| Already 2.x | "Already on SDD 2.x. No migration needed." |
 | Script fails | Show error, don't delete staging dir so user can retry |
 
 ---

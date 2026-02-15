@@ -1,4 +1,4 @@
-# SDD 2.0: Spec-Driven Development + Compound Learning
+# SDD 2.0.0: Spec-Driven Development + Compound Learning
 
 A framework for AI-assisted development that combines:
 - **Spec-Driven Development (SDD)** - Define behavior before implementing
@@ -16,7 +16,7 @@ Add to your `~/.gitconfig`:
 
 ```ini
 [alias]
-    auto = "!f() { git clone --depth 1 https://github.com/AdrianRogowski/auto-sdd.git .sdd-temp && rm -rf .sdd-temp/.git && cp -r .sdd-temp/. . && rm -rf .sdd-temp && echo 'SDD 2.0 installed! Run /spec-first to create your first feature spec.'; }; f"
+    auto = "!f() { git clone --depth 1 https://github.com/AdrianRogowski/auto-sdd.git .sdd-temp && rm -rf .sdd-temp/.git && cp -r .sdd-temp/. . && rm -rf .sdd-temp && echo 'SDD 2.0.0 installed! Run /spec-first to create your first feature spec.'; }; f"
 ```
 
 Then in any project:
@@ -26,6 +26,7 @@ git auto
 ```
 
 This copies all SDD files into your current project:
+- `VERSION` - Framework version (semver, e.g. 2.0.0)
 - `.cursor/` - Cursor rules, commands, hooks
 - `.claude/` - Claude Code commands
 - `.specs/` - Feature specs, learnings, design system, roadmap
@@ -58,7 +59,7 @@ git auto-upgrade
 
 ```ini
 [alias]
-    auto-upgrade = "!f() { git clone --depth 1 https://github.com/AdrianRogowski/auto-sdd.git .sdd-temp && rm -rf .sdd-temp/.git && mkdir -p .sdd-upgrade && cp -r .sdd-temp/. .sdd-upgrade/ && rm -rf .sdd-temp && echo 'SDD 2.0 files staged in .sdd-upgrade/' && echo 'Now run /sdd-migrate to upgrade'; }; f"
+    auto-upgrade = "!f() { git clone --depth 1 https://github.com/AdrianRogowski/auto-sdd.git .sdd-temp && rm -rf .sdd-temp/.git && mkdir -p .sdd-upgrade && cp -r .sdd-temp/. .sdd-upgrade/ && rm -rf .sdd-temp && echo 'SDD 2.0.0 files staged in .sdd-upgrade/' && echo 'Now run /sdd-migrate to upgrade'; }; f"
 ```
 
 ### Post-Install (Optional: Overnight Automation)
@@ -193,6 +194,7 @@ Every feature build goes through a multi-stage pipeline. Each agent-based step r
 
 ```
 .
+├── VERSION                 # Framework version (semver, e.g. 2.0.0)
 ├── .cursor/
 │   ├── commands/           # Slash command definitions
 │   ├── rules/              # Cursor rules (SDD workflow, design tokens)
@@ -226,12 +228,17 @@ Every feature build goes through a multi-stage pipeline. Each agent-based step r
 │   ├── nightly-review.sh          # Extract learnings (10:30 PM)
 │   ├── overnight-autonomous.sh    # Auto-implement features (11:00 PM)
 │   ├── setup-overnight.sh         # Install launchd jobs
+│   ├── uninstall-overnight.sh     # Remove launchd jobs
 │   └── launchd/                   # macOS scheduling plists
 │
 ├── logs/                   # Overnight automation logs
 ├── CLAUDE.md               # Agent instructions (universal)
 └── .env.local              # Configuration (Slack, Jira, etc.)
 ```
+
+### Versioning
+
+SDD uses semantic versioning. The `VERSION` file at the project root holds the framework version (e.g. `2.0.0`). `.specs/.sdd-version` mirrors it for migration detection. To check your version: `cat VERSION`.
 
 ## Roadmap System
 
@@ -319,6 +326,11 @@ JIRA_CLOUD_ID="yoursite.atlassian.net"
 JIRA_PROJECT_KEY="PROJ"
 JIRA_AUTO_LABEL="auto-ok"
 
+# Base branch (branch to sync from and create feature branches from)
+BASE_BRANCH=                  # Unset: build-loop uses current branch; overnight uses main
+# BASE_BRANCH=develop         # Use develop instead of main
+# BASE_BRANCH=current         # Overnight: use whatever branch you're on
+
 # Options
 CREATE_JIRA_FOR_SLACK=true    # Create Jira tickets for Slack requests
 SYNC_JIRA_STATUS=true         # Keep Jira status in sync
@@ -396,17 +408,17 @@ Categories: `testing.md`, `performance.md`, `security.md`, `api.md`, `design.md`
 
 | Script | Purpose |
 |--------|---------|
-| `./scripts/build-loop-local.sh` | Run /build-next in a loop locally (no remote/push/PR) |
+| `./scripts/build-loop-local.sh` | Run /build-next in a loop locally (no remote/push/PR). Config: BASE_BRANCH, BRANCH_STRATEGY, MAX_FEATURES |
 | `./scripts/generate-mapping.sh` | Regenerate mapping.md from specs |
 | `./scripts/nightly-review.sh` | Extract learnings from today's commits |
-| `./scripts/overnight-autonomous.sh` | Full overnight automation |
+| `./scripts/overnight-autonomous.sh` | Full overnight automation (sync, triage, build, PRs) |
 | `./scripts/setup-overnight.sh` | Install launchd scheduled jobs |
 | `./scripts/uninstall-overnight.sh` | Remove launchd jobs |
 
 ### Build Loop Examples
 
 ```bash
-# Default: build with test suite enforcement
+# Default: chained branches, build with test suite enforcement
 ./scripts/build-loop-local.sh
 
 # Full validation: tests + code review
@@ -415,8 +427,13 @@ POST_BUILD_STEPS="test,code-review" ./scripts/build-loop-local.sh
 # Use Opus for building, cheap model for validation
 BUILD_MODEL="opus-4.6-thinking" DRIFT_MODEL="gemini-3-flash" ./scripts/build-loop-local.sh
 
-# Independent branches (each feature isolated from main)
-BRANCH_STRATEGY=independent ./scripts/build-loop-local.sh
+# Branch strategies (set in .env.local or pass inline)
+BRANCH_STRATEGY=independent ./scripts/build-loop-local.sh   # Each feature isolated (worktrees)
+BRANCH_STRATEGY=both ./scripts/build-loop-local.sh         # Chained + independent rebuild
+BRANCH_STRATEGY=sequential ./scripts/build-loop-local.sh   # All features on current branch
+
+# Base branch (default: current branch for build-loop, main for overnight)
+BASE_BRANCH=develop ./scripts/build-loop-local.sh
 ```
 
 ## Requirements
