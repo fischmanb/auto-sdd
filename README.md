@@ -140,16 +140,21 @@ Every feature build goes through a multi-stage pipeline. Each agent-based step r
 │ (spec-first │  │  CHECK    │  │  SUITE    │  │ (fresh agent│  │(fresh agent,│  │          │
 │  --full)    │  │ (compile) │  │ (npm test)│  │  Layer 2)   │  │ optional)   │  │          │
 └─────────────┘  └───────────┘  └───────────┘  └─────────────┘  └─────────────┘  └──────────┘
-      │               │               │
-      └── retry ◄─────┴── retry ◄─────┘   (failures trigger retries)
+      │               │               │               │                │
+      └── retry ◄─────┴── retry ◄─────┘               │                │
+                                                       ▼                ▼
+                                              build+tests re-run  build+tests re-run
+                                              (agents modify code)  (agents modify code)
 ```
 
-| Stage | Type | Controls | Blocking? |
-|-------|------|----------|-----------|
-| Build check | Shell (compile/type check) | `BUILD_CHECK_CMD` | Yes (retry) |
-| Test suite | Shell (test runner) | `TEST_CHECK_CMD` | Yes (retry) |
-| Drift check | Agent (fresh context) | `DRIFT_CHECK=true` | Yes (retry) |
-| Code review | Agent (fresh context) | `POST_BUILD_STEPS` | No (warn only) |
+| Stage | Type | Controls | Blocking? | Re-validates? |
+|-------|------|----------|-----------|---------------|
+| Build check | Shell (compile/type check) | `BUILD_CHECK_CMD` | Yes (retry) | — |
+| Test suite | Shell (test runner) | `TEST_CHECK_CMD` | Yes (retry) | — |
+| Drift check | Agent (fresh context) | `DRIFT_CHECK=true` | Yes (retry) | build + tests after fix |
+| Code review | Agent (fresh context) | `POST_BUILD_STEPS` | No (warn only) | build + tests after fix |
+
+Build and test re-runs after agent steps are shell commands — **zero AI tokens**.
 
 **Model selection**: Each agent step can use a different model via `BUILD_MODEL`, `DRIFT_MODEL`, `REVIEW_MODEL`, etc.
 
