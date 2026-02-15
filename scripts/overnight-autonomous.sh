@@ -91,6 +91,76 @@ if ! command -v gh &> /dev/null; then
     warn "GitHub CLI (gh) not found - PRs won't be created"
 fi
 
+# ── Model selection & test detection ──────────────────────────────────────
+
+AGENT_MODEL="${AGENT_MODEL:-}"
+BUILD_MODEL="${BUILD_MODEL:-}"
+RETRY_MODEL="${RETRY_MODEL:-}"
+DRIFT_MODEL="${DRIFT_MODEL:-}"
+REVIEW_MODEL="${REVIEW_MODEL:-}"
+TRIAGE_MODEL="${TRIAGE_MODEL:-}"
+POST_BUILD_STEPS="${POST_BUILD_STEPS:-test}"
+
+agent_cmd() {
+    local step_model="$1"
+    local model="${step_model:-$AGENT_MODEL}"
+    local cmd="agent -p --force --output-format text"
+    if [ -n "$model" ]; then
+        cmd="$cmd --model $model"
+    fi
+    echo "$cmd"
+}
+
+detect_test_check() {
+    if [ -n "$TEST_CHECK_CMD" ]; then
+        if [ "$TEST_CHECK_CMD" = "skip" ]; then echo ""; else echo "$TEST_CHECK_CMD"; fi
+        return
+    fi
+    if [ -f "package.json" ] && grep -q '"test"' package.json 2>/dev/null; then
+        if ! grep -q "no test specified" package.json 2>/dev/null; then echo "npm test"; return; fi
+    fi
+    if [ -f "pytest.ini" ] || [ -f "conftest.py" ]; then echo "pytest"; return; fi
+    if [ -f "pyproject.toml" ] && grep -q "pytest" "pyproject.toml" 2>/dev/null; then echo "pytest"; return; fi
+    if [ -f "Cargo.toml" ]; then echo "cargo test"; return; fi
+    if [ -f "go.mod" ]; then echo "go test ./..."; return; fi
+    echo ""
+}
+
+TEST_CMD=$(detect_test_check)
+
+check_tests() {
+    if [ -z "$TEST_CMD" ]; then return 0; fi
+    log "Running test suite: $TEST_CMD"
+    if eval "$TEST_CMD" 2>&1; then success "Tests passed"; return 0
+    else error "Tests failed"; return 1; fi
+}
+
+should_run_step() {
+    echo ",$POST_BUILD_STEPS," | grep -q ",$1,"
+}
+
+run_code_review() {
+    log "Running code-review agent (fresh context, model: ${REVIEW_MODEL:-${AGENT_MODEL:-default}})..."
+    $(agent_cmd "$REVIEW_MODEL") "
+Review and improve code quality of the most recently built feature.
+1. Check 'git log --oneline -10' to see recent commits
+2. Review source files against senior engineering standards
+3. Fix critical issues ONLY (no 'any' types, proper error handling, etc.)
+4. Do NOT change behavior. Do NOT refactor for style.
+5. Commit fixes if any: git add -A && git commit -m 'refactor: code quality improvements (auto-review)'
+Output: REVIEW_CLEAN or REVIEW_FIXED: {summary} or REVIEW_FAILED: {reason}
+" 2>&1 || true
+    if [ -n "$(git status --porcelain 2>/dev/null)" ]; then
+        git add -A && git commit -m "refactor: code quality improvements (auto-review)" 2>/dev/null || true
+    fi
+}
+
+log "Test suite: ${TEST_CMD:-disabled}"
+log "Post-build steps: ${POST_BUILD_STEPS:-none}"
+if [ -n "$AGENT_MODEL" ] || [ -n "$BUILD_MODEL" ] || [ -n "$DRIFT_MODEL" ] || [ -n "$REVIEW_MODEL" ]; then
+    log "Models: default=${AGENT_MODEL:-CLI default} build=${BUILD_MODEL:-↑} drift=${DRIFT_MODEL:-↑} review=${REVIEW_MODEL:-↑}"
+fi
+
 # ── Drift check helpers ──────────────────────────────────────────────────
 
 extract_drift_targets() {
@@ -123,7 +193,7 @@ check_drift() {
     local drift_attempt=0
     while [ "$drift_attempt" -le "$MAX_DRIFT_RETRIES" ]; do
         DRIFT_OUTPUT=$(mktemp)
-        agent -p --force --output-format text "
+        $(agent_cmd "$DRIFT_MODEL") "
 Run /catch-drift for this specific feature. Auto-fix all drift by updating specs to match code.
 
 Spec file: $spec_file
@@ -229,7 +299,7 @@ STEP_START=$(date +%s)
 
 log "Running /roadmap-triage to scan Slack/Jira..."
 
-agent -p --force --output-format text "
+$(agent_cmd "$TRIAGE_MODEL") "
 Run the /roadmap-triage command to:
 1. Scan Slack channel $SLACK_FEATURE_CHANNEL for feature requests
 2. Scan Jira project $JIRA_PROJECT_KEY for tickets with label 'auto-ok'
@@ -290,7 +360,7 @@ for i in $(seq 1 "$MAX_FEATURES"); do
     # Run /build-next
     BUILD_OUTPUT=$(mktemp)
     
-    agent -p --force --output-format text "
+    $(agent_cmd "$BUILD_MODEL") "
 Run the /build-next command to:
 1. Read .specs/roadmap.md and find the next pending feature
 2. Check that all dependencies are completed
@@ -345,6 +415,14 @@ The SPEC_FILE and SOURCE_FILES lines are REQUIRED when FEATURE_BUILT is reported
         
         git commit -m "feat(auto): $FEATURE_NAME" 2>/dev/null || true
         
+        # Validate: do tests pass?
+        if should_run_step "test" && ! check_tests; then
+            FEATURE_DURATION=$(( $(date +%s) - FEATURE_START ))
+            warn "Tests failed for $FEATURE_NAME ($(format_duration $FEATURE_DURATION))"
+            FEATURE_TIMINGS+=("⚠ $FEATURE_NAME (tests): $(format_duration $FEATURE_DURATION)")
+            # Continue to push — tests are documented in the PR for human review
+        fi
+        
         # Run drift check (fresh agent, separate context)
         extract_drift_targets "$BUILD_RESULT"
         if ! check_drift "$DRIFT_SPEC_FILE" "$DRIFT_SOURCE_FILES"; then
@@ -352,6 +430,11 @@ The SPEC_FILE and SOURCE_FILES lines are REQUIRED when FEATURE_BUILT is reported
             warn "Feature built but drift check failed ($(format_duration $FEATURE_DURATION))"
             FEATURE_TIMINGS+=("⚠ $FEATURE_NAME (drift): $(format_duration $FEATURE_DURATION)")
             # Continue to push — drift is documented in the PR for human review
+        fi
+        
+        # Run code review (fresh agent, separate context)
+        if should_run_step "code-review"; then
+            run_code_review || warn "Code review had issues (non-blocking)"
         fi
         
         # Push and create PR
@@ -479,7 +562,7 @@ echo "Total time: $(format_duration $TOTAL_ELAPSED)"
 
 # Notify via Slack if configured
 if [ "$BUILT" -gt 0 ] && [ -n "$SLACK_REPORT_CHANNEL" ]; then
-    agent -p --force --output-format text "
+    $(agent_cmd "$TRIAGE_MODEL") "
 Post a message to Slack channel $SLACK_REPORT_CHANNEL:
 
 🌙 **Overnight Run Complete**

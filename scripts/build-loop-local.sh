@@ -39,6 +39,45 @@
 # MAX_DRIFT_RETRIES: how many times to retry fixing drift (default: 1).
 #   If drift is found, the drift agent auto-fixes by updating specs.
 #   If the fix breaks the build, it retries up to this many times.
+#
+# TEST_CHECK_CMD: command to run the test suite after each feature.
+#   Defaults to auto-detection (npm test, pytest, cargo test, go test, etc.)
+#   Set to "skip" to disable test checking.
+#   Examples:
+#     TEST_CHECK_CMD="npm test"
+#     TEST_CHECK_CMD="npx vitest run"
+#     TEST_CHECK_CMD="pytest"
+#     TEST_CHECK_CMD="cargo test"
+#     TEST_CHECK_CMD="skip"
+#
+# POST_BUILD_STEPS: comma-separated list of extra steps after build+drift.
+#   Each agent-based step runs in a FRESH context window.
+#   Available steps:
+#     test          - Run test suite (shell cmd, uses TEST_CHECK_CMD)
+#     code-review   - Agent reviews code quality (fresh context)
+#   Note: drift check is controlled separately via DRIFT_CHECK.
+#   Default: "test"
+#   Examples:
+#     POST_BUILD_STEPS="test"                  # Just tests (default)
+#     POST_BUILD_STEPS="test,code-review"      # Tests + quality review
+#     POST_BUILD_STEPS=""                       # Skip all post-build steps
+#
+# MODEL SELECTION: which AI model to use for each agent invocation.
+#   Each step gets its own fresh context window — choose the model per step.
+#   Leave empty to use the Cursor CLI default.
+#   Run `agent --list-models` to see available models.
+#
+#   AGENT_MODEL       - Default model for ALL agent steps (fallback)
+#   BUILD_MODEL       - Model for main build agent (/build-next → /spec-first --full)
+#   RETRY_MODEL       - Model for retry attempts (fixing build/test failures)
+#   DRIFT_MODEL       - Model for catch-drift agent
+#   REVIEW_MODEL      - Model for code-review agent
+#
+#   Examples:
+#     AGENT_MODEL="sonnet-4.5"                    # Use Sonnet for everything
+#     BUILD_MODEL="opus-4.6-thinking"             # Opus for main build
+#     DRIFT_MODEL="gemini-3-flash"                # Cheap model for drift checks
+#     REVIEW_MODEL="sonnet-4.5-thinking"          # Thinking model for reviews
 
 set -e
 
@@ -54,6 +93,14 @@ MAX_RETRIES="${MAX_RETRIES:-1}"
 BRANCH_STRATEGY="${BRANCH_STRATEGY:-chained}"
 DRIFT_CHECK="${DRIFT_CHECK:-true}"
 MAX_DRIFT_RETRIES="${MAX_DRIFT_RETRIES:-1}"
+POST_BUILD_STEPS="${POST_BUILD_STEPS:-test}"
+
+# Model selection (per-step overrides with AGENT_MODEL fallback)
+AGENT_MODEL="${AGENT_MODEL:-}"
+BUILD_MODEL="${BUILD_MODEL:-}"
+RETRY_MODEL="${RETRY_MODEL:-}"
+DRIFT_MODEL="${DRIFT_MODEL:-}"
+REVIEW_MODEL="${REVIEW_MODEL:-}"
 
 log() { echo "[$(date '+%H:%M:%S')] $1"; }
 success() { echo "[$(date '+%H:%M:%S')] ✓ $1"; }
@@ -133,6 +180,37 @@ detect_build_check() {
 
 BUILD_CMD=$(detect_build_check)
 
+# ── Auto-detect test check command ────────────────────────────────────────
+
+detect_test_check() {
+    if [ -n "$TEST_CHECK_CMD" ]; then
+        if [ "$TEST_CHECK_CMD" = "skip" ]; then echo ""; else echo "$TEST_CHECK_CMD"; fi
+        return
+    fi
+    if [ -f "package.json" ] && grep -q '"test"' package.json 2>/dev/null; then
+        if ! grep -q "no test specified" package.json 2>/dev/null; then echo "npm test"; return; fi
+    fi
+    if [ -f "pytest.ini" ] || [ -f "conftest.py" ]; then echo "pytest"; return; fi
+    if [ -f "pyproject.toml" ] && grep -q "pytest" "pyproject.toml" 2>/dev/null; then echo "pytest"; return; fi
+    if [ -f "Cargo.toml" ]; then echo "cargo test"; return; fi
+    if [ -f "go.mod" ]; then echo "go test ./..."; return; fi
+    echo ""
+}
+
+TEST_CMD=$(detect_test_check)
+
+# ── Agent command builder (model selection) ───────────────────────────────
+
+agent_cmd() {
+    local step_model="$1"
+    local model="${step_model:-$AGENT_MODEL}"
+    local cmd="agent -p --force --output-format text"
+    if [ -n "$model" ]; then
+        cmd="$cmd --model $model"
+    fi
+    echo "$cmd"
+}
+
 # ── Helpers ──────────────────────────────────────────────────────────────
 
 check_working_tree_clean() {
@@ -162,6 +240,25 @@ check_build() {
         fail "Build check failed"
         return 1
     fi
+}
+
+check_tests() {
+    if [ -z "$TEST_CMD" ]; then
+        log "No test suite configured (set TEST_CHECK_CMD to enable)"
+        return 0
+    fi
+    log "Running test suite: $TEST_CMD"
+    if eval "$TEST_CMD" 2>&1; then
+        success "Tests passed"
+        return 0
+    else
+        fail "Tests failed"
+        return 1
+    fi
+}
+
+should_run_step() {
+    echo ",$POST_BUILD_STEPS," | grep -q ",$1,"
 }
 
 # ── Drift check helpers ──────────────────────────────────────────────────
@@ -234,7 +331,7 @@ NO_DRIFT
 DRIFT_FIXED: {brief summary of what was reconciled}
 DRIFT_UNRESOLVABLE: {what needs human attention and why}
 "
-        agent -p --force --output-format text "$drift_prompt" 2>&1 | tee "$DRIFT_OUTPUT" || true
+        $(agent_cmd "$DRIFT_MODEL") "$drift_prompt" 2>&1 | tee "$DRIFT_OUTPUT" || true
         DRIFT_RESULT=$(cat "$DRIFT_OUTPUT")
         rm -f "$DRIFT_OUTPUT"
 
@@ -269,6 +366,56 @@ DRIFT_UNRESOLVABLE: {what needs human attention and why}
 
     fail "Drift check failed after $((MAX_DRIFT_RETRIES + 1)) attempt(s)"
     return 1
+}
+
+# ── Code review (fresh agent) ────────────────────────────────────────────
+
+run_code_review() {
+    log "Running code-review agent (fresh context, model: ${REVIEW_MODEL:-${AGENT_MODEL:-default}})..."
+    local REVIEW_OUTPUT
+    REVIEW_OUTPUT=$(mktemp)
+
+    $(agent_cmd "$REVIEW_MODEL") "
+Review and improve the code quality of the most recently built feature.
+
+Steps:
+1. Check 'git log --oneline -10' to see recent commits
+2. Identify source files for the most recent feature (look at git diff of recent commits)
+3. Review against senior engineering standards:
+   - TypeScript: No 'any' types, proper utility types, explicit return types
+   - Async: Proper error handling, no await-in-forEach, correct Promise patterns
+   - React: Complete useEffect deps, proper cleanup, no state mutation
+   - Architecture: Proper abstraction, no library leaking, DRY
+   - Security: Input validation, XSS prevention
+4. Fix critical and high-severity issues ONLY
+5. Do NOT change feature behavior
+6. Do NOT refactor working code for style preferences
+7. Run the test suite to verify your changes don't break anything
+8. Commit fixes if any: git add -A && git commit -m 'refactor: code quality improvements (auto-review)'
+
+After completion, output exactly one of:
+REVIEW_CLEAN
+REVIEW_FIXED: {summary}
+REVIEW_FAILED: {reason}
+" 2>&1 | tee "$REVIEW_OUTPUT" || true
+
+    local REVIEW_RESULT
+    REVIEW_RESULT=$(cat "$REVIEW_OUTPUT")
+    rm -f "$REVIEW_OUTPUT"
+
+    if echo "$REVIEW_RESULT" | grep -q "REVIEW_CLEAN\|REVIEW_FIXED"; then
+        success "Code review complete"
+        if ! check_working_tree_clean; then
+            git add -A && git commit -m "refactor: code quality improvements (auto-review)" 2>/dev/null || true
+        fi
+        return 0
+    else
+        warn "Code review reported issues it couldn't fix"
+        if ! check_working_tree_clean; then
+            git add -A && git commit -m "refactor: partial code quality fixes (auto-review)" 2>/dev/null || true
+        fi
+        return 1
+    fi
 }
 
 # ── Branch strategy helpers ────────────────────────────────────────────────
@@ -456,9 +603,9 @@ run_build_loop() {
             BUILD_OUTPUT=$(mktemp)
 
             if [ "$attempt" -eq 0 ]; then
-                agent -p --force --output-format text "$BUILD_PROMPT" 2>&1 | tee "$BUILD_OUTPUT" || true
+                $(agent_cmd "$BUILD_MODEL") "$BUILD_PROMPT" 2>&1 | tee "$BUILD_OUTPUT" || true
             else
-                agent -p --force --output-format text "$RETRY_PROMPT_TEMPLATE" 2>&1 | tee "$BUILD_OUTPUT" || true
+                $(agent_cmd "$RETRY_MODEL") "$RETRY_PROMPT_TEMPLATE" 2>&1 | tee "$BUILD_OUTPUT" || true
             fi
 
             BUILD_RESULT=$(cat "$BUILD_OUTPUT")
@@ -492,22 +639,38 @@ run_build_loop() {
                 if check_working_tree_clean; then
                     # Verify: does it actually build?
                     if check_build; then
-                        # Verify: spec and code are aligned (fresh agent)
-                        extract_drift_targets "$BUILD_RESULT"
-                        if check_drift "$DRIFT_SPEC_FILE" "$DRIFT_SOURCE_FILES"; then
-                            LOOP_BUILT=$((LOOP_BUILT + 1))
-                            local feature_end=$(date +%s)
-                            local feature_duration=$((feature_end - FEATURE_START))
-                            success "Feature $LOOP_BUILT built: $feature_name ($(format_duration $feature_duration))"
-                            LOOP_TIMINGS+=("✓ $feature_name: $(format_duration $feature_duration)")
-                            feature_done=true
+                        # Verify: do tests pass?
+                        if ! should_run_step "test" || check_tests; then
+                            # Verify: spec and code are aligned (fresh agent)
+                            extract_drift_targets "$BUILD_RESULT"
+                            if check_drift "$DRIFT_SPEC_FILE" "$DRIFT_SOURCE_FILES"; then
+                                # Optional: code review (fresh agent)
+                                if should_run_step "code-review"; then
+                                    run_code_review || warn "Code review had issues (non-blocking)"
+                                    # Re-validate after review changes
+                                    if ! check_build; then
+                                        warn "Code review broke the build!"
+                                    elif should_run_step "test" && [ -n "$TEST_CMD" ] && ! check_tests; then
+                                        warn "Code review broke tests!"
+                                    fi
+                                fi
 
-                            # Track feature name for 'both' mode
-                            BUILT_FEATURE_NAMES+=("$feature_name")
+                                LOOP_BUILT=$((LOOP_BUILT + 1))
+                                local feature_end=$(date +%s)
+                                local feature_duration=$((feature_end - FEATURE_START))
+                                success "Feature $LOOP_BUILT built: $feature_name ($(format_duration $feature_duration))"
+                                LOOP_TIMINGS+=("✓ $feature_name: $(format_duration $feature_duration)")
+                                feature_done=true
 
-                            break
+                                # Track feature name for 'both' mode
+                                BUILT_FEATURE_NAMES+=("$feature_name")
+
+                                break
+                            else
+                                warn "Agent said FEATURE_BUILT but drift check failed"
+                            fi
                         else
-                            warn "Agent said FEATURE_BUILT but drift check failed"
+                            warn "Agent said FEATURE_BUILT but tests failed"
                         fi
                     else
                         warn "Agent said FEATURE_BUILT but build check failed"
@@ -589,10 +752,19 @@ if [ -n "$BUILD_CMD" ]; then
 else
     echo "Build check: disabled (set BUILD_CHECK_CMD to enable)"
 fi
+if [ -n "$TEST_CMD" ]; then
+    echo "Test suite: $TEST_CMD"
+else
+    echo "Test suite: disabled (set TEST_CHECK_CMD to enable)"
+fi
 if [ "$DRIFT_CHECK" = "true" ]; then
     echo "Drift check: enabled (max retries: $MAX_DRIFT_RETRIES)"
 else
     echo "Drift check: disabled (set DRIFT_CHECK=true to enable)"
+fi
+echo "Post-build steps: ${POST_BUILD_STEPS:-none}"
+if [ -n "$AGENT_MODEL" ] || [ -n "$BUILD_MODEL" ] || [ -n "$DRIFT_MODEL" ] || [ -n "$REVIEW_MODEL" ]; then
+    echo "Models: default=${AGENT_MODEL:-CLI default} build=${BUILD_MODEL:-↑} drift=${DRIFT_MODEL:-↑} review=${REVIEW_MODEL:-↑}"
 fi
 echo ""
 
@@ -698,7 +870,7 @@ BUILD_FAILED: {reason}
 "
 
             BUILD_OUTPUT=$(mktemp)
-            agent -p --force --output-format text "$INDEP_PROMPT" 2>&1 | tee "$BUILD_OUTPUT" || true
+            $(agent_cmd "$BUILD_MODEL") "$INDEP_PROMPT" 2>&1 | tee "$BUILD_OUTPUT" || true
             BUILD_RESULT=$(cat "$BUILD_OUTPUT")
             rm -f "$BUILD_OUTPUT"
 

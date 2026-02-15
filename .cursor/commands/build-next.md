@@ -324,6 +324,24 @@ SLACK_NOTIFY_COMPLETE=true
 
 # PR creation (for automated runs)
 CREATE_PR_ON_COMPLETE=true
+
+# Post-build validation (used by build-loop-local.sh and overnight-autonomous.sh)
+BUILD_CHECK_CMD=""                               # Auto-detected if empty
+TEST_CHECK_CMD=""                                # Auto-detected if empty
+POST_BUILD_STEPS="test"                          # Default: just tests
+# POST_BUILD_STEPS="test,code-review"            # Tests + quality review
+
+# Model selection (per-step, each gets a fresh context window)
+# Run `agent --list-models` to see available models
+AGENT_MODEL=""                                   # Default for all steps (empty = CLI default)
+BUILD_MODEL=""                                   # Main build agent (/build-next → /spec-first)
+RETRY_MODEL=""                                   # Retry agent (fixing failures)
+DRIFT_MODEL=""                                   # Catch-drift agent
+REVIEW_MODEL=""                                  # Code-review agent
+# Example: Opus for building, cheaper model for validation
+# BUILD_MODEL="opus-4.6-thinking"
+# DRIFT_MODEL="gemini-3-flash"
+# REVIEW_MODEL="sonnet-4.5"
 ```
 
 ---
