@@ -9,12 +9,12 @@
 #   BRANCH_STRATEGY=both ./scripts/build-loop-local.sh
 #
 # CONFIG: set MAX_FEATURES, MAX_RETRIES, BUILD_CHECK_CMD, BRANCH_STRATEGY in .env.local
-# or pass in env.
+# or pass in env. Command-line env vars override .env.local (e.g. MAX_FEATURES=3 ./script).
 #
-# BASE_BRANCH: Branch to sync from and create feature branches from (default: current)
-#   - Unset or empty: Use current branch (git branch --show-current)
-#   - develop: Always use develop
-#   - main: Always use main
+# BASE_BRANCH: Branch to create feature branches from (default: current)
+#   - Unset or empty: Use current branch — checkout your branch, run script, done.
+#   - develop, main: Use that branch instead.
+#   Workflow: git checkout my-branch && ./scripts/build-loop-local.sh
 #   Examples: BASE_BRANCH=develop  BASE_BRANCH=main
 #
 # BRANCH_STRATEGY: How to handle branches (default: chained)
@@ -90,8 +90,20 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="${PROJECT_DIR:-$(dirname "$SCRIPT_DIR")}"
 
+# Load .env.local but don't overwrite vars already set (command-line wins over .env.local)
 if [ -f "$PROJECT_DIR/.env.local" ]; then
-    source "$PROJECT_DIR/.env.local"
+    while IFS= read -r line || [ -n "$line" ]; do
+        [[ "$line" =~ ^[[:space:]]*# ]] && continue
+        [[ "$line" =~ ^[[:space:]]*$ ]] && continue
+        if [[ "$line" =~ ^([A-Za-z_][A-Za-z0-9_]*)=(.*)$ ]]; then
+            key="${BASH_REMATCH[1]}"
+            [[ -n "${!key+x}" ]] && continue
+            value="${BASH_REMATCH[2]}"
+            value="${value%\"}"; value="${value#\"}"
+            value="${value%\'}"; value="${value#\'}"
+            export "$key=$value"
+        fi
+    done < "$PROJECT_DIR/.env.local"
 fi
 
 MAX_FEATURES="${MAX_FEATURES:-25}"
