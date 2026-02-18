@@ -797,9 +797,9 @@ run_build_loop() {
 
             case "$strategy" in
                 chained)
-                    warn "Feature failed, next feature will branch from $MAIN_BRANCH"
-                    LAST_FEATURE_BRANCH=""
-                    git checkout "$MAIN_BRANCH" 2>/dev/null || true
+                    # Keep LAST_FEATURE_BRANCH so next feature branches from last successful, not base
+                    warn "Feature failed, next feature will branch from last successful: ${LAST_FEATURE_BRANCH:-$MAIN_BRANCH}"
+                    git checkout "${LAST_FEATURE_BRANCH:-$MAIN_BRANCH}" 2>/dev/null || git checkout "$MAIN_BRANCH" 2>/dev/null || true
                     git branch -D "$CURRENT_FEATURE_BRANCH" 2>/dev/null || true
                     ;;
                 independent)
