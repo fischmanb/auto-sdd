@@ -21,6 +21,8 @@ refactor, spec-first, spec-init, start-feature, update-test-docs,
 verify-test-counts
 ```
 
+**New SDD 2.0 commands to add** (if missing): vision, roadmap, roadmap-triage, clone-app, build-next, compound, sdd-migrate
+
 Any other commands are CUSTOM → preserve them.
 
 ## Migration Steps
@@ -28,7 +30,7 @@ Any other commands are CUSTOM → preserve them.
 1. **Inventory**: List commands/rules, identify stock vs custom
 2. **Learnings**: `cp -r .sdd-upgrade/.specs/learnings .specs/learnings`
 3. **Frontmatter**: Add YAML frontmatter to specs that don't have it (don't change content)
-4. **Commands**: Copy stock commands from `.sdd-upgrade/.cursor/commands/`
+4. **Commands**: Copy stock commands from `.sdd-upgrade/.cursor/commands/`; add vision, roadmap, roadmap-triage, clone-app, build-next if missing
 5. **Rules**: Copy stock rules from `.sdd-upgrade/.cursor/rules/`, add compound.mdc
 6. **Hooks**: Copy `.sdd-upgrade/.cursor/hooks.json` and hooks/ if not exist
 7. **Scripts**: `cp -r .sdd-upgrade/scripts .`

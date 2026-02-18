@@ -15,6 +15,7 @@ Check for .sdd-upgrade/ directory
 ```
 
 Also check this is an SDD project:
+
 ```
 Check for .specs/ directory
 ├── If exists → SDD project, continue
@@ -22,6 +23,7 @@ Check for .specs/ directory
 ```
 
 Check version:
+
 ```
 Check .specs/.sdd-version (or VERSION)
 ├── If "2.0" or "2.0.0" or starts with "2." → Already migrated, nothing to do
@@ -36,6 +38,7 @@ Check .specs/.sdd-version (or VERSION)
 List all files in `.cursor/commands/` and categorize them:
 
 **Stock SDD 1.0 commands** (will be replaced from staging):
+
 - catch-drift.md
 - check-coverage.md
 - code-review.md
@@ -55,6 +58,7 @@ List all files in `.cursor/commands/` and categorize them:
 **Any other .md files** in commands/ are custom → preserve them.
 
 Output:
+
 ```
 Command Inventory:
 ├── Stock commands to update: [count]
@@ -63,9 +67,14 @@ Command Inventory:
 │   • ... (list all found)
 ├── Custom commands to preserve: [count]
 │   • my-custom-command.md (if any)
-└── New commands to add: 2
+└── New commands to add: 7
     • compound.md
     • sdd-migrate.md
+    • vision.md
+    • roadmap.md
+    • roadmap-triage.md
+    • clone-app.md
+    • build-next.md
 ```
 
 ---
@@ -75,6 +84,7 @@ Command Inventory:
 List all files in `.cursor/rules/`:
 
 **Stock SDD 1.0 rules** (will be replaced):
+
 - design-tokens.mdc
 - specs-workflow.mdc
 
@@ -85,11 +95,13 @@ List all files in `.cursor/rules/`:
 ## Step 3: Create Learnings Folder
 
 Copy from staging:
+
 ```bash
 cp -r .sdd-upgrade/.specs/learnings .specs/learnings
 ```
 
 This creates:
+
 - `.specs/learnings/index.md`
 - `.specs/learnings/testing.md`
 - `.specs/learnings/performance.md`
@@ -113,15 +125,15 @@ For each `.specs/features/**/*.feature.md`:
 
 ```yaml
 ---
-feature: {extracted name}
-domain: {from path}
-source: {from Source File line or empty}
+feature: { extracted name }
+domain: { from path }
+source: { from Source File line or empty }
 tests: []
 components: []
 design_refs: []
 status: implemented
-created: {today's date}
-updated: {today's date}
+created: { today's date }
+updated: { today's date }
 ---
 ```
 
@@ -132,8 +144,17 @@ updated: {today's date}
 ## Step 5: Update Stock Commands
 
 For each stock command found in Step 1:
+
 ```bash
 cp .sdd-upgrade/.cursor/commands/{name}.md .cursor/commands/{name}.md
+```
+
+**Add new SDD 2.0 commands** (vision, roadmap, roadmap-triage, clone-app, build-next) if missing:
+
+```bash
+for cmd in vision roadmap roadmap-triage clone-app build-next; do
+  [ -f .sdd-upgrade/.cursor/commands/${cmd}.md ] && cp .sdd-upgrade/.cursor/commands/${cmd}.md .cursor/commands/${cmd}.md
+done
 ```
 
 Do the same for `.claude/commands/` if it exists.
@@ -145,11 +166,13 @@ Do the same for `.claude/commands/` if it exists.
 ## Step 6: Update Stock Rules
 
 For each stock rule found in Step 2:
+
 ```bash
 cp .sdd-upgrade/.cursor/rules/{name}.mdc .cursor/rules/{name}.mdc
 ```
 
 Add the new compound rule:
+
 ```bash
 cp .sdd-upgrade/.cursor/rules/compound.mdc .cursor/rules/compound.mdc
 ```
@@ -159,6 +182,7 @@ cp .sdd-upgrade/.cursor/rules/compound.mdc .cursor/rules/compound.mdc
 ## Step 7: Add Hooks
 
 If `.cursor/hooks.json` doesn't exist:
+
 ```bash
 cp .sdd-upgrade/.cursor/hooks.json .cursor/hooks.json
 cp -r .sdd-upgrade/.cursor/hooks .cursor/hooks
@@ -177,6 +201,7 @@ chmod +x scripts/*.sh
 ```
 
 Also copy supporting files:
+
 ```bash
 cp .sdd-upgrade/.env.local.example . 2>/dev/null || true
 mkdir -p logs
@@ -234,7 +259,7 @@ Output final summary:
 ✓ Added frontmatter to [N] feature specs
 ✓ Updated [N] stock commands
 ✓ Preserved [N] custom commands
-✓ Added compound.md, sdd-migrate.md
+✓ Added compound.md, sdd-migrate.md, vision.md, roadmap.md, roadmap-triage.md, clone-app.md, build-next.md
 ✓ Updated [N] stock rules, added compound.mdc
 ✓ Added hooks system
 ✓ Added automation scripts
@@ -264,12 +289,12 @@ frontmatter. They don't need ASCII mockups to work.
 
 ## Error Handling
 
-| Error | Message |
-|-------|---------|
-| No `.sdd-upgrade/` | "Run 'git auto-upgrade' first to stage the 2.0 files" |
-| No `.specs/` | "Not an SDD project. Use 'git auto' for fresh install" |
-| Already 2.x | "Already on SDD 2.x. No migration needed." |
-| Script fails | Show error, don't delete staging dir so user can retry |
+| Error              | Message                                                |
+| ------------------ | ------------------------------------------------------ |
+| No `.sdd-upgrade/` | "Run 'git auto-upgrade' first to stage the 2.0 files"  |
+| No `.specs/`       | "Not an SDD project. Use 'git auto' for fresh install" |
+| Already 2.x        | "Already on SDD 2.x. No migration needed."             |
+| Script fails       | Show error, don't delete staging dir so user can retry |
 
 ---
 
