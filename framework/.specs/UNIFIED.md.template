@@ -1,0 +1,51 @@
+# Project Specification
+
+## Vision
+[What this app does and why]
+
+## Design System
+
+### Colors
+- `color-primary`: #3B82F6
+- `color-background`: #FFFFFF
+- `color-text`: #111827
+- `color-error`: #EF4444
+
+### Spacing
+- `spacing-4`: 1rem (16px)
+- `spacing-8`: 2rem (32px)
+
+### Typography
+- `text-base`: 1rem (16px)
+- `text-xl`: 1.25rem (20px)
+
+## Features
+
+### Feature 1: [Name]
+**Status**: pending
+**Domain**: [auth|core|etc]
+**Source**: src/[file].js
+**Tests**: tests/[file].test.js
+
+#### Scenarios
+- **Happy Path**: Given [state], When [action], Then [result]
+- **Edge Case**: Given [state], When [action], Then [result]
+
+#### UI Mockup
+```
+[ASCII mockup here]
+```
+
+#### Learnings
+- [To be filled during build]
+
+## Learnings Index
+
+### Testing
+- [Patterns]
+
+### Performance
+- [Patterns]
+
+### General
+- [Patterns]
