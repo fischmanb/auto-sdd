@@ -1,6 +1,9 @@
 # SDD-256GB: Optimized Spec-Driven Development
 
-Single-context AI development for 256GB unified memory systems.
+> ⚠️ **WORKING BRANCH**: `optimized-256gb`  
+> This branch contains the multi-invocation, context-safe implementation.  
+> See [Agents.md](./Agents.md) for architecture details.  
+> Main branch contains the original auto-sdd framework.
 
 ## Quick Start (15 minutes)
 
@@ -24,18 +27,31 @@ cd sdd-256gb
 
 ## Architecture
 
-| Model | Purpose | Port | Memory |
-|-------|---------|------|--------|
-| Qwen2.5-Coder-32B | Primary Builder | 8080 | ~64GB |
-| DeepSeek-Coder-V2-16B | Code Reviewer | 8081 | ~32GB |
-| Qwen2.5-14B | Drift Checker | 8082 | ~28GB |
-| **Total** | | | **~124GB** |
+| Model | Purpose | Port | Memory | Context |
+|-------|---------|------|--------|---------|
+| Qwen2.5-Coder-32B | Plan + Build | 8080 | ~64GB | Fresh per stage |
+| DeepSeek-Coder-V2-16B | Review | 8081 | ~32GB | Fresh per review |
+| Qwen2.5-14B | Fix (optional) | 8082 | ~28GB | Fresh per fix |
+| **Total** | | | **~124GB** | **No context rot** |
 
-## Why This Works
+## Why Multi-Invocation?
 
-- **Single context**: Entire codebase + specs fit in memory
-- **No fragmentation**: One AI session completes full TDD cycle
-- **Real-time**: 10-30 minutes per feature vs. hours
+With 256GB, we could use one long context. But **context rot** is real:
+- 0-20K tokens: Sharp, precise
+- 20-50K: Good, misses edge cases
+- 50-80K: Repetition creeps in
+- 80K+: "What was I building again?"
+
+**Solution**: Fresh context per stage. Each invocation is crisp.
+
+## Stages
+
+```
+Spec ──▶ [Plan] ──▶ [Build] ──▶ [Review] ──▶ [Fix?] ──▶ Done
+         20K ctx      15K ctx      30K ctx      25K ctx
+```
+
+See [ARCHITECTURE.md](./ARCHITECTURE.md) for details.
 
 ## Commands
 
@@ -44,8 +60,14 @@ cd sdd-256gb
 ./stop.sh           # Stop all servers
 ./status.sh         # Check server health
 ./demo.sh           # Run test feature build
+./stages/01-plan.sh # Run single stage
 ```
 
 ## For Your Boss (Monday)
 
-> "I optimized the SDD framework for my hardware. Instead of overnight batching with fragmented contexts, I run three specialized models concurrently with unified memory. Result: real-time feature development, 10-50x speedup."
+> "I optimized the SDD framework for my hardware. Instead of overnight batching with fragmented contexts, I run three specialized models with fresh, sharp contexts per stage. Result: real-time feature development, 10-50x speedup, no context rot."
+
+## Documentation
+
+- [Agents.md](./Agents.md) - For AI agents working on this codebase
+- [ARCHITECTURE.md](./ARCHITECTURE.md) - Design decisions and context management
