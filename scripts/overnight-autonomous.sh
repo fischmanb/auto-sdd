@@ -34,6 +34,49 @@ warn() { echo -e "${YELLOW}[$(date '+%H:%M:%S')] ⚠${NC} $1"; }
 error() { echo -e "${RED}[$(date '+%H:%M:%S')] ✗${NC} $1"; }
 section() { echo -e "\n${CYAN}═══════════════════════════════════════════════════════════${NC}"; echo -e "${CYAN}  $1${NC}"; echo -e "${CYAN}═══════════════════════════════════════════════════════════${NC}\n"; }
 
+# ── Robust signal parsing ─────────────────────────────────────────────────
+# Extracts the LAST occurrence of a signal from agent output.
+# Handles values containing colons, preserves internal whitespace,
+# trims leading/trailing whitespace only.
+# Usage: parse_signal "SIGNAL_NAME" "$output"
+parse_signal() {
+    local signal_name="$1"
+    local output="$2"
+    echo "$output" | awk -v sig="^${signal_name}:" '$0 ~ sig {
+        val = $0
+        sub(/^[^:]*:/, "", val)       # Remove everything up to and including first colon
+        sub(/^[[:space:]]+/, "", val)  # Trim leading whitespace
+        sub(/[[:space:]]+$/, "", val)  # Trim trailing whitespace
+        last = val
+    } END { print last }'
+}
+
+# ── Required signal validation ──────────────────────────────────────────────
+validate_required_signals() {
+    local build_result="$1"
+    local feature_name spec_file
+
+    feature_name=$(parse_signal "FEATURE_BUILT" "$build_result")
+    spec_file=$(parse_signal "SPEC_FILE" "$build_result")
+
+    if [ -z "$feature_name" ]; then
+        warn "Missing required signal: FEATURE_BUILT"
+        return 1
+    fi
+
+    if [ -z "$spec_file" ]; then
+        warn "Missing required signal: SPEC_FILE (needed for drift check)"
+        return 1
+    fi
+
+    if [ ! -f "$spec_file" ]; then
+        warn "SPEC_FILE does not exist on disk: $spec_file"
+        return 1
+    fi
+
+    return 0
+}
+
 format_duration() {
     local total_seconds=$1
     local hours=$((total_seconds / 3600))
@@ -57,6 +100,30 @@ PROJECT_DIR="${PROJECT_DIR:-$(dirname "$SCRIPT_DIR")}"
 if [ -f "$PROJECT_DIR/.env.local" ]; then
     source "$PROJECT_DIR/.env.local"
 fi
+
+# ── File locking (concurrency protection) ──────────────────────────────────
+LOCK_DIR="/tmp"
+LOCK_FILE="${LOCK_DIR}/sdd-overnight-$(echo "$PROJECT_DIR" | tr '/' '_' | tr ' ' '_').lock"
+
+acquire_lock() {
+    if [ -f "$LOCK_FILE" ]; then
+        local existing_pid
+        existing_pid=$(cat "$LOCK_FILE" 2>/dev/null || echo "")
+        if [ -n "$existing_pid" ] && kill -0 "$existing_pid" 2>/dev/null; then
+            error "Another instance is already running (PID: $existing_pid)"
+            error "Lock file: $LOCK_FILE"
+            error "If this is stale, remove $LOCK_FILE manually"
+            exit 4
+        else
+            warn "Removing stale lock file (PID $existing_pid no longer running)"
+            rm -f "$LOCK_FILE"
+        fi
+    fi
+    echo $$ > "$LOCK_FILE"
+    trap 'rm -f "$LOCK_FILE"' INT TERM EXIT
+}
+
+acquire_lock
 
 # Defaults
 MAX_FEATURES="${MAX_FEATURES:-4}"
@@ -132,11 +199,64 @@ detect_build_check() {
 
 BUILD_CMD=$(detect_build_check)
 
+# ── Exponential backoff for agent calls ─────────────────────────────────────
+MAX_AGENT_RETRIES="${MAX_AGENT_RETRIES:-5}"
+BACKOFF_MAX_SECONDS="${BACKOFF_MAX_SECONDS:-60}"
+
+run_agent_with_backoff() {
+    local output_file="$1"
+    shift
+    local agent_retry=0
+    AGENT_EXIT=0
+
+    while [ "$agent_retry" -le "$MAX_AGENT_RETRIES" ]; do
+        if [ "$agent_retry" -gt 0 ]; then
+            local backoff=$(( 2 ** agent_retry ))
+            if [ "$backoff" -gt "$BACKOFF_MAX_SECONDS" ]; then
+                backoff="$BACKOFF_MAX_SECONDS"
+            fi
+            warn "Rate limit detected, retrying in ${backoff}s (attempt $agent_retry/$MAX_AGENT_RETRIES)..."
+            sleep "$backoff"
+        fi
+
+        set +e
+        "$@" 2>&1 | tee "$output_file"
+        AGENT_EXIT=${PIPESTATUS[0]}
+        set -e
+
+        if [ "$AGENT_EXIT" -ne 0 ]; then
+            if grep -qiE '(rate.?limit|429|too many requests|overloaded|capacity)' "$output_file" 2>/dev/null; then
+                agent_retry=$((agent_retry + 1))
+                continue
+            fi
+        fi
+
+        return 0
+    done
+
+    error "Agent failed after $MAX_AGENT_RETRIES retries due to rate limiting"
+    return 1
+}
+
+# ── Safe command execution ──────────────────────────────────────────────────
+run_cmd_safe() {
+    local cmd="$1"
+    local is_custom="${2:-false}"
+    if [ "$is_custom" = "true" ]; then
+        warn "Executing custom command from .env.local: $cmd"
+        bash -c "$cmd"
+    else
+        bash -c "$cmd"
+    fi
+}
+
 check_build() {
     if [ -z "$BUILD_CMD" ]; then return 0; fi
     log "Running build check: $BUILD_CMD"
     local tmpfile; tmpfile=$(mktemp)
-    eval "$BUILD_CMD" 2>&1 | tee "$tmpfile"
+    local is_custom="false"
+    [ -n "$BUILD_CHECK_CMD" ] && [ "$BUILD_CHECK_CMD" != "skip" ] && is_custom="true"
+    run_cmd_safe "$BUILD_CMD" "$is_custom" 2>&1 | tee "$tmpfile"
     local exit_code=${PIPESTATUS[0]}
     if [ $exit_code -eq 0 ]; then success "Build check passed"; LAST_BUILD_OUTPUT=""
     else LAST_BUILD_OUTPUT=$(tail -50 "$tmpfile"); error "Build check failed"; fi
@@ -167,7 +287,9 @@ check_tests() {
     if [ -z "$TEST_CMD" ]; then return 0; fi
     log "Running test suite: $TEST_CMD"
     local tmpfile; tmpfile=$(mktemp)
-    eval "$TEST_CMD" 2>&1 | tee "$tmpfile"
+    local is_custom="false"
+    [ -n "$TEST_CHECK_CMD" ] && [ "$TEST_CHECK_CMD" != "skip" ] && is_custom="true"
+    run_cmd_safe "$TEST_CMD" "$is_custom" 2>&1 | tee "$tmpfile"
     local exit_code=${PIPESTATUS[0]}
     if [ $exit_code -eq 0 ]; then success "Tests passed"; LAST_TEST_OUTPUT=""
     else LAST_TEST_OUTPUT=$(tail -80 "$tmpfile"); error "Tests failed"; fi
@@ -186,6 +308,8 @@ run_code_review() {
 Test command: $TEST_CMD"
     fi
 
+    local AGENT_EXIT=0
+    set +e
     $(agent_cmd "$REVIEW_MODEL") "
 Review and improve code quality of the most recently built feature.
 $test_context
@@ -201,7 +325,13 @@ Steps:
 IMPORTANT: Do not introduce test regressions. Run tests after every change and fix anything you break.
 
 Output: REVIEW_CLEAN or REVIEW_FIXED: {summary} or REVIEW_FAILED: {reason}
-" 2>&1 || true
+" 2>&1
+    AGENT_EXIT=$?
+    set -e
+
+    if [ "$AGENT_EXIT" -ne 0 ]; then
+        warn "Review agent exited with code $AGENT_EXIT (will check signals for actual status)"
+    fi
     if [ -n "$(git status --porcelain 2>/dev/null)" ]; then
         git add -A && git commit -m "refactor: code quality improvements (auto-review)" 2>/dev/null || true
     fi
@@ -213,12 +343,42 @@ if [ -n "$AGENT_MODEL" ] || [ -n "$BUILD_MODEL" ] || [ -n "$DRIFT_MODEL" ] || [ 
     log "Models: default=${AGENT_MODEL:-CLI default} build=${BUILD_MODEL:-↑} drift=${DRIFT_MODEL:-↑} review=${REVIEW_MODEL:-↑}"
 fi
 
+# ── Context budget management ──────────────────────────────────────────────
+MAX_CONTEXT_TOKENS="${MAX_CONTEXT_TOKENS:-100000}"
+
+truncate_for_context() {
+    local file="$1"
+    if [ ! -f "$file" ]; then
+        return
+    fi
+    local char_count
+    char_count=$(wc -c < "$file" 2>/dev/null || echo "0")
+    local estimated_tokens=$(( char_count / 4 ))
+    local budget_half=$(( MAX_CONTEXT_TOKENS / 2 ))
+
+    if [ "$estimated_tokens" -gt "$budget_half" ]; then
+        warn "Spec file exceeds 50% of context budget (~${estimated_tokens} tokens, budget: ${MAX_CONTEXT_TOKENS})"
+        warn "Truncating to Gherkin scenarios only"
+        awk '
+            BEGIN { in_frontmatter=0; fm_count=0 }
+            /^---$/ { fm_count++; if (fm_count<=2) { print; next } }
+            fm_count==1 { print; next }
+            /^#+[[:space:]]/ { print; next }
+            /^[[:space:]]*(Feature|Scenario|Given|When|Then|And|But|Background|Rule):/ { print; next }
+            /^[[:space:]]*(Feature|Scenario|Given|When|Then|And|But|Background|Rule)[[:space:]]/ { print; next }
+            /^\*\*/ { print; next }
+        ' "$file"
+    else
+        cat "$file"
+    fi
+}
+
 # ── Drift check helpers ──────────────────────────────────────────────────
 
 extract_drift_targets() {
     local build_result="$1"
-    DRIFT_SPEC_FILE=$(echo "$build_result" | grep "^SPEC_FILE:" | tail -1 | cut -d: -f2- | xargs 2>/dev/null || echo "")
-    DRIFT_SOURCE_FILES=$(echo "$build_result" | grep "^SOURCE_FILES:" | tail -1 | cut -d: -f2- | xargs 2>/dev/null || echo "")
+    DRIFT_SPEC_FILE=$(parse_signal "SPEC_FILE" "$build_result")
+    DRIFT_SOURCE_FILES=$(parse_signal "SOURCE_FILES" "$build_result")
     if [ -z "$DRIFT_SPEC_FILE" ]; then
         DRIFT_SPEC_FILE=$(git diff HEAD~1 --name-only 2>/dev/null | grep '\.specs/features/.*\.feature\.md$' | head -1 || echo "")
     fi
@@ -257,6 +417,8 @@ PREVIOUS TEST FAILURE OUTPUT (last 80 lines):
 $LAST_TEST_OUTPUT"
         fi
 
+        local AGENT_EXIT=0
+        set +e
         $(agent_cmd "$DRIFT_MODEL") "
 Run /catch-drift for this specific feature. Auto-fix all drift by updating specs to match code.
 
@@ -277,7 +439,14 @@ Output EXACTLY ONE of:
 NO_DRIFT
 DRIFT_FIXED: {brief summary}
 DRIFT_UNRESOLVABLE: {what needs human attention}
-" 2>&1 | tee "$DRIFT_OUTPUT" || true
+" 2>&1 | tee "$DRIFT_OUTPUT"
+        AGENT_EXIT=${PIPESTATUS[0]}
+        set -e
+
+        if [ "$AGENT_EXIT" -ne 0 ]; then
+            warn "Drift agent exited with code $AGENT_EXIT (will check signals for actual status)"
+        fi
+
         DRIFT_RESULT=$(cat "$DRIFT_OUTPUT")
         rm -f "$DRIFT_OUTPUT"
 
@@ -287,7 +456,7 @@ DRIFT_UNRESOLVABLE: {what needs human attention}
         fi
         if echo "$DRIFT_RESULT" | grep -q "DRIFT_FIXED"; then
             local fix_summary
-            fix_summary=$(echo "$DRIFT_RESULT" | grep "DRIFT_FIXED" | tail -1 | cut -d: -f2- | xargs)
+            fix_summary=$(parse_signal "DRIFT_FIXED" "$DRIFT_RESULT")
             success "Drift auto-fixed: $fix_summary"
             # Verify the fix didn't break build or tests
             if ! check_build; then
@@ -299,7 +468,7 @@ DRIFT_UNRESOLVABLE: {what needs human attention}
             fi
         fi
         if echo "$DRIFT_RESULT" | grep -q "DRIFT_UNRESOLVABLE"; then
-            warn "Unresolvable drift: $(echo "$DRIFT_RESULT" | grep "DRIFT_UNRESOLVABLE" | tail -1 | cut -d: -f2- | xargs)"
+            warn "Unresolvable drift: $(parse_signal "DRIFT_UNRESOLVABLE" "$DRIFT_RESULT")"
             return 1
         fi
         drift_attempt=$((drift_attempt + 1))
@@ -383,6 +552,7 @@ STEP_START=$(date +%s)
 
 log "Running /roadmap-triage to scan Slack/Jira..."
 
+set +e
 $(agent_cmd "$TRIAGE_MODEL") "
 Run the /roadmap-triage command to:
 1. Scan Slack channel $SLACK_FEATURE_CHANNEL for feature requests
@@ -394,6 +564,12 @@ Run the /roadmap-triage command to:
 
 If no new requests found, that's fine - continue.
 "
+AGENT_EXIT=$?
+set -e
+
+if [ "$AGENT_EXIT" -ne 0 ]; then
+    warn "Triage agent exited with code $AGENT_EXIT (non-blocking, continuing)"
+fi
 
 STEP_DURATION=$(( $(date +%s) - STEP_START ))
 success "Triage complete ($(format_duration $STEP_DURATION))"
@@ -444,7 +620,8 @@ for i in $(seq 1 "$MAX_FEATURES"); do
     # Run /build-next
     BUILD_OUTPUT=$(mktemp)
     
-    $(agent_cmd "$BUILD_MODEL") "
+    local AGENT_EXIT=0
+    local BUILD_PROMPT_OVERNIGHT="
 Run the /build-next command to:
 1. Read .specs/roadmap.md and find the next pending feature
 2. Check that all dependencies are completed
@@ -465,10 +642,15 @@ Or: NO_FEATURES_READY
 Or: BUILD_FAILED: {reason}
 
 The SPEC_FILE and SOURCE_FILES lines are REQUIRED when FEATURE_BUILT is reported.
-" > "$BUILD_OUTPUT" 2>&1 || true
-    
+"
+    run_agent_with_backoff "$BUILD_OUTPUT" $(agent_cmd "$BUILD_MODEL") "$BUILD_PROMPT_OVERNIGHT"
+
+    if [ "$AGENT_EXIT" -ne 0 ]; then
+        warn "Agent exited with code $AGENT_EXIT (will check signals for actual status)"
+    fi
+
     BUILD_RESULT=$(cat "$BUILD_OUTPUT")
-    rm "$BUILD_OUTPUT"
+    rm -f "$BUILD_OUTPUT"
     
     # Check result
     if echo "$BUILD_RESULT" | grep -q "NO_FEATURES_READY"; then
@@ -479,7 +661,7 @@ The SPEC_FILE and SOURCE_FILES lines are REQUIRED when FEATURE_BUILT is reported
     fi
     
     if echo "$BUILD_RESULT" | grep -q "BUILD_FAILED"; then
-        REASON=$(echo "$BUILD_RESULT" | grep "BUILD_FAILED" | cut -d: -f2-)
+        REASON=$(parse_signal "BUILD_FAILED" "$BUILD_RESULT")
         FEATURE_DURATION=$(( $(date +%s) - FEATURE_START ))
         warn "Build failed: $REASON ($(format_duration $FEATURE_DURATION))"
         FEATURE_TIMINGS+=("✗ feature $i: $(format_duration $FEATURE_DURATION)")
@@ -494,7 +676,7 @@ The SPEC_FILE and SOURCE_FILES lines are REQUIRED when FEATURE_BUILT is reported
         git add -A
         
         # Extract feature name from output
-        FEATURE_NAME=$(echo "$BUILD_RESULT" | grep "FEATURE_BUILT" | cut -d: -f2- | xargs || echo "feature")
+        FEATURE_NAME=$(parse_signal "FEATURE_BUILT" "$BUILD_RESULT")
         FEATURE_NAME="${FEATURE_NAME:-feature}"
         
         git commit -m "feat(auto): $FEATURE_NAME" 2>/dev/null || true
@@ -507,13 +689,17 @@ The SPEC_FILE and SOURCE_FILES lines are REQUIRED when FEATURE_BUILT is reported
             # Continue to push — tests are documented in the PR for human review
         fi
         
-        # Run drift check (fresh agent, separate context)
-        extract_drift_targets "$BUILD_RESULT"
-        if ! check_drift "$DRIFT_SPEC_FILE" "$DRIFT_SOURCE_FILES"; then
-            FEATURE_DURATION=$(( $(date +%s) - FEATURE_START ))
-            warn "Feature built but drift check failed ($(format_duration $FEATURE_DURATION))"
-            FEATURE_TIMINGS+=("⚠ $FEATURE_NAME (drift): $(format_duration $FEATURE_DURATION)")
-            # Continue to push — drift is documented in the PR for human review
+        # Run drift check (fresh agent, separate context) — only if signals are valid
+        if validate_required_signals "$BUILD_RESULT"; then
+            extract_drift_targets "$BUILD_RESULT"
+            if ! check_drift "$DRIFT_SPEC_FILE" "$DRIFT_SOURCE_FILES"; then
+                FEATURE_DURATION=$(( $(date +%s) - FEATURE_START ))
+                warn "Feature built but drift check failed ($(format_duration $FEATURE_DURATION))"
+                FEATURE_TIMINGS+=("⚠ $FEATURE_NAME (drift): $(format_duration $FEATURE_DURATION)")
+                # Continue to push — drift is documented in the PR for human review
+            fi
+        else
+            warn "Required signals missing/invalid — skipping drift check"
         fi
         
         # Run code review (fresh agent, separate context)
@@ -652,6 +838,7 @@ echo "Total time: $(format_duration $TOTAL_ELAPSED)"
 
 # Notify via Slack if configured
 if [ "$BUILT" -gt 0 ] && [ -n "$SLACK_REPORT_CHANNEL" ]; then
+    set +e
     $(agent_cmd "$TRIAGE_MODEL") "
 Post a message to Slack channel $SLACK_REPORT_CHANNEL:
 
@@ -664,6 +851,7 @@ Roadmap: $COMPLETED completed, $PENDING pending
 
 Check GitHub for draft PRs to review.
 "
+    set -e
 fi
 
 success "Overnight run complete!"

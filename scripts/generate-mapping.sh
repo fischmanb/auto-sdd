@@ -5,6 +5,14 @@
 
 set -e
 
+# Parse flags
+VALIDATE_ONLY=false
+for arg in "$@"; do
+    if [ "$arg" = "--validate-only" ]; then
+        VALIDATE_ONLY=true
+    fi
+done
+
 SPECS_DIR=".specs"
 OUTPUT="$SPECS_DIR/mapping.md"
 FEATURES_DIR="$SPECS_DIR/features"
@@ -23,6 +31,50 @@ if ! command -v yq &> /dev/null; then
 else
     USE_YQ=true
 fi
+
+# ── YAML frontmatter validation ──────────────────────────────────────────────
+
+# Validate that a feature spec has well-formed YAML frontmatter.
+# Checks for balanced --- markers and required fields.
+# Returns 0 if valid, 1 if invalid.
+validate_frontmatter() {
+    local file="$1"
+    local validate_only="${2:-false}"
+
+    # Check first line is ---
+    if ! head -1 "$file" | grep -q "^---$"; then
+        echo -e "${YELLOW}Warning: $file — missing opening --- marker, skipping${NC}" >&2
+        return 1
+    fi
+
+    # Check for closing --- within first 20 lines
+    local marker_count
+    marker_count=$(head -20 "$file" | grep -c "^---$" 2>/dev/null || echo "0")
+    if [ "$marker_count" -lt 2 ]; then
+        echo -e "${YELLOW}Warning: $file — missing closing --- marker in first 20 lines, skipping${NC}" >&2
+        return 1
+    fi
+
+    # Check required fields exist in frontmatter
+    local frontmatter
+    frontmatter=$(awk 'BEGIN{c=0} /^---$/{c++; if(c==2) exit; next} c==1{print}' "$file")
+
+    local has_feature has_domain has_status
+    has_feature=$(echo "$frontmatter" | grep -c "^feature:" 2>/dev/null || echo "0")
+    has_domain=$(echo "$frontmatter" | grep -c "^domain:" 2>/dev/null || echo "0")
+    has_status=$(echo "$frontmatter" | grep -c "^status:" 2>/dev/null || echo "0")
+
+    if [ "$has_feature" -eq 0 ]; then
+        echo -e "${YELLOW}Warning: $file — missing required field 'feature', skipping${NC}" >&2
+        return 1
+    fi
+    if [ "$has_domain" -eq 0 ]; then
+        echo -e "${YELLOW}Warning: $file — missing required field 'domain', skipping${NC}" >&2
+        return 1
+    fi
+
+    return 0
+}
 
 # Function to extract ONLY the first frontmatter block (between first two --- markers)
 # Fixes a bug where sed -n '/^---$/,/^---$/p' could match --- horizontal rules
@@ -100,9 +152,33 @@ by_status_tested=0
 by_status_implemented=0
 
 # Find all feature specs
+# Handle --validate-only mode
+if [ "$VALIDATE_ONLY" = true ]; then
+    echo "Validating frontmatter in feature specs..."
+    validation_errors=0
+    if [ -d "$FEATURES_DIR" ]; then
+        while IFS= read -r -d '' spec; do
+            if ! validate_frontmatter "$spec" true; then
+                validation_errors=$((validation_errors + 1))
+            fi
+        done < <(find "$FEATURES_DIR" -name "*.feature.md" -print0 2>/dev/null | sort -z)
+    fi
+    if [ "$validation_errors" -gt 0 ]; then
+        echo -e "${RED}Found $validation_errors file(s) with invalid frontmatter${NC}"
+        exit 1
+    else
+        echo -e "${GREEN}All feature specs have valid frontmatter${NC}"
+        exit 0
+    fi
+fi
+
 if [ -d "$FEATURES_DIR" ]; then
     while IFS= read -r -d '' spec; do
-        # Check if file has frontmatter
+        # Validate frontmatter before processing
+        if ! validate_frontmatter "$spec"; then
+            continue
+        fi
+
         if head -1 "$spec" | grep -q "^---$"; then
             total=$((total + 1))
             
@@ -186,6 +262,9 @@ for status in "stub" "specced" "tested" "implemented"; do
     found=false
     if [ -d "$FEATURES_DIR" ]; then
         while IFS= read -r -d '' spec; do
+            if ! validate_frontmatter "$spec" 2>/dev/null; then
+                continue
+            fi
             if head -1 "$spec" | grep -q "^---$"; then
                 if [ "$USE_YQ" = true ]; then
                     spec_status=$(extract_with_yq "$spec" "status" "stub")
@@ -194,7 +273,7 @@ for status in "stub" "specced" "tested" "implemented"; do
                     spec_status=$(extract_with_grep "$spec" "status" "stub")
                     feature=$(extract_with_grep "$spec" "feature" "Unknown")
                 fi
-                
+
                 if [ "$spec_status" = "$status" ]; then
                     rel_path="${spec#./}"
                     echo "- [$feature]($rel_path)" >> "$OUTPUT"
