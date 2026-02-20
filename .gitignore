@@ -1,6 +1,12 @@
 # SDD Migration staging directory
 .sdd-upgrade/
 
+# SDD build state (resume capability)
+.sdd-state/
+
+# Build worktrees (independent/both strategy)
+.build-worktrees/
+
 # Environment files
 .env.local
 
