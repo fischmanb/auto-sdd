@@ -1,31 +1,35 @@
 #!/bin/bash
-# Run a demo feature build
+# Run a demo feature build (multi-invocation)
 
 set -e
 
-echo "SDD-256GB Demo"
-echo "=============="
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/lib/common.sh"
+source "$SCRIPT_DIR/lib/models.sh"
+
+echo "═══════════════════════════════════════════════════════════"
+echo "  SDD-256GB Demo: Multi-Invocation Build"
+echo "═══════════════════════════════════════════════════════════"
 echo ""
 
 # Check servers
-for port in 8080 8081 8082; do
-    if ! curl -s "http://127.0.0.1:$port/health" > /dev/null 2>&1; then
-        echo "Error: Model server on port $port not running"
-        echo "Start with: ./start.sh"
-        exit 1
-    fi
-done
-echo "✓ All model servers online"
+log "Checking model servers..."
+if ! check_all_models; then
+    echo ""
+    error "Start servers with: ./start.sh"
+    exit 1
+fi
 echo ""
 
-# Create demo project if needed
-if [ ! -d "demo-project" ]; then
-    mkdir -p demo-project/{src,tests,.specs}
-    
-    # Create package.json
-    cat > demo-project/package.json << 'PKG'
+# Create demo project
+DEMO_DIR="demo-project"
+if [ ! -d "$DEMO_DIR" ]; then
+    log "Creating demo project..."
+    mkdir -p "$DEMO_DIR"/{src,tests,.specs}
+
+    cat > "$DEMO_DIR/package.json" << 'PKG'
 {
-  "name": "demo-project",
+  "name": "demo-todo",
   "version": "1.0.0",
   "scripts": {
     "test": "node --test tests/*.test.js"
@@ -33,9 +37,11 @@ if [ ! -d "demo-project" ]; then
 }
 PKG
 
-    # Create UNIFIED.md spec
-    cat > demo-project/.specs/UNIFIED.md << 'SPEC'
-# Demo Project: Todo App
+    cat > "$DEMO_DIR/.specs/UNIFIED.md" << 'SPEC'
+# Demo: Todo App
+
+## Vision
+A simple todo list for testing the SDD framework.
 
 ## Design System
 - `color-primary`: #3B82F6
@@ -52,7 +58,7 @@ PKG
 
 #### Scenarios
 - **Happy Path**: Given empty list, When add "Buy milk", Then list contains "Buy milk"
-- **Empty Input**: Given empty list, When add "", Then error shown
+- **Empty Input**: Given empty list, When add "", Then error is thrown
 
 #### UI Mockup
 ```
@@ -61,79 +67,68 @@ PKG
 │ • Buy milk         [x]  │
 └─────────────────────────┘
 ```
+
+## Learnings Index
+
+### Testing
+- None yet
 SPEC
+
+    success "Demo project created"
 fi
 
-cd demo-project
-
-echo "Building Feature 1: Add Todo"
-echo "-----------------------------"
+cd "$DEMO_DIR"
 echo ""
 
-# Simple curl-based build (for demo purposes)
-SPEC_CONTENT=$(cat .specs/UNIFIED.md)
+# Stage 1: Plan
+echo "═══════════════════════════════════════════════════════════"
+echo "  STAGE 1: PLAN"
+echo "═══════════════════════════════════════════════════════════"
+"$SCRIPT_DIR/stages/01-plan.sh" .specs/UNIFIED.md plan.json
 
-BUILD_PROMPT=$(cat <<PROMPT
-You are building a todo app feature. Create these files:
+if jq -e '.status == "NO_PENDING_FEATURES"' plan.json > /dev/null 2>&1; then
+    echo ""
+    success "Demo complete (no pending features)"
+    exit 0
+fi
 
-1. src/todo.js - Implementation with:
-   - addTodo(text) function
-   - getTodos() function
-   - deleteTodo(index) function
-   - Uses in-memory array (no database needed for demo)
-
-2. tests/todo.test.js - Tests for:
-   - Adding a todo works
-   - Empty string returns error
-   - Deleting a todo works
-
-Return ONLY the file contents in this format:
-
-===FILE: src/todo.js===
-[content]
-
-===FILE: tests/todo.test.js===
-[content]
-
-Specification:
-$SPEC_CONTENT
-PROMPT
-)
-
-echo "Sending to Builder (Qwen 32B)..."
+echo ""
+cat plan.json | jq .
 echo ""
 
-RESPONSE=$(curl -s -X POST http://127.0.0.1:8080/v1/chat/completions \
-    -H "Content-Type: application/json" \
-    -d "{
-        \"messages\": [{\"role\": \"user\", \"content\": $(echo "$BUILD_PROMPT" | jq -Rs .)}],
-        \"temperature\": 0.2,
-        \"max_tokens\": 4096
-    }")
+# Stage 2: Build
+echo "═══════════════════════════════════════════════════════════"
+echo "  STAGE 2: BUILD"
+echo "═══════════════════════════════════════════════════════════"
+"$SCRIPT_DIR/stages/02-build.sh" plan.json .specs/UNIFIED.md
 
-# Extract and write files
-echo "$RESPONSE" | jq -r '.choices[0].message.content' | while IFS= read -r line; do
-    if [[ "$line" == "===FILE:"* ]]; then
-        FILENAME=$(echo "$line" | sed 's/===FILE: //; s/===//')
-        mkdir -p "$(dirname "$FILENAME")"
-        > "$FILENAME"
-        WRITING="$FILENAME"
-    elif [[ -n "$WRITING" && "$line" != "==="* ]]; then
-        echo "$line" >> "$WRITING"
-    fi
-done
-
+echo ""
 echo "Files created:"
-ls -la src/ tests/
+ls -la src/ tests/ 2>/dev/null || ls -la
+
 echo ""
 
-echo "Running tests..."
-npm test 2>&1 || echo "Tests completed (check output above)"
+# Stage 3: Review
+echo "═══════════════════════════════════════════════════════════"
+echo "  STAGE 3: REVIEW"
+echo "═══════════════════════════════════════════════════════════"
+"$SCRIPT_DIR/stages/03-review.sh" plan.json .specs/UNIFIED.md review.json
+
+echo ""
+cat review.json | jq .
+
 echo ""
 
-echo "✓ Demo complete!"
+# Summary
+echo "═══════════════════════════════════════════════════════════"
+echo "  DEMO COMPLETE"
+echo "═══════════════════════════════════════════════════════════"
+echo ""
+echo "Created files:"
+find src tests -type f 2>/dev/null | head -10
 echo ""
 echo "Next steps:"
-echo "  - Review: cat src/todo.js"
-echo "  - Test: npm test"
-echo "  - Modify spec and rebuild"
+echo "  cd $DEMO_DIR"
+echo "  cat src/todo.js"
+echo "  npm test"
+echo ""
