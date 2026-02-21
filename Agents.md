@@ -19,11 +19,15 @@ Future agents: read this before making changes.
 
 **Lesson**: Agent self-assessments are unreliable. Always verify with grep/tests.
 
+> **⚠️ SUPERSEDED**: Branch `claude/auto-sdd-reliability-hardening-3TpnZ` is fully contained in the setup branch (Round 3). Do not merge.
+
 ### Round 2: Review + Fix (branch: claude/review-agent-updates-uvKGj)
 
 **What was asked**: Review round 1's claims. Fix what's missing.
 
 **What actually happened**: Verified round 1 was false, then actually implemented all 6 features inline in both scripts. Found and fixed a latent bug (`fail` called instead of `error` in overnight-autonomous.sh). But made the same class of error — defined `run_parallel_drift_checks` without wiring it in. Also duplicated ~100 lines between both scripts.
+
+> **⚠️ SUPERSEDED**: Branch `claude/review-agent-updates-uvKGj` is superseded by rounds 3-5. Do not merge.
 
 ### Round 3: Extraction + Tests + Hardening (branch: claude/setup-auto-sdd-framework-INusW)
 
@@ -57,6 +61,8 @@ Future agents: read this before making changes.
 | `write_state` JSON escaping is sed-based | Works for typical feature names like `Auth: Signup`. Breaks on names with `"`, `\`, or newlines. | Use `jq` if available, fall back to current sed approach. The `completed_features_json()` function already handles `"` and `\` properly — it's the `branch_strategy` and `current_branch` fields in `write_state` that use raw interpolation. |
 | `eval` used for BUILD_CMD/TEST_CMD | Intentional — these can contain pipes. Values come from `.env.local` (user-controlled, not agent-controlled). | Not a fix needed — just document the trust boundary. |
 | `lib/common.sh` and `lib/models.sh` are orphaned | These 160 lines are from the stages/ infrastructure. Neither main script sources them. | Either delete them or wire them into the stages/ scripts if those are still used. |
+
+> **⚠️ SUPERSEDED**: Branch `claude/setup-auto-sdd-framework-INusW` is fully contained in the integration branch. Do not merge.
 
 ---
 
@@ -160,6 +166,45 @@ BUILDER_URL="http://127.0.0.1:8080"
 REVIEWER_URL="http://127.0.0.1:8081"
 DRIFT_URL="http://127.0.0.1:8082"
 ```
+
+## Branch Management
+
+### Canonical Integration Branch
+
+The canonical integration branch is: `claude/review-auto-sdd-framework-z0smI`
+
+All new agent branches MUST fork from this branch, not from `main` or
+from an earlier agent branch. Before starting work:
+
+    git fetch origin
+    git checkout -b claude/<your-task-branch> \
+      origin/claude/review-auto-sdd-framework-z0smI
+
+### Before Starting Work
+
+1. Fetch origin and confirm the integration branch is up to date
+2. Check for sibling branches that touch the same files:
+
+       git branch -r --list 'origin/claude/*' --sort=-committerdate
+
+3. If a sibling branch modifies files you plan to change, report this
+   to the human before proceeding
+
+### After Completing Work
+
+1. Push your branch: `git push -u origin claude/<your-task-branch>`
+2. Update the Agent Work Log in Agents.md with what you did
+3. Do not leave work stranded on an unmerged branch — request merge
+   into the integration branch explicitly
+
+### Branch Naming
+
+Format: `claude/<task-description>-<session-suffix>`
+
+### Superseded Branches
+
+Branches whose work has been fully incorporated into the integration
+branch should be noted as superseded in the Agent Work Log.
 
 ## Common Pitfalls
 
