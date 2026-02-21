@@ -17,7 +17,7 @@ REVIEWER_MAX_TOKENS=2048
 DRIFT_MAX_TOKENS=2048
 
 # Check all models
- check_all_models() {
+check_all_models() {
     local failed=0
 
     if ! curl -s "$BUILDER_URL/health" > /dev/null 2>&1; then
