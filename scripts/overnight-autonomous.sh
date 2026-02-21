@@ -2,6 +2,10 @@
 # overnight-autonomous.sh
 # Autonomous overnight feature implementation using roadmap
 #
+# Usage:
+#   ./scripts/overnight-autonomous.sh
+#   ./scripts/overnight-autonomous.sh --resume    # Continue from last crash
+#
 # Flow:
 #   1. Sync with main branch
 #   2. Rebase existing auto PRs
@@ -17,6 +21,13 @@
 #   JIRA_AUTO_LABEL        - Label marking auto-ok items
 #   MAX_FEATURES           - Max features per night (default: 4)
 #   PROJECT_DIR            - Project directory
+#   ENABLE_RESUME          - Enable crash recovery (default: true)
+#
+# INTENTIONAL GAPS vs build-loop-local.sh:
+# - "both" branch strategy: overnight pushes PRs; dual-pass comparison workflow is local-only
+# - "sequential" branch strategy: overnight needs branches for PR creation; sequential has no branching
+# - run_parallel_drift_checks: overnight builds few features (default 4); parallel drift is a
+#   high-throughput optimization for powerful local hardware (M3 Ultra)
 
 set -e
 
@@ -110,6 +121,19 @@ LOCK_FILE="${LOCK_DIR}/sdd-overnight-$(echo "$PROJECT_DIR" | tr '/' '_' | tr ' '
 
 # acquire_lock is provided by lib/reliability.sh
 acquire_lock
+
+# ── Resume capability ──────────────────────────────────────────────────────
+STATE_DIR="$PROJECT_DIR/.sdd-state"
+STATE_FILE="$STATE_DIR/resume.json"
+ENABLE_RESUME="${ENABLE_RESUME:-true}"
+RESUME_MODE=false
+
+# Parse --resume flag
+for arg in "$@"; do
+    if [ "$arg" = "--resume" ]; then
+        RESUME_MODE=true
+    fi
+done
 
 # Defaults
 MAX_FEATURES="${MAX_FEATURES:-4}"
@@ -258,9 +282,10 @@ run_code_review() {
 Test command: $TEST_CMD"
     fi
 
-    local AGENT_EXIT=0
+    local REVIEW_OUTPUT
+    REVIEW_OUTPUT=$(mktemp)
     set +e
-    $(agent_cmd "$REVIEW_MODEL") "
+    run_agent_with_backoff "$REVIEW_OUTPUT" $(agent_cmd "$REVIEW_MODEL") "
 Review and improve code quality of the most recently built feature.
 $test_context
 
@@ -275,9 +300,9 @@ Steps:
 IMPORTANT: Do not introduce test regressions. Run tests after every change and fix anything you break.
 
 Output: REVIEW_CLEAN or REVIEW_FIXED: {summary} or REVIEW_FAILED: {reason}
-" 2>&1
-    AGENT_EXIT=$?
+"
     set -e
+    rm -f "$REVIEW_OUTPUT"
 
     if [ "$AGENT_EXIT" -ne 0 ]; then
         warn "Review agent exited with code $AGENT_EXIT (will check signals for actual status)"
@@ -344,9 +369,8 @@ $LAST_TEST_OUTPUT"
         local spec_content=""
         spec_content=$(truncate_for_context "$spec_file" 2>/dev/null || true)
 
-        local AGENT_EXIT=0
         set +e
-        $(agent_cmd "$DRIFT_MODEL") "
+        run_agent_with_backoff "$DRIFT_OUTPUT" $(agent_cmd "$DRIFT_MODEL") "
 Run /catch-drift for this specific feature. Auto-fix all drift by updating specs to match code.
 
 Spec file: $spec_file
@@ -369,8 +393,7 @@ Output EXACTLY ONE of:
 NO_DRIFT
 DRIFT_FIXED: {brief summary}
 DRIFT_UNRESOLVABLE: {what needs human attention}
-" 2>&1 | tee "$DRIFT_OUTPUT"
-        AGENT_EXIT=${PIPESTATUS[0]}
+"
         set -e
 
         if [ "$AGENT_EXIT" -ne 0 ]; then
@@ -482,8 +505,9 @@ STEP_START=$(date +%s)
 
 log "Running /roadmap-triage to scan Slack/Jira..."
 
+TRIAGE_OUTPUT=$(mktemp)
 set +e
-$(agent_cmd "$TRIAGE_MODEL") "
+run_agent_with_backoff "$TRIAGE_OUTPUT" $(agent_cmd "$TRIAGE_MODEL") "
 Run the /roadmap-triage command to:
 1. Scan Slack channel $SLACK_FEATURE_CHANNEL for feature requests
 2. Scan Jira project $JIRA_PROJECT_KEY for tickets with label 'auto-ok'
@@ -494,8 +518,8 @@ Run the /roadmap-triage command to:
 
 If no new requests found, that's fine - continue.
 "
-AGENT_EXIT=$?
 set -e
+rm -f "$TRIAGE_OUTPUT"
 
 if [ "$AGENT_EXIT" -ne 0 ]; then
     warn "Triage agent exited with code $AGENT_EXIT (non-blocking, continuing)"
@@ -508,6 +532,21 @@ STEP_TIMINGS+=("Step 2 - Triage: $(format_duration $STEP_DURATION)")
 # ── Circular dependency check (from lib/reliability.sh) ──
 check_circular_deps
 
+# ── Handle --resume ──────────────────────────────────────────────────────
+RESUME_START_INDEX=0
+BUILT_FEATURE_NAMES=()
+if [ "$RESUME_MODE" = true ]; then
+    if read_state; then
+        RESUME_START_INDEX=$RESUME_INDEX
+        log "Resuming from feature index $RESUME_START_INDEX"
+        if [ -n "$RESUME_BRANCH" ]; then
+            LAST_FEATURE_BRANCH="$RESUME_BRANCH"
+        fi
+    else
+        warn "No resume state found at $STATE_FILE — starting from beginning"
+    fi
+fi
+
 # ─────────────────────────────────────────────
 # STEP 3: Build features from roadmap
 # ─────────────────────────────────────────────
@@ -517,10 +556,16 @@ STEP_START=$(date +%s)
 
 BUILT=0
 FAILED=0
-LAST_FEATURE_BRANCH=""
+LAST_FEATURE_BRANCH="${LAST_FEATURE_BRANCH:-}"
 FEATURE_TIMINGS=()
 
 for i in $(seq 1 "$MAX_FEATURES"); do
+    # ── Resume: skip already-completed features ──
+    if [ "$ENABLE_RESUME" = "true" ] && [ "$i" -le "$RESUME_START_INDEX" ]; then
+        log "Skipping feature $i (already completed in previous run)"
+        continue
+    fi
+
     FEATURE_START=$(date +%s)
     elapsed_so_far=$(( FEATURE_START - SCRIPT_START ))
     log "Build iteration $i/$MAX_FEATURES... (elapsed: $(format_duration $elapsed_so_far))"
@@ -611,7 +656,22 @@ The SPEC_FILE and SOURCE_FILES lines are REQUIRED when FEATURE_BUILT is reported
         # Extract feature name from output
         FEATURE_NAME=$(parse_signal "FEATURE_BUILT" "$BUILD_RESULT")
         FEATURE_NAME="${FEATURE_NAME:-feature}"
-        
+
+        # ── Skip if this feature was already built (resume case) ──
+        already_built=false
+        for _built_name in "${BUILT_FEATURE_NAMES[@]}"; do
+            if [ "$_built_name" = "$FEATURE_NAME" ]; then
+                already_built=true
+                break
+            fi
+        done
+        if [ "$already_built" = true ]; then
+            log "Skipping already-built feature: $FEATURE_NAME"
+            git checkout "$MAIN_BRANCH" 2>/dev/null || true
+            git branch -D "$BRANCH_NAME" 2>/dev/null || true
+            continue
+        fi
+
         git commit -m "feat(auto): $FEATURE_NAME" 2>/dev/null || true
         
         # Validate: do tests pass?
@@ -695,9 +755,14 @@ EOF
                     success "Created PR: $PR_URL ($(format_duration $FEATURE_DURATION))"
                     FEATURE_TIMINGS+=("✓ $FEATURE_NAME: $(format_duration $FEATURE_DURATION)")
                     BUILT=$((BUILT + 1))
+                    BUILT_FEATURE_NAMES+=("$FEATURE_NAME")
                     # Track branch for chained mode
                     if [ "$BRANCH_STRATEGY" = "chained" ]; then
                         LAST_FEATURE_BRANCH="$BRANCH_NAME"
+                    fi
+                    # Save resume state
+                    if [ "$ENABLE_RESUME" = "true" ]; then
+                        write_state "$i" "$BRANCH_STRATEGY" "$(completed_features_json)" "${BRANCH_NAME:-}"
                     fi
                 fi
             else
@@ -705,9 +770,14 @@ EOF
                 success "Branch pushed (PR not created - gh CLI unavailable) ($(format_duration $FEATURE_DURATION))"
                 FEATURE_TIMINGS+=("✓ $FEATURE_NAME: $(format_duration $FEATURE_DURATION)")
                 BUILT=$((BUILT + 1))
+                BUILT_FEATURE_NAMES+=("$FEATURE_NAME")
                 # Track branch for chained mode
                 if [ "$BRANCH_STRATEGY" = "chained" ]; then
                     LAST_FEATURE_BRANCH="$BRANCH_NAME"
+                fi
+                # Save resume state
+                if [ "$ENABLE_RESUME" = "true" ]; then
+                    write_state "$i" "$BRANCH_STRATEGY" "$(completed_features_json)" "${BRANCH_NAME:-}"
                 fi
             fi
         else
@@ -724,6 +794,11 @@ EOF
         git checkout "$MAIN_BRANCH" 2>/dev/null
     fi
 done
+
+# Clean resume state on successful completion of all features
+if [ "$ENABLE_RESUME" = "true" ] && [ "$FAILED" -eq 0 ]; then
+    clean_state
+fi
 
 # ─────────────────────────────────────────────
 # STEP 4: Summary
@@ -771,8 +846,9 @@ echo "Total time: $(format_duration $TOTAL_ELAPSED)"
 
 # Notify via Slack if configured
 if [ "$BUILT" -gt 0 ] && [ -n "$SLACK_REPORT_CHANNEL" ]; then
+    SLACK_OUTPUT=$(mktemp)
     set +e
-    $(agent_cmd "$TRIAGE_MODEL") "
+    run_agent_with_backoff "$SLACK_OUTPUT" $(agent_cmd "$TRIAGE_MODEL") "
 Post a message to Slack channel $SLACK_REPORT_CHANNEL:
 
 🌙 **Overnight Run Complete**
@@ -785,6 +861,7 @@ Roadmap: $COMPLETED completed, $PENDING pending
 Check GitHub for draft PRs to review.
 "
     set -e
+    rm -f "$SLACK_OUTPUT"
 fi
 
 success "Overnight run complete!"
