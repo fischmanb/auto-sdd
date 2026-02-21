@@ -480,6 +480,38 @@ test_count_files() {
     teardown
 }
 
+# ── Test: read_state populates BUILT_FEATURE_NAMES ────────────────────────────
+
+test_read_state_built_feature_names() {
+    echo ""
+    echo "=== read_state BUILT_FEATURE_NAMES ==="
+    setup
+
+    # Test 1: write_state with two completed features, read_state populates BUILT_FEATURE_NAMES
+    BUILT_FEATURE_NAMES=("Auth: Signup" "Dashboard")
+    local json
+    json=$(completed_features_json)
+    write_state 2 "chained" "$json" "auto/feature-2"
+
+    # Reset BUILT_FEATURE_NAMES to verify read_state repopulates it
+    BUILT_FEATURE_NAMES=()
+    read_state
+    assert_eq "BUILT_FEATURE_NAMES has 2 entries" "2" "${#BUILT_FEATURE_NAMES[@]}"
+    assert_eq "BUILT_FEATURE_NAMES[0] is Auth: Signup" "Auth: Signup" "${BUILT_FEATURE_NAMES[0]}"
+    assert_eq "BUILT_FEATURE_NAMES[1] is Dashboard" "Dashboard" "${BUILT_FEATURE_NAMES[1]}"
+
+    # Test 2: empty completed_features array → BUILT_FEATURE_NAMES is empty, no error
+    BUILT_FEATURE_NAMES=()
+    json=$(completed_features_json)
+    write_state 0 "chained" "$json" "auto/feature-0"
+
+    BUILT_FEATURE_NAMES=("stale")
+    read_state
+    assert_eq "empty completed_features → empty BUILT_FEATURE_NAMES" "0" "${#BUILT_FEATURE_NAMES[@]}"
+
+    teardown
+}
+
 # ── Run all tests ────────────────────────────────────────────────────────────
 
 echo "Running lib/reliability.sh test suite..."
@@ -490,6 +522,7 @@ test_completed_features_json
 test_check_circular_deps
 test_lock
 test_count_files
+test_read_state_built_feature_names
 test_functions_called
 test_syntax
 

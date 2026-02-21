@@ -902,6 +902,20 @@ run_build_loop() {
                 local feature_name
                 feature_name=$(parse_signal "FEATURE_BUILT" "$BUILD_RESULT")
 
+                # ── Skip if this feature was already built (resume case) ──
+                local already_built=false
+                for _built_name in "${BUILT_FEATURE_NAMES[@]}"; do
+                    if [ "$_built_name" = "$feature_name" ]; then
+                        already_built=true
+                        break
+                    fi
+                done
+                if [ "$already_built" = true ]; then
+                    log "[$strategy] Skipping already-built feature: $feature_name"
+                    feature_done=true
+                    break
+                fi
+
                 # Verify: did it actually commit?
                 if check_working_tree_clean; then
                     # Verify: does it actually build?
