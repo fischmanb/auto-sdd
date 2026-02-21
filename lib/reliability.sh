@@ -105,7 +105,7 @@ STATEJSON
     mv "$tmpfile" "$STATE_FILE"
 }
 
-# Read state file. Sets: RESUME_INDEX, RESUME_STRATEGY, RESUME_BRANCH
+# Read state file. Sets: RESUME_INDEX, RESUME_STRATEGY, RESUME_BRANCH, BUILT_FEATURE_NAMES[]
 read_state() {
     if [ ! -f "$STATE_FILE" ]; then
         return 1
@@ -114,6 +114,40 @@ read_state() {
     RESUME_INDEX=$(awk -F': ' '/"feature_index"/{gsub(/[^0-9]/,"",$2); print $2}' "$STATE_FILE")
     RESUME_STRATEGY=$(awk -F'"' '/"branch_strategy"/{print $4}' "$STATE_FILE")
     RESUME_BRANCH=$(awk -F'"' '/"current_branch"/{print $4}' "$STATE_FILE")
+
+    # Parse completed_features JSON array into BUILT_FEATURE_NAMES[]
+    # Handles: empty array [], missing key, one or more feature names
+    BUILT_FEATURE_NAMES=()
+    local raw_names
+    raw_names=$(awk '
+        /"completed_features"/ {
+            # Grab everything from [ to ] (may span multiple lines)
+            found = 1; buf = $0
+            while (found && buf !~ /\]/) {
+                if ((getline line) > 0) buf = buf line
+                else break
+            }
+            # Remove everything before [ and after ]
+            gsub(/.*\[/, "", buf)
+            gsub(/\].*/, "", buf)
+            # Split on commas and extract quoted strings
+            n = split(buf, parts, ",")
+            for (i = 1; i <= n; i++) {
+                val = parts[i]
+                # Strip whitespace and quotes
+                gsub(/^[[:space:]]*"/, "", val)
+                gsub(/"[[:space:]]*$/, "", val)
+                if (val != "") print val
+            }
+        }
+    ' "$STATE_FILE" 2>/dev/null)
+
+    if [ -n "$raw_names" ]; then
+        while IFS= read -r name; do
+            BUILT_FEATURE_NAMES+=("$name")
+        done <<< "$raw_names"
+    fi
+
     return 0
 }
 
