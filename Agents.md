@@ -171,14 +171,14 @@ DRIFT_URL="http://127.0.0.1:8082"
 
 ### Canonical Integration Branch
 
-The canonical integration branch is: `claude/review-auto-sdd-framework-z0smI`
+The canonical integration branch is: `claude/review-auto-sdd-framework-z2Ngc`
 
 All new agent branches MUST fork from this branch, not from `main` or
 from an earlier agent branch. Before starting work:
 
     git fetch origin
     git checkout -b claude/<your-task-branch> \
-      origin/claude/review-auto-sdd-framework-z0smI
+      origin/claude/review-auto-sdd-framework-z2Ngc
 
 ### Before Starting Work
 
