@@ -91,18 +91,32 @@ write_state() {
     local completed_json="$3"
     local current_branch="$4"
     mkdir -p "$STATE_DIR"
+    # Escape backslashes first, then double quotes (same pattern as completed_features_json)
+    local escaped_strategy
+    escaped_strategy=$(printf '%s' "$strategy" | sed 's/\\/\\\\/g; s/"/\\"/g')
+    local escaped_branch
+    escaped_branch=$(printf '%s' "$current_branch" | sed 's/\\/\\\\/g; s/"/\\"/g')
     local tmpfile
     tmpfile=$(mktemp "$STATE_DIR/resume.XXXXXX")
     cat > "$tmpfile" << STATEJSON
 {
   "feature_index": $feature_index,
-  "branch_strategy": "$strategy",
+  "branch_strategy": "$escaped_strategy",
   "completed_features": $completed_json,
-  "current_branch": "$current_branch",
+  "current_branch": "$escaped_branch",
   "timestamp": "$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
 }
 STATEJSON
     mv "$tmpfile" "$STATE_FILE"
+    # Validate JSON if jq is available
+    if command -v jq >/dev/null 2>&1; then
+        if ! jq . "$STATE_FILE" >/dev/null 2>&1; then
+            echo "ERROR: write_state produced invalid JSON in $STATE_FILE" >&2
+            return 1
+        fi
+    else
+        echo "SKIP: jq not available — JSON validation skipped" >&2
+    fi
 }
 
 # Read state file. Sets: RESUME_INDEX, RESUME_STRATEGY, RESUME_BRANCH, BUILT_FEATURE_NAMES[]

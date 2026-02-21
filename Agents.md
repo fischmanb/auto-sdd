@@ -58,7 +58,7 @@ Future agents: read this before making changes.
 | `run_parallel_drift_checks` still not wired in | Requires collecting spec/source paths during the independent build loop, then calling afterward. Nontrivial orchestration change. | Accumulate `DRIFT_PAIRS+=("$spec_file:$source_files")` in the independent build pass, then call `run_parallel_drift_checks "${DRIFT_PAIRS[@]}"` after the loop. |
 | ~~Resume doesn't skip already-built features~~ | Fixed: `read_state` now populates `BUILT_FEATURE_NAMES[]` from state file; build loop checks feature name against this array after `FEATURE_BUILT` signal. | Done. |
 | No live integration test | `dry-run.sh` full mode requires `agent` CLI + running model. All current validation is structural (bash -n, unit tests, dry-run). | Run `./tests/dry-run.sh` with a real agent endpoint. |
-| `write_state` JSON escaping is sed-based | Works for typical feature names like `Auth: Signup`. Breaks on names with `"`, `\`, or newlines. | Use `jq` if available, fall back to current sed approach. The `completed_features_json()` function already handles `"` and `\` properly — it's the `branch_strategy` and `current_branch` fields in `write_state` that use raw interpolation. |
+| ~~`write_state` JSON escaping is sed-based~~ | Fixed: `write_state` now escapes `\` and `"` in `branch_strategy` and `current_branch` fields using the same sed pattern as `completed_features_json`. Validates output with `jq` when available. | Done. |
 | `eval` used for BUILD_CMD/TEST_CMD | Intentional — these can contain pipes. Values come from `.env.local` (user-controlled, not agent-controlled). | Not a fix needed — just document the trust boundary. |
 | `lib/common.sh` and `lib/models.sh` are orphaned | These 160 lines are from the stages/ infrastructure. Neither main script sources them. | Either delete them or wire them into the stages/ scripts if those are still used. |
 
@@ -102,7 +102,7 @@ auto-sdd/
 ├── framework/                  # User-facing tools
 │   └── ai-dev                  # Main CLI entry for stages/
 ├── tests/                      # Test suite
-│   ├── test-reliability.sh     # Unit tests for lib/reliability.sh (54 assertions)
+│   ├── test-reliability.sh     # Unit tests for lib/reliability.sh (57 assertions)
 │   ├── test-validation.sh      # Unit tests for lib/validation.sh (10 assertions)
 │   ├── dry-run.sh              # Integration test for build-loop-local.sh
 │   └── fixtures/dry-run/       # Test fixtures (roadmap, vision)
@@ -282,7 +282,7 @@ Both `scripts/build-loop-local.sh` and `scripts/overnight-autonomous.sh` source
 | `run_agent_with_backoff` | Exponential backoff retry for rate limits | Both scripts |
 | `truncate_for_context` | Truncate large specs to Gherkin-only for context budget | Both scripts (drift check) |
 | `check_circular_deps` | DFS cycle detection on roadmap dependency graph | Both scripts |
-| `write_state` / `read_state` / `clean_state` | JSON resume state persistence; `read_state` populates `BUILT_FEATURE_NAMES[]` from completed_features | build-loop only |
+| `write_state` / `read_state` / `clean_state` | JSON resume state persistence; `write_state` escapes special characters in branch and strategy fields; `read_state` populates `BUILT_FEATURE_NAMES[]` from completed_features | build-loop only |
 | `completed_features_json` | Build JSON array from bash array (with escaping) | build-loop only |
 | `get_cpu_count` | Detect CPU count (nproc/sysctl) | build-loop only |
 | `count_files` | Count files in directory grouped by extension (nameref) | pending |
@@ -327,7 +327,7 @@ Review agents must output: `REVIEW_CLEAN` | `REVIEW_FIXED: {summary}` | `REVIEW_
 ## Testing
 
 ```bash
-# Unit tests for lib/reliability.sh (54 assertions, all passing)
+# Unit tests for lib/reliability.sh (57 assertions, all passing)
 ./tests/test-reliability.sh
 
 # Unit tests for lib/validation.sh (10 assertions, all passing)
@@ -344,7 +344,7 @@ DRY_RUN_SKIP_AGENT=true ./tests/dry-run.sh
 
 - No live integration testing — all validation is `bash -n` + unit tests + structural dry-run
 - `lib/common.sh` and `lib/models.sh` are orphaned (not sourced by main scripts)
-- `write_state` branch/strategy fields use raw string interpolation (fine for typical values)
+- ~~`write_state` branch/strategy fields use raw string interpolation~~ (fixed: now escaped)
 
 ## Process Lessons (for humans and agents)
 

@@ -512,6 +512,86 @@ test_read_state_built_feature_names() {
     teardown
 }
 
+# ── Test: write_state with special characters in branch/strategy ──────────────
+
+test_write_state_branch_with_double_quote() {
+    echo ""
+    echo "=== write_state: branch with double quote ==="
+    setup
+
+    BUILT_FEATURE_NAMES=("Feature1")
+    local json
+    json=$(completed_features_json)
+    write_state 0 "chained" "$json" 'auto/branch-with"quote'
+
+    if command -v jq &>/dev/null; then
+        if jq empty "$STATE_FILE" 2>/dev/null; then
+            echo "  PASS: state file is valid JSON (branch with double quote)"
+            PASS=$((PASS + 1))
+        else
+            echo "  FAIL: state file is invalid JSON (branch with double quote)"
+            FAIL=$((FAIL + 1))
+        fi
+    else
+        echo "  SKIP: jq not available — JSON validation skipped"
+        PASS=$((PASS + 1))
+    fi
+
+    teardown
+}
+
+test_write_state_branch_with_backslash() {
+    echo ""
+    echo "=== write_state: branch with backslash ==="
+    setup
+
+    BUILT_FEATURE_NAMES=("Feature1")
+    local json
+    json=$(completed_features_json)
+    write_state 0 "chained" "$json" 'auto/branch-with\backslash'
+
+    if command -v jq &>/dev/null; then
+        if jq empty "$STATE_FILE" 2>/dev/null; then
+            echo "  PASS: state file is valid JSON (branch with backslash)"
+            PASS=$((PASS + 1))
+        else
+            echo "  FAIL: state file is invalid JSON (branch with backslash)"
+            FAIL=$((FAIL + 1))
+        fi
+    else
+        echo "  SKIP: jq not available — JSON validation skipped"
+        PASS=$((PASS + 1))
+    fi
+
+    teardown
+}
+
+test_write_state_strategy_with_double_quote() {
+    echo ""
+    echo "=== write_state: strategy with double quote ==="
+    setup
+
+    BUILT_FEATURE_NAMES=("Feature1")
+    local json
+    json=$(completed_features_json)
+    write_state 0 'strategy"with-quote' "$json" "auto/feature-1"
+
+    if command -v jq &>/dev/null; then
+        if jq empty "$STATE_FILE" 2>/dev/null; then
+            echo "  PASS: state file is valid JSON (strategy with double quote)"
+            PASS=$((PASS + 1))
+        else
+            echo "  FAIL: state file is invalid JSON (strategy with double quote)"
+            FAIL=$((FAIL + 1))
+        fi
+    else
+        echo "  SKIP: jq not available — JSON validation skipped"
+        PASS=$((PASS + 1))
+    fi
+
+    teardown
+}
+
 # ── Run all tests ────────────────────────────────────────────────────────────
 
 echo "Running lib/reliability.sh test suite..."
@@ -523,6 +603,9 @@ test_check_circular_deps
 test_lock
 test_count_files
 test_read_state_built_feature_names
+test_write_state_branch_with_double_quote
+test_write_state_branch_with_backslash
+test_write_state_strategy_with_double_quote
 test_functions_called
 test_syntax
 
