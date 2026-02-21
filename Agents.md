@@ -87,7 +87,7 @@ A spec-driven development system optimized for 256GB unified memory. Uses multip
 auto-sdd/
 ├── scripts/                    # Orchestration scripts (main entry points)
 │   ├── build-loop-local.sh     # Build roadmap features locally (1311 lines)
-│   ├── overnight-autonomous.sh # Overnight automation with Slack/Jira (790 lines)
+│   ├── overnight-autonomous.sh # Overnight automation with Slack/Jira, crash recovery, backoff retry
 │   └── generate-mapping.sh     # Auto-generate .specs/mapping.md from frontmatter
 ├── lib/                        # Shared libraries
 │   ├── reliability.sh          # Lock, backoff, state, truncation, cycle detection, file counting
@@ -254,8 +254,8 @@ Both `scripts/build-loop-local.sh` and `scripts/overnight-autonomous.sh` source
 | `run_agent_with_backoff` | Exponential backoff retry for rate limits | Both scripts |
 | `truncate_for_context` | Truncate large specs to Gherkin-only for context budget | Both scripts (drift check) |
 | `check_circular_deps` | DFS cycle detection on roadmap dependency graph | Both scripts |
-| `write_state` / `read_state` / `clean_state` | JSON resume state persistence; `write_state` escapes special characters in branch and strategy fields; `read_state` populates `BUILT_FEATURE_NAMES[]` from completed_features | build-loop only |
-| `completed_features_json` | Build JSON array from bash array (with escaping) | build-loop only |
+| `write_state` / `read_state` / `clean_state` | JSON resume state persistence; `write_state` escapes special characters in branch and strategy fields; `read_state` populates `BUILT_FEATURE_NAMES[]` from completed_features | Both scripts |
+| `completed_features_json` | Build JSON array from bash array (with escaping) | Both scripts |
 | `get_cpu_count` | Detect CPU count (nproc/sysctl) | build-loop only |
 | `count_files` | Count files in directory grouped by extension (nameref) | pending |
 | `run_parallel_drift_checks` | Parallel drift checks (M3 Ultra) | build-loop (independent pass) |
@@ -321,6 +321,24 @@ DRY_RUN_SKIP_AGENT=true ./tests/dry-run.sh
 - ~~`lib/common.sh` and `lib/models.sh` are orphaned~~ (archived to `archive/local-llm-pipeline/`)
 - ~~`write_state` branch/strategy fields use raw string interpolation~~ (fixed: now escaped)
 - Auto branch cleanup on feature completion: build loop should automatically delete task branches after a feature is successfully built and verified. Deferred until dry-run full test passes reliably with a real agent. When implemented, wire into build loop at feature completion and update dry-run cleanup to include branch deletion.
+
+## Script Parity: build-loop-local.sh vs overnight-autonomous.sh
+
+### Gaps Closed
+
+| Feature | What was done |
+|---------|--------------|
+| Crash recovery (write_state/read_state/clean_state) | Added to overnight-autonomous.sh: STATE_DIR/STATE_FILE/ENABLE_RESUME globals, --resume flag, read_state before build loop, write_state after each successful feature, clean_state on completion |
+| BUILT_FEATURE_NAMES skip check | Added to overnight feature loop: skips features already built (by index and by name), matching build-loop-local.sh pattern |
+| run_agent_with_backoff for all agent calls | Wrapped triage, drift, code review, and Slack notification agent calls with run_agent_with_backoff (build agent was already wrapped) |
+
+### Intentional Gaps (not closed)
+
+| Feature | Reason |
+|---------|--------|
+| "both" branch strategy | Overnight pushes PRs; dual-pass comparison workflow is local-only |
+| "sequential" branch strategy | Overnight needs branches for PR creation; sequential has no branching |
+| run_parallel_drift_checks | Overnight builds few features (default 4); parallel drift is a high-throughput optimization for powerful local hardware (M3 Ultra) |
 
 ## Process Lessons (for humans and agents)
 
