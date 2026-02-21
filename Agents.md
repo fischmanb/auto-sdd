@@ -102,7 +102,7 @@ auto-sdd/
 ├── tests/                      # Test suite
 │   ├── test-reliability.sh     # Unit tests for lib/reliability.sh (57 assertions)
 │   ├── test-validation.sh      # Unit tests for lib/validation.sh (10 assertions)
-│   ├── dry-run.sh              # Integration test for build-loop-local.sh
+│   ├── dry-run.sh              # Integration test for build-loop-local.sh (e2e validation, --verbose, idempotent cleanup)
 │   └── fixtures/dry-run/       # Test fixtures (roadmap, vision)
 ├── Brians-Notes/               # Human notes
 │   ├── SETUP.md                # 15-minute Mac Studio setup guide
@@ -310,6 +310,9 @@ DRY_RUN_SKIP_AGENT=true ./tests/dry-run.sh
 
 # Full dry-run (requires agent CLI + running model)
 ./tests/dry-run.sh
+
+# Full dry-run with verbose agent output (captured to tests/dry-run-verbose.log)
+./tests/dry-run.sh --verbose
 ```
 
 ## Known Gaps
@@ -317,6 +320,7 @@ DRY_RUN_SKIP_AGENT=true ./tests/dry-run.sh
 - No live integration testing — all validation is `bash -n` + unit tests + structural dry-run
 - ~~`lib/common.sh` and `lib/models.sh` are orphaned~~ (archived to `archive/local-llm-pipeline/`)
 - ~~`write_state` branch/strategy fields use raw string interpolation~~ (fixed: now escaped)
+- Auto branch cleanup on feature completion: build loop should automatically delete task branches after a feature is successfully built and verified. Deferred until dry-run full test passes reliably with a real agent. When implemented, wire into build loop at feature completion and update dry-run cleanup to include branch deletion.
 
 ## Process Lessons (for humans and agents)
 

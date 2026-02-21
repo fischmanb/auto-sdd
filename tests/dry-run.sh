@@ -5,12 +5,23 @@
 # This validates end-to-end: lock → circular dep check → agent call → signal parse
 #   → drift check → state save → cleanup.
 #
+# Structural test: exercises shared library functions without an agent.
+# Full test: runs the actual build loop, then validates:
+#   - FEATURE_BUILT signal emitted
+#   - Roadmap updated to reflect completion
+#   - State file structure (completed_features, current_branch, valid JSON)
+#   - Drift check signal (when DRIFT_CHECK enabled)
+#
+# Cleanup is idempotent: state files and roadmap changes are reverted on exit
+# (pass or fail). Git branches are preserved and logged for debugging.
+#
 # Prerequisites:
 #   - `agent` CLI must be installed (Cursor CLI)
 #   - A model must be running or accessible
 #
 # Usage:
 #   ./tests/dry-run.sh                 # Full dry run with agent
+#   ./tests/dry-run.sh --verbose       # Full dry run, agent output to tests/dry-run-verbose.log
 #   DRY_RUN_SKIP_AGENT=true ./tests/dry-run.sh  # Skip agent calls (structural test only)
 
 set -e
@@ -19,6 +30,24 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 FIXTURES="$SCRIPT_DIR/fixtures/dry-run"
 WORK_DIR=""
+VERBOSE=false
+VERBOSE_LOG="$SCRIPT_DIR/dry-run-verbose.log"
+
+# ── Flag parsing ────────────────────────────────────────────────────────────
+
+for arg in "$@"; do
+    case "$arg" in
+        --verbose)
+            VERBOSE=true
+            ;;
+    esac
+done
+
+# Truncate verbose log at the start of each run so each run starts fresh
+if [ "$VERBOSE" = true ]; then
+    : > "$VERBOSE_LOG"
+    echo "Verbose mode: agent output will be captured to $VERBOSE_LOG"
+fi
 
 # ── Setup ────────────────────────────────────────────────────────────────────
 
@@ -59,15 +88,57 @@ EOF
     echo "Setup complete."
 }
 
-# ── Cleanup ──────────────────────────────────────────────────────────────────
+# ── Idempotent cleanup ───────────────────────────────────────────────────────
 
 cleanup() {
-    if [ -n "$WORK_DIR" ] && [ -d "$WORK_DIR" ]; then
-        # Clean up lock file if it exists
-        rm -f /tmp/sdd-build-loop-*.lock
-        rm -rf "$WORK_DIR"
-        echo "Cleaned up: $WORK_DIR"
+    local exit_code=$?
+
+    if [ -z "$WORK_DIR" ] || [ ! -d "$WORK_DIR" ]; then
+        return
     fi
+
+    echo ""
+    echo "=== Cleanup ==="
+
+    # 1. Delete state file if it exists
+    if [ -f "$WORK_DIR/.sdd-state/resume.json" ]; then
+        rm -f "$WORK_DIR/.sdd-state/resume.json"
+        echo "   Removed state file"
+    fi
+    if [ -d "$WORK_DIR/.sdd-state" ]; then
+        rmdir "$WORK_DIR/.sdd-state" 2>/dev/null || true
+    fi
+
+    # 2. Revert any roadmap changes using git checkout
+    cd "$WORK_DIR" 2>/dev/null && \
+        git checkout -- .specs/roadmap.md 2>/dev/null && \
+        echo "   Reverted roadmap changes" || true
+
+    # 3. Log branch names instead of deleting them
+    local branches
+    branches=$(cd "$WORK_DIR" 2>/dev/null && git branch --list 'auto/*' 2>/dev/null || true)
+    if [ -n "$branches" ]; then
+        while IFS= read -r branch; do
+            branch=$(echo "$branch" | sed 's/^[* ]*//')
+            [ -z "$branch" ] && continue
+            echo "   NOTE: branch $branch preserved for debugging — delete manually when no longer needed"
+        done <<< "$branches"
+    fi
+
+    # 4. Delete temp worktree directory if it exists
+    if [ -d "$WORK_DIR/.build-worktrees" ]; then
+        rm -rf "$WORK_DIR/.build-worktrees"
+        echo "   Removed .build-worktrees"
+    fi
+
+    # 5. Clean up lock file if it exists
+    rm -f /tmp/sdd-build-loop-*.lock
+
+    # 6. Remove the work directory
+    rm -rf "$WORK_DIR"
+    echo "   Cleaned up: $WORK_DIR"
+
+    return $exit_code
 }
 
 trap cleanup EXIT
@@ -157,40 +228,140 @@ full_test() {
 
     cd "$WORK_DIR"
 
+    # Capture build output for post-run validation
+    local build_output_file
+    build_output_file=$(mktemp)
+
     # Run build-loop with MAX_FEATURES=1
     echo "Running: MAX_FEATURES=1 PROJECT_DIR=$WORK_DIR ./scripts/build-loop-local.sh"
     echo ""
 
-    MAX_FEATURES=1 \
-    BRANCH_STRATEGY=sequential \
-    DRIFT_CHECK=false \
-    BUILD_CHECK_CMD=skip \
-    TEST_CHECK_CMD=skip \
-    POST_BUILD_STEPS="" \
-    PROJECT_DIR="$WORK_DIR" \
-        "$WORK_DIR/scripts/build-loop-local.sh" 2>&1 || {
-        local exit_code=$?
+    local build_exit=0
+    if [ "$VERBOSE" = true ]; then
+        MAX_FEATURES=1 \
+        BRANCH_STRATEGY=sequential \
+        DRIFT_CHECK="${DRIFT_CHECK:-false}" \
+        BUILD_CHECK_CMD=skip \
+        TEST_CHECK_CMD=skip \
+        POST_BUILD_STEPS="" \
+        PROJECT_DIR="$WORK_DIR" \
+            "$WORK_DIR/scripts/build-loop-local.sh" 2>&1 | tee "$build_output_file" >> "$VERBOSE_LOG" || build_exit=$?
+    else
+        MAX_FEATURES=1 \
+        BRANCH_STRATEGY=sequential \
+        DRIFT_CHECK="${DRIFT_CHECK:-false}" \
+        BUILD_CHECK_CMD=skip \
+        TEST_CHECK_CMD=skip \
+        POST_BUILD_STEPS="" \
+        PROJECT_DIR="$WORK_DIR" \
+            "$WORK_DIR/scripts/build-loop-local.sh" > "$build_output_file" 2>&1 || build_exit=$?
+    fi
+
+    local build_output
+    build_output=$(cat "$build_output_file")
+    rm -f "$build_output_file"
+
+    if [ $build_exit -ne 0 ]; then
         echo ""
-        echo "Build loop exited with code $exit_code"
-        if [ $exit_code -eq 3 ]; then
+        echo "Build loop exited with code $build_exit"
+        if [ $build_exit -eq 3 ]; then
             echo "FAIL: Circular dep detected (unexpected)"
             exit 1
-        elif [ $exit_code -eq 4 ]; then
+        elif [ $build_exit -eq 4 ]; then
             echo "FAIL: Lock held (stale lock?)"
             exit 1
         fi
         echo "Build loop failure is expected if no agent model is running"
-    }
+    fi
 
-    # Check if state was saved
-    if [ -f "$WORK_DIR/.sdd-state/resume.json" ]; then
+    # ── Post-run validation checks ──
+
+    echo ""
+    echo "--- Post-run validation ---"
+    echo ""
+
+    # a. FEATURE_BUILT signal check
+    echo "a. Checking FEATURE_BUILT signal..."
+    if echo "$build_output" | grep -q "FEATURE_BUILT"; then
+        echo "   PASS: FEATURE_BUILT signal found"
+    else
+        echo "   FAIL: FEATURE_BUILT signal not found in build output"
+        echo "   Hint: The build agent must output 'FEATURE_BUILT: {name}' on success"
+        exit 1
+    fi
+
+    # b. Roadmap update check
+    echo "b. Checking roadmap status update..."
+    if grep -qE '(✅|🔄)' "$WORK_DIR/.specs/roadmap.md" 2>/dev/null; then
+        echo "   PASS: Roadmap shows completion status"
+    else
+        echo "   FAIL: Roadmap was not updated — expected ✅ or 🔄 status"
+        echo "   Current roadmap:"
+        cat "$WORK_DIR/.specs/roadmap.md"
+        exit 1
+    fi
+
+    # c. State file structure check
+    echo "c. Checking state file structure..."
+    local state_file="$WORK_DIR/.sdd-state/resume.json"
+    if [ -f "$state_file" ]; then
+        echo "   PASS: State file exists"
+    else
+        echo "   FAIL: State file not found at $state_file"
+        exit 1
+    fi
+
+    if grep -q '"completed_features"' "$state_file" 2>/dev/null; then
+        echo "   PASS: State file contains completed_features key"
+    else
+        echo "   FAIL: State file missing completed_features key"
+        cat "$state_file"
+        exit 1
+    fi
+
+    if grep -q '"current_branch"' "$state_file" 2>/dev/null; then
+        echo "   PASS: State file contains current_branch key"
+    else
+        echo "   FAIL: State file missing current_branch key"
+        cat "$state_file"
+        exit 1
+    fi
+
+    if command -v jq &>/dev/null; then
+        if jq . "$state_file" >/dev/null 2>&1; then
+            echo "   PASS: State file is valid JSON"
+        else
+            echo "   FAIL: State file is not valid JSON"
+            cat "$state_file"
+            exit 1
+        fi
+    else
+        echo "   SKIP: jq not available — JSON validation skipped"
+    fi
+
+    # d. Drift check signal (conditional)
+    if [ "${DRIFT_CHECK:-false}" = "true" ]; then
+        echo "d. Checking drift check signal..."
+        if echo "$build_output" | grep -qE '(NO_DRIFT|DRIFT_FIXED)'; then
+            echo "   PASS: Drift check signal found"
+        else
+            echo "   FAIL: Neither NO_DRIFT nor DRIFT_FIXED signal found in build output"
+            echo "   Hint: When DRIFT_CHECK=true, the drift agent must output NO_DRIFT or DRIFT_FIXED"
+            exit 1
+        fi
+    else
+        echo "d. SKIP: Drift check disabled (DRIFT_CHECK=${DRIFT_CHECK:-false})"
+    fi
+
+    # Check if state was saved (informational)
+    if [ -f "$state_file" ]; then
         echo ""
-        echo "State file exists after run:"
-        cat "$WORK_DIR/.sdd-state/resume.json"
+        echo "State file contents:"
+        cat "$state_file"
     fi
 
     echo ""
-    echo "=== Full dry run complete ==="
+    echo "=== Full dry run: ALL PASSED ==="
 }
 
 # ── Main ──────────────────────────────────────────────────────────────────────
