@@ -14,7 +14,7 @@ Each section below is a self-contained prompt. Copy one prompt at a time into a 
 
     git fetch origin
     git checkout -b claude/<new-task-branch> \
-      origin/claude/review-auto-sdd-framework-z0smI
+      origin/claude/review-auto-sdd-framework-z2Ngc
 
 Do NOT fork from `main` or from an older agent branch. The integration
 branch contains all cumulative work from prior agents.
@@ -27,7 +27,7 @@ branch contains all cumulative work from prior agents.
 
 Copy this paragraph into every session to give the agent baseline context:
 
-> You're working on `auto-sdd`, a spec-driven development automation system. It has two orchestration scripts (`scripts/build-loop-local.sh` and `scripts/overnight-autonomous.sh`) that build features from a roadmap by invoking AI agents via the `agent` CLI. Shared reliability functions live in `lib/reliability.sh`. Read `Agents.md` first — it has the full work log, known gaps, and verification checklist. All tests should pass before you commit: `./tests/test-reliability.sh` and `DRY_RUN_SKIP_AGENT=true ./tests/dry-run.sh`. Always fork your working branch from the integration branch (`claude/review-auto-sdd-framework-z0smI`), not from `main`. After completing work, request that your branch be merged into the integration branch so future agents inherit your changes.
+> You're working on `auto-sdd`, a spec-driven development automation system. It has two orchestration scripts (`scripts/build-loop-local.sh` and `scripts/overnight-autonomous.sh`) that build features from a roadmap by invoking AI agents via the `agent` CLI. Shared reliability functions live in `lib/reliability.sh`. Read `Agents.md` first — it has the full work log, known gaps, and verification checklist. All tests should pass before you commit: `./tests/test-reliability.sh` and `DRY_RUN_SKIP_AGENT=true ./tests/dry-run.sh`. Always fork your working branch from the integration branch (`claude/review-auto-sdd-framework-z2Ngc`), not from `main`. After completing work, request that your branch be merged into the integration branch so future agents inherit your changes.
 
 ---
 
