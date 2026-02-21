@@ -12,6 +12,7 @@
 
 # Logs
 logs/*.log
+tests/dry-run-verbose.log
 
 # OS files
 .DS_Store
