@@ -34,9 +34,6 @@ warn() { echo -e "${YELLOW}[$(date '+%H:%M:%S')] ⚠${NC} $1"; }
 error() { echo -e "${RED}[$(date '+%H:%M:%S')] ✗${NC} $1"; }
 section() { echo -e "\n${CYAN}═══════════════════════════════════════════════════════════${NC}"; echo -e "${CYAN}  $1${NC}"; echo -e "${CYAN}═══════════════════════════════════════════════════════════${NC}\n"; }
 
-# ── Source shared reliability library ─────────────────────────────────────
-source "$SCRIPT_DIR/../lib/reliability.sh"
-
 # ── Robust signal parsing ─────────────────────────────────────────────────
 # Extracts the LAST occurrence of a signal from agent output.
 # Handles values containing colons, preserves internal whitespace,
@@ -103,6 +100,9 @@ PROJECT_DIR="${PROJECT_DIR:-$(dirname "$SCRIPT_DIR")}"
 if [ -f "$PROJECT_DIR/.env.local" ]; then
     source "$PROJECT_DIR/.env.local"
 fi
+
+# ── Source shared reliability library ─────────────────────────────────────
+source "$SCRIPT_DIR/../lib/reliability.sh"
 
 # ── File locking (concurrency protection) ──────────────────────────────────
 LOCK_DIR="/tmp"
@@ -553,8 +553,8 @@ for i in $(seq 1 "$MAX_FEATURES"); do
     # Run /build-next
     BUILD_OUTPUT=$(mktemp)
     
-    local AGENT_EXIT=0
-    local BUILD_PROMPT_OVERNIGHT="
+    AGENT_EXIT=0
+    BUILD_PROMPT_OVERNIGHT="
 Run the /build-next command to:
 1. Read .specs/roadmap.md and find the next pending feature
 2. Check that all dependencies are completed
