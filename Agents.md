@@ -60,7 +60,7 @@ Future agents: read this before making changes.
 | No live integration test | `dry-run.sh` full mode requires `agent` CLI + running model. All current validation is structural (bash -n, unit tests, dry-run). | Run `./tests/dry-run.sh` with a real agent endpoint. |
 | ~~`write_state` JSON escaping is sed-based~~ | Fixed: `write_state` now escapes `\` and `"` in `branch_strategy` and `current_branch` fields using the same sed pattern as `completed_features_json`. Validates output with `jq` when available. | Done. |
 | `eval` used for BUILD_CMD/TEST_CMD | Intentional — these can contain pipes. Values come from `.env.local` (user-controlled, not agent-controlled). | Not a fix needed — just document the trust boundary. |
-| `lib/common.sh` and `lib/models.sh` are orphaned | These 160 lines are from the stages/ infrastructure. Neither main script sources them. | Either delete them or wire them into the stages/ scripts if those are still used. |
+| ~~`lib/common.sh` and `lib/models.sh` are orphaned~~ | Archived to `archive/local-llm-pipeline/` along with `stages/`, `framework/`, and `demo.sh`. | Done. |
 
 > **⚠️ SUPERSEDED**: Branch `claude/setup-auto-sdd-framework-INusW` is fully contained in the integration branch. Do not merge.
 
@@ -91,16 +91,14 @@ auto-sdd/
 │   └── generate-mapping.sh     # Auto-generate .specs/mapping.md from frontmatter
 ├── lib/                        # Shared libraries
 │   ├── reliability.sh          # Lock, backoff, state, truncation, cycle detection, file counting
-│   ├── validation.sh           # YAML frontmatter validation (sourced by generate-mapping.sh)
-│   ├── common.sh               # curl, parsing, validation (UNUSED by main scripts)
-│   └── models.sh               # Model endpoint management (UNUSED by main scripts)
-├── stages/                     # Multi-invocation pipeline (local LLM infrastructure)
-│   ├── 01-plan.sh              # Spec → plan.json
-│   ├── 02-build.sh             # plan.json → files
-│   ├── 03-review.sh            # files → review.json
-│   └── 04-fix.sh               # review.json → fixed files
-├── framework/                  # User-facing tools
-│   └── ai-dev                  # Main CLI entry for stages/
+│   └── validation.sh           # YAML frontmatter validation (sourced by generate-mapping.sh)
+├── archive/                    # Preserved for future reference
+│   └── local-llm-pipeline/     # Pre-Claude-CLI local LLM pipeline (see README.md inside)
+│       ├── lib/common.sh       # curl, parsing, validation (was lib/common.sh)
+│       ├── lib/models.sh       # Model endpoint management (was lib/models.sh)
+│       ├── stages/             # 01-plan.sh through 04-fix.sh
+│       ├── framework/ai-dev    # CLI entry for stages pipeline
+│       └── demo.sh             # Demonstration script
 ├── tests/                      # Test suite
 │   ├── test-reliability.sh     # Unit tests for lib/reliability.sh (57 assertions)
 │   ├── test-validation.sh      # Unit tests for lib/validation.sh (10 assertions)
@@ -124,30 +122,21 @@ This repo contains **two separate systems**:
    - Fresh context per feature (not per file)
    - This is the actively-developed system
 
-2. **Local LLM pipeline** (`stages/`, `framework/`, `lib/common.sh`, `lib/models.sh`)
+2. **Local LLM pipeline** (archived to `archive/local-llm-pipeline/`)
    - Uses locally-hosted models on Mac Studio (Qwen, DeepSeek)
    - Fresh context per stage (plan → build → review → fix)
-   - This was the initial prototype; unclear if still actively used
+   - Archived — preserved for future LM Studio integration reference
 
-`lib/reliability.sh` serves system 1 only. `lib/common.sh` and `lib/models.sh` serve system 2 only.
+`lib/reliability.sh` serves system 1 only. The local LLM utilities (`common.sh`, `models.sh`) are in `archive/local-llm-pipeline/lib/`.
 
 ## How to Modify
 
-### Adding a Stage (system 2)
+### Adding/Modifying a Stage (system 2 — archived)
 
-1. Create `stages/05-newstage.sh`
-2. Follow the pattern:
-   - Read input from previous stage's JSON
-   - Call model with fresh context
-   - Write output to JSON
-   - Return 0 on success, 1 on failure
-3. Update `framework/ai-dev` to call new stage
-
-### Modifying a Stage (system 2)
-
-1. Keep context budget under the limit (see table above)
-2. Maintain JSON I/O format for chaining
-3. Test in isolation: `./stages/02-build.sh < test-input.json`
+The local LLM pipeline has been archived to `archive/local-llm-pipeline/`.
+See `archive/local-llm-pipeline/README.md` for contents and status.
+The utilities in `archive/local-llm-pipeline/lib/common.sh` may be reusable
+for future LM Studio integration.
 
 ### Modifying Orchestration Scripts (system 1)
 
@@ -158,14 +147,9 @@ This repo contains **two separate systems**:
 5. Run `./tests/test-reliability.sh` to verify shared functions
 6. Run `DRY_RUN_SKIP_AGENT=true ./tests/dry-run.sh` for integration
 
-### Changing Models (system 2)
+### Changing Models (system 2 — archived)
 
-Edit `lib/models.sh`:
-```bash
-BUILDER_URL="http://127.0.0.1:8080"
-REVIEWER_URL="http://127.0.0.1:8081"
-DRIFT_URL="http://127.0.0.1:8082"
-```
+Model configuration is in `archive/local-llm-pipeline/lib/models.sh`.
 
 ## Branch Management
 
@@ -215,7 +199,7 @@ branch should be noted as superseded in the Agent Work Log.
 **DO**: Keep stages separate for crispness
 
 **DON'T**: Parse model output with regex alone
-**DO**: Use delimiters + JSON fallback (see `lib/common.sh`)
+**DO**: Use delimiters + JSON fallback (see `archive/local-llm-pipeline/lib/common.sh`)
 
 **DON'T**: Assume model output is valid
 **DO**: Validate JSON, check file existence, handle errors
@@ -225,18 +209,10 @@ branch should be noted as superseded in the Agent Work Log.
 
 ## State Management
 
-### Stages (system 2)
+### Stages (system 2 — archived)
 
-State passes between stages via JSON files:
-
-```
-01-plan.sh    → plan.json
-02-build.sh   ← plan.json → writes files
-03-review.sh  ← files + spec → review.json
-04-fix.sh     ← review.json → fixes files
-```
-
-Each stage is idempotent. Can restart from any point.
+The stages pipeline and its JSON state format are documented in
+`archive/local-llm-pipeline/README.md` and `ARCHITECTURE.md`.
 
 ### Orchestration (system 1)
 
@@ -248,13 +224,9 @@ State for resume capability:
 
 Written atomically (mktemp + mv). Read with awk (no jq dependency).
 
-## Model Endpoints (system 2)
+## Model Endpoints (system 2 — archived)
 
-| Endpoint | Purpose | Health Check |
-|----------|---------|--------------|
-| `:8080/v1/chat/completions` | Builder | `curl :8080/health` |
-| `:8081/v1/chat/completions` | Reviewer | `curl :8081/health` |
-| `:8082/v1/chat/completions` | Drift/Fix | `curl :8082/health` |
+Model endpoints are configured in `archive/local-llm-pipeline/lib/models.sh`.
 
 ## Architecture Decision Log
 
@@ -343,7 +315,7 @@ DRY_RUN_SKIP_AGENT=true ./tests/dry-run.sh
 ## Known Gaps
 
 - No live integration testing — all validation is `bash -n` + unit tests + structural dry-run
-- `lib/common.sh` and `lib/models.sh` are orphaned (not sourced by main scripts)
+- ~~`lib/common.sh` and `lib/models.sh` are orphaned~~ (archived to `archive/local-llm-pipeline/`)
 - ~~`write_state` branch/strategy fields use raw string interpolation~~ (fixed: now escaped)
 
 ## Process Lessons (for humans and agents)
@@ -370,8 +342,8 @@ DRY_RUN_SKIP_AGENT=true ./tests/dry-run.sh
 # 4. Check functions are called (not just defined)
 grep -n "function_name" scripts/*.sh | grep -v '^\s*#'
 
-# 5. Check for orphaned code
-grep -c "source.*common.sh" scripts/*.sh  # Should be 0 (orphaned)
+# 5. Check lib/ only contains active libraries
+ls lib/  # Should show only reliability.sh and validation.sh
 grep -c "source.*reliability.sh" scripts/*.sh  # Should be 2
 grep -c "source.*validation.sh" scripts/*.sh  # Should be 1 (generate-mapping.sh)
 ```
