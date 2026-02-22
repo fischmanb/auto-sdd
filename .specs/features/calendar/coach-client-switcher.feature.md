@@ -57,31 +57,43 @@ Then that client's name is displayed as the only option
 And it is shown as selected
 ```
 
+### Scenario: Accessible tab navigation
+
+```gherkin
+Given the ClientSwitcher is rendered
+Then the container has role="tablist" and aria-label="Client selector"
+And each client option has role="tab"
+And the selected option has aria-selected="true"
+And unselected options have aria-selected="false"
+```
+
 ## UI Mockup
 
 ```
 ┌─────────────────────────────────────────────────────┐
-│  Client Switcher (bg: surface, px: spacing-4)       │
+│  Client Switcher (flex gap-2 flex-wrap)             │
 │                                                     │
 │  ┌──────────────────────────────────────────────┐   │
-│  │ [● Alex Chen] [ Jordan K. ] [ Sam Rivera ]   │   │
+│  │ [ Alex Chen ] [ Jordan Kim ] [ Sam Rivera ]  │   │
 │  └──────────────────────────────────────────────┘   │
-│   ▲ selected pill: bg-primary text-white             │
-│     unselected: bg-surface border text-text          │
+│   ▲ selected pill: bg-blue-600 (=bg-primary) text-white border-blue-600  │
+│     unselected: bg-white text-gray-800 border-gray-300 hover:border-blue-400 │
 │                                                     │
 │  Week View (below) shows Alex Chen's blocks...      │
 └─────────────────────────────────────────────────────┘
 
 Selected pill:
 ┌────────────────┐
-│  ● Alex Chen   │  (bg-primary, text-white, radius-full, px-4 py-2)
+│  Alex Chen     │  (bg-blue-600, text-white, border-blue-600, rounded-full, px-4 py-2, text-sm font-medium)
 └────────────────┘
 
 Unselected pill:
 ┌────────────────┐
-│    Jordan K.   │  (bg-surface, text-text, border, radius-full, px-4 py-2)
+│  Jordan Kim    │  (bg-white, text-gray-800, border-gray-300, rounded-full, px-4 py-2, text-sm font-medium)
 └────────────────┘
 ```
+
+Note: `bg-blue-600` equals the `primary` design token (`#3B82F6`) defined in tailwind.config.js.
 
 ## Types
 
