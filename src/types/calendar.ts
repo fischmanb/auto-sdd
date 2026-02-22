@@ -1,3 +1,15 @@
+export interface Client {
+  id: string
+  name: string
+  blocks: CalendarBlock[]
+}
+
+export interface ClientSwitcherProps {
+  clients: Client[]
+  selectedClientId: string
+  onSelect: (clientId: string) => void
+}
+
 export type BlockCategory =
   | 'deep-work'
   | 'medication'

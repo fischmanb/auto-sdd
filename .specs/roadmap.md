@@ -18,9 +18,9 @@ This is a **front-end prototype phase** — features use static mock data passed
 
 | Status | Count |
 |--------|-------|
-| ✅ Completed | 1 |
+| ✅ Completed | 2 |
 | 🔄 In Progress | 0 |
-| ⬜ Pending | 3 |
+| ⬜ Pending | 2 |
 | ⏸️ Blocked | 0 |
 
 **Last updated**: 2026-02-22
@@ -43,7 +43,7 @@ This is a **front-end prototype phase** — features use static mock data passed
 
 | # | Feature | Source | Jira | Complexity | Deps | Status |
 |---|---------|--------|------|------------|------|--------|
-| 2 | Coach Client Switcher | vision | - | S | 1 | ⬜ |
+| 2 | Coach Client Switcher | vision | - | S | 1 | ✅ |
 | 3 | Block: Add and Edit | vision | - | M | 1 | ⬜ |
 | 4 | Block: Detail View | vision | - | S | 1 | ⬜ |
 
