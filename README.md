@@ -13,7 +13,19 @@ You write a feature roadmap. The loop picks the next pending feature, hands it t
 
 Each agent invocation is isolated. No context rot. No shared state between features except what you explicitly define in the spec.
 
-**Validated end-to-end**: the loop produced a working React + TypeScript + Vite app — WeekView calendar component (12 passing tests) and ClientSwitcher coach panel (7 passing tests) — TypeScript clean, running at localhost:5173.
+**Validated end-to-end** on Feb 22, 2026 against a React + TypeScript + Vite coaching app:
+
+| | |
+|---|---|
+| Branch | `auto/chained-20260222-123029` |
+| Features built | 2 (Calendar Week View, Coach Client Switcher) |
+| Tests passing | 19 (12 + 7) |
+| Build time | ~6 minutes per feature (from commit timestamps) |
+| Models used | Claude Opus 4.6 (Feature 1), Claude Sonnet 4.6 (Feature 2) |
+| Drift check | Ran automatically; detected and reconciled spec drift on Feature 2 |
+| TypeScript | Clean compile after both features |
+
+Components produced: `src/components/calendar/WeekView.tsx`, `DayColumn.tsx`, `BlockCard.tsx`, `src/components/coach/ClientSwitcher.tsx`. App ran at localhost:5173.
 
 ---
 
@@ -26,7 +38,7 @@ The upstream project provided the orchestration concept and slash commands. Prod
 | CLI support | Cursor (`agent`) | Claude Code (`claude`) — `--force` removed, all `command -v` checks updated |
 | Reliability | None | `lib/reliability.sh` — locking, exponential backoff, context truncation, cycle detection |
 | Crash recovery | None | `--resume` flag; JSON state persisted in `.sdd-state/` across interruptions |
-| Test suite | None | 64 assertions across unit tests, validation tests, and structural dry-run |
+| Test suite | None | 57 assertions across unit tests, validation tests, and structural dry-run |
 | Bug fixes | — | 7 bare `local` statements outside functions; broken comment-line grep filter; `MAX_FEATURES_PER_RUN` env key silently ignored |
 | Documentation | README | `Agents.md` — agent work log with verified outcomes vs claimed outcomes; `ARCHITECTURE.md`; `Brians-Notes/` |
 
