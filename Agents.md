@@ -148,6 +148,23 @@ Future agents: read this before making changes.
 **What was NOT changed**: scripts/overnight-autonomous.sh (no hardcoded anti-mock rules found), .specs/roadmap.md, lib/, tests/, any other files
 **Verification**: bash -n passes, git diff --stat shows only allowed files
 
+### Round 13: Harden branch switch + credit exhaustion detection (branch: claude/add-decision-comments-QAn1M)
+**What was asked**: Harden build-loop-local.sh against two failure modes: (1) dirty worktree cascading failures where one failed feature leaves uncommitted changes that prevent all subsequent features from checking out new branches, and (2) API credit exhaustion where the loop wastes time retrying and advancing through features that can never succeed.
+**What was changed**:
+- scripts/build-loop-local.sh: Added `git add -A && git stash push` before every `git checkout` call (5 stash guards covering all 8 checkout calls across setup_branch_chained, NO_FEATURES_READY cleanup, feature failure cleanup, independent pass transition, and final summary)
+- scripts/build-loop-local.sh: Added credit exhaustion detection after agent output is captured — checks for patterns (credit, billing, insufficient_quota, quota exceeded, 402, 429, payment required) and halts the build loop immediately with `exit 1` instead of continuing to retry or advance to the next feature
+- Agents.md: this entry
+**Why**:
+- Dirty worktree cascade: A failed feature that leaves uncommitted changes causes every subsequent `git checkout` to fail, turning one failure into a cascade that fails the entire build loop. The stash-before-checkout pattern ensures each feature starts with a clean worktree.
+- Credit exhaustion: When API credits run out, every subsequent agent call will also fail. Without early detection, the loop wastes time on retries and advances through all remaining features, all of which are doomed to fail.
+**What was NOT changed**: lib/reliability.sh, tests/, overnight-autonomous.sh, any other files
+**Verification**:
+- `bash -n scripts/build-loop-local.sh` passes (no syntax errors)
+- `./tests/test-reliability.sh` passes (57/57 assertions)
+- 5 stash guards cover all 8 real checkout calls
+- Credit exhaustion detection present with pattern matching for billing/quota/402/429 signals
+- `git diff --stat` shows only build-loop-local.sh and Agents.md
+
 ---
 
 ## What This Is
