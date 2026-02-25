@@ -33,9 +33,11 @@ Forked from [AdrianRogowski/auto-sdd](https://github.com/AdrianRogowski/auto-sdd
 
 ### What's next
 
-- Run build loop against `stakd/` project (Traded.co clone, 28 features across 3 phases)
-- Local model integration (replace cloud API with local LM Studio endpoints on Mac Studio)
-- Codebase summary passed to each agent (so features don't redeclare types/interfaces)
+1. **Codebase summary injection** — generate summary after each commit, pass to next agent. Fixes cross-feature type/interface drift.
+2. **Topological sort** — emit optimal feature order from existing dependency graph parser. Independent features first, then dependents.
+3. **Local model integration** — replace cloud API with local LM Studio on Mac Studio
+4. **stakd/ build campaign** — full 28-feature test run
+5. **Adaptive routing / parallelism** — only if data from 1-3 shows remaining sequential bottleneck justifies the complexity
 
 ### Known gaps
 
@@ -50,10 +52,13 @@ Forked from [AdrianRogowski/auto-sdd](https://github.com/AdrianRogowski/auto-sdd
 
 > Topics under discussion or exploration that haven't resolved yet. A fresh chat should pick these up.
 
-- **ONBOARDING.md update protocol**: Just finalized (2026-02-25). Two-trigger system: significance heuristic (update if there's even a question it matters) + interval fallback (re-read every 3-5 prompts). Captures in-progress thinking, not just decisions. See "Keeping This File Current" section below.
-- **Codebase summary for agent context**: Each build agent currently has no knowledge of what previous agents produced, causing type redeclarations and interface drift. Passing a codebase summary to each agent is the next logical addition. Not started.
-- **Local model integration**: Replacing cloud API calls with local LM Studio endpoints on Mac Studio. The archived `archive/local-llm-pipeline/` system is reference material for this. Not started.
-- **stakd/ build campaign**: Next major test — running the build loop against the Traded.co clone (28 features, 3 phases). Blocked on the codebase summary work if we want clean cross-feature builds.
+- **Priority stack (decided 2026-02-25)**: The agreed execution order for next work is: (1) Codebase summary injection → (2) Topological sort for feature ordering → (3) Local model integration → (4) Adaptive routing / parallelism (only if data shows it's needed after 1-3). Each item is ordered by efficiency gain per complexity added.
+- **Codebase summary for agent context**: Each build agent currently has no knowledge of what previous agents produced, causing type redeclarations and interface drift. Passing a codebase summary to each agent is the next thing to build. High quality gain, moderate speed gain (fewer retries), low complexity. Not started.
+- **Topological sort for feature ordering**: Use the existing `check_circular_deps` dependency graph parser to emit a topological order. Run all independent features first, then dependents. Gets 80% of adaptive routing's benefit with near-zero complexity. Not started.
+- **Adaptive routing — deprioritized**: Investigated in Round 14 (results lost to compaction), re-analyzed in Round 16. Full edge case analysis done: diamond deps, merge conflicts at convergence, complex resume state, drift check ordering, resource contention, partial parallel failure. Conclusion: the wall-clock savings don't justify the complexity (~400-500 new lines, new failure classes) until items 1-3 are done and real data shows the remaining sequential bottleneck matters.
+- **Local model integration**: Replacing cloud API calls with local LM Studio endpoints on Mac Studio. The archived `archive/local-llm-pipeline/` system is reference material. Not started — comes after codebase summary and topo sort.
+- **stakd/ build campaign**: Next major end-to-end test — running the build loop against the Traded.co clone (28 features, 3 phases). Benefits from codebase summary being in place first for clean cross-feature builds.
+- **Onboarding state protocol**: Implemented this session (2026-02-25). Mechanical enforcement via `~/auto-sdd/.onboarding-state` file — tracks prompt count, buffers pending captures, triggers interval checks. Memory instruction points all future chats to the protocol. See "Keeping This File Current" section.
 
 ---
 
@@ -150,7 +155,9 @@ Full details in `Agents.md`. Here's the arc:
 | 11 | Diagnose 78% build failure rate | Root cause: credit exhaustion, not context loss |
 | 12 | Add decision comments to build prompts | Agents now leave WHY comments |
 | 13 | Git stash hardening + credit exhaustion detection | 5 stash guards, early halt on billing errors |
+| 14 | Investigate adaptive routing | Investigation only — results lost to compaction, re-analyzed in Round 16 |
 | 15 | Build summary report | Per-feature metrics, JSON + human-readable output |
+| 16 | ONBOARDING.md + maintenance protocol + adaptive routing analysis | Created onboarding file, mechanical state-tracking protocol, full edge case analysis of adaptive routing → deprioritized in favor of codebase summary + topo sort |
 
 **Key lesson that repeats**: Agent self-assessments are unreliable. Always verify with grep, `bash -n`, and tests. Never trust the agent's narrative summary.
 
@@ -237,6 +244,7 @@ auto-sdd/
 ├── README.md                      # Public-facing documentation
 ├── ARCHITECTURE.md                # Design decisions (local LLM pipeline)
 ├── VERSION                        # 2.0.0
+├── .onboarding-state              # State tracking for update protocol (local only, gitignored)
 └── .env.local.example             # Full config reference
 ```
 
@@ -244,29 +252,57 @@ auto-sdd/
 
 ## Keeping This File Current
 
-This file is useless if it's stale. Context loss — compaction, crashes, new chats — happens without warning. The update protocol is designed around that reality.
+This file is useless if it's stale. Context loss — compaction, crashes, new chats — happens without warning. The update protocol is designed around that reality and enforced mechanically.
 
-### Two triggers, both mandatory
+### Enforcement mechanism: `.onboarding-state`
 
-**1. Significance trigger (immediate):** If there is even a question of whether the current exchange could matter to the next chat, update ONBOARDING.md now. Don't wait for a decision to be finalized. Don't deliberate about whether it's "significant enough." Bias aggressively toward updating. The cost of an unnecessary update is near zero. The cost of a missed one is a disoriented next chat.
+A state file at `~/auto-sdd/.onboarding-state` tracks update status:
+
+```
+last_check_ts=<ISO timestamp of last reconciliation>
+last_check_hash=<md5 of ONBOARDING.md at last full read>
+prompt_count=<responses since last interval check>
+pending_captures=["item 1", "item 2"]
+```
+
+**Every project-related response** (silent, no meta-commentary):
+1. Read `.onboarding-state`, increment `prompt_count`
+2. If the current exchange has something that might need capturing, append a one-liner to `pending_captures` and flag inline with 📌 (e.g. "📌 Possibly worth capturing: deprioritized adaptive routing in favor of codebase summary")
+3. Write state file back
+
+**At interval (prompt_count >= 4)**:
+1. Hash ONBOARDING.md, compare to `last_check_hash`
+2. If hash matches AND `pending_captures` is empty → reset counter, done
+3. If hash differs → another agent or Brian edited the file. Read only the **Active Considerations** section (grep for section boundaries, ~15 lines). Note what changed.
+4. If `pending_captures` is non-empty → read only **Active Considerations**, reconcile the buffer into it, flush `pending_captures`, update hash
+5. Reset counter
+
+**Fresh onboard (state file missing or `last_check_ts` > 24h stale)**:
+- Full read of ONBOARDING.md. This is the only case where the whole file gets read.
+
+**Cost profile**: 95% of responses = read/write a 5-line file (negligible). Every ~4th response = one md5 + maybe 15 lines (minimal). New chat after a break = full read (appropriate).
+
+### Two triggers
+
+**1. Significance trigger (immediate):** If there is even a question of whether the current exchange could matter to the next chat, append to `pending_captures` and flag with 📌. Don't deliberate. The cost of a false positive is near zero.
 
 This includes:
 - Decisions and actions (new files, resolved gaps, changed priorities)
-- **Topics under active consideration** — if we're weighing a design direction, exploring an approach, or mid-discussion on something that hasn't landed yet, capture that too. The next chat needs to know what was being thought about, not just what was concluded.
+- **Topics under active consideration** — directions being weighed, open questions, things Brian raised that haven't resolved yet
 - New process lessons or failure modes observed
 - Anything Brian says that reframes the project or its priorities
 
-**2. Interval trigger (every 3-5 prompts):** Regardless of whether any single exchange felt significant, re-read ONBOARDING.md every 3-5 prompts and check whether it still reflects reality. Slow drift — where no single message changes the picture but five in a row shift it — is the failure mode this catches. If the doc is current, move on. If not, update.
+**2. Interval trigger (every 3-5 prompts):** The mechanical check described above. Catches slow drift where no single message feels significant but several in a row shift the picture.
 
 ### What to capture
 
-Not just outcomes. The **Active Considerations** section (below) exists specifically for in-progress thinking: directions being weighed, open questions, things Brian raised that haven't resolved yet. A fresh chat that knows what was being discussed is 10x more useful than one that only knows what was decided.
+Not just outcomes. The **Active Considerations** section exists specifically for in-progress thinking. A fresh chat that knows what was being discussed is 10x more useful than one that only knows what was decided.
 
 ### How to update
 
 1. Edit this file
 2. `git add ONBOARDING.md && git commit -m "docs: update ONBOARDING.md — <what changed>"`
-3. Brian pushes (or push if you have access)
+3. Ask Brian before pushing
 
 ### What NOT to put here
 

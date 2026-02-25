@@ -440,3 +440,7 @@ MAX_DRIFT_RETRIES=1       # Retry attempts for fixing drift (default: 1)
 - NO placeholder UI. Components must be wired to real data sources.
 - Features must work end-to-end or they are not done.
 - Real validation, real error handling, real flows.
+
+## Onboarding State Protocol
+
+If `~/auto-sdd/.onboarding-state` exists, follow the update protocol documented in `ONBOARDING.md` under "Keeping This File Current." This applies to all agents and chat instances working on this project.

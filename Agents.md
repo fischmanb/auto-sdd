@@ -283,6 +283,32 @@ The loop ran to completion without human intervention.
 
 ---
 
+### Round 16: ONBOARDING.md, maintenance protocol, adaptive routing analysis (no branch — chat session via Desktop Commander)
+
+**Date**: Feb 25, 2026
+
+**What was asked**: Create an onboarding document for fresh Claude instances, establish a maintenance protocol that survives context loss, merge the Round 14 investigation entry, and analyze adaptive routing for the build loop.
+
+**What actually happened**:
+
+1. **ONBOARDING.md created and pushed to main** — comprehensive orientation file covering project state, key files, architecture summary, agent work log summary, process lessons, verification commands, and file tree.
+
+2. **Maintenance protocol designed through iteration** — initial "update before conversation ends" approach rejected (model can't predict context loss). Interval-based + significance-trigger approach adopted, then hardened with mechanical enforcement: `.onboarding-state` file tracks prompt count, buffers pending captures, triggers interval checks against Active Considerations section only (not full file re-read). Full read only on fresh onboard (>24h stale or missing state file). Memory instruction ensures all future chats inherit the protocol.
+
+3. **Round 14 merged to main** — `claude/add-round-14-entry-GojMr` branch contained the Agents.md entry for the lost adaptive routing investigation. Verified clean, merged with `--no-ff`.
+
+4. **Adaptive routing full edge case analysis** — 10 edge cases identified (diamond deps, merge conflicts at convergence, complex resume state, drift check ordering, codebase summary interaction, resource contention, partial parallel failure, build/test validation across branches, DAG vs list ordering, "both" strategy conflict). Conclusion: deprioritized. Complexity doesn't justify wall-clock savings until simpler levers are exhausted.
+
+5. **Priority stack established** — (1) Codebase summary injection, (2) Topological sort for feature ordering, (3) Local model integration, (4) Adaptive routing only if data shows it's needed.
+
+6. **Push/merge permission protocol** — `git push` and `git merge` require Brian's explicit permission via Desktop Commander (uses his machine's credentials directly).
+
+**What was changed**: ONBOARDING.md (created), CLAUDE.md (protocol reference), Agents.md (Round 14 merge + Round 16), .onboarding-state (created, gitignored), .gitignore (added .onboarding-state)
+
+**What was NOT changed**: No scripts, no lib/, no tests, no build logic
+
+---
+
 ## What This Is
 
 A spec-driven development system optimized for 256GB unified memory. Uses multiple local LLMs with **fresh contexts per stage** to avoid context rot.

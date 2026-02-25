@@ -4,6 +4,9 @@
 # SDD build state (resume capability)
 .sdd-state/
 
+# Onboarding state tracking (local only)
+.onboarding-state
+
 # Build worktrees (independent/both strategy)
 .build-worktrees/
 
