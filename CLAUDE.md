@@ -443,4 +443,4 @@ MAX_DRIFT_RETRIES=1       # Retry attempts for fixing drift (default: 1)
 
 ## Onboarding State Protocol
 
-If `~/auto-sdd/.onboarding-state` exists, follow the update protocol documented in `ONBOARDING.md` under "Keeping This File Current." This applies to all agents and chat instances working on this project.
+`ONBOARDING.md` is the orientation file for fresh Claude instances. It contains project state, active considerations, and a priority stack. Claude Code agents should be aware it exists but **must not read, write, or update** `ONBOARDING.md` or `~/auto-sdd/.onboarding-state`. The onboarding protocol is maintained exclusively through chat sessions (e.g. claude.ai with Desktop Commander), not through build-loop agents.

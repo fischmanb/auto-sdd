@@ -207,7 +207,7 @@ The broken pattern fails because `grep -rn` prepends `filename:linenum:` before 
 
 ---
 
-## Current Goals (as of 2025-02-24)
+## Current Goals (as of 2026-02-25)
 
 1. ✅ Hardened `lib/reliability.sh` with lock, backoff, state, truncation, cycle detection
 2. ✅ Extracted shared functions, removed duplication between scripts
@@ -216,11 +216,28 @@ The broken pattern fails because `grep -rn` prepends `filename:linenum:` before 
 5. ✅ Swapped Cursor `agent` CLI to Claude Code `claude` CLI
 6. ✅ Fixed agent permissions (`--dangerously-skip-permissions` + settings.local.json)
 7. ✅ Added cost/token tracking wrapper (`lib/claude-wrapper.sh`, logs to `$COST_LOG_FILE` as JSONL)
-8. **Next**: Run build loop against `stakd/` project (Traded.co clone, 28 features across 3 phases)
-9. **Then**: Local model integration (replace cloud API calls with local LM Studio endpoints on Mac Studio)
+8. ✅ Build summary report (per-feature timing, test counts, token usage)
+9. ✅ ONBOARDING.md with mechanical maintenance protocol
+10. **Next**: Codebase summary injection (so agents don't redeclare types/interfaces)
+11. **Then**: Topological sort for feature ordering (independent features first)
+12. **Then**: Local model integration (replace cloud API with local LM Studio on Mac Studio)
+13. **Then**: Run build loop against `stakd/` project (28 features, 3 phases)
+14. **Later (if needed)**: Adaptive routing / parallelism (deprioritized — see ONBOARDING.md Active Considerations)
 
 ---
 
 ## How to Orient on a New Chat
 
 If Brian says context was lost, ask him to paste `Agents.md`. That file contains the full agent work log, current file structure, known gaps, and verification checklist. It is the source of truth for repo state. This guide covers methodology; `Agents.md` covers current state.
+
+---
+
+## Session Discipline: Chat vs Agent
+
+**Implementation work** (modifying scripts, lib/, tests, build logic) must be done through **fresh Claude Code agent sessions** — one session per round/prompt, with hardened prompts following the structure in this guide. Never accumulate implementation work across a long-running context. Context degradation over long sessions produces the same class of failures documented in Rounds 1 and 9: scope creep, unreliable self-assessment, and working around problems instead of stopping.
+
+**Planning, analysis, and documentation** (design discussions, edge case analysis, onboarding docs, Agents.md entries, ONBOARDING.md updates) can be done through **chat sessions** (claude.ai with Desktop Commander). The accumulated conversational context is an asset for this kind of work — each exchange builds on the last. But chat sessions should not make implementation changes to the codebase.
+
+**The boundary**: if you're about to modify a script in `scripts/`, a library in `lib/`, or test logic in `tests/`, it should be a hardened agent prompt in a fresh session. If you're updating documentation, analyzing a design question, or maintaining the onboarding protocol, chat is the right tool.
+
+**Why this matters**: Desktop Commander gives chat sessions full filesystem access, making them functionally equivalent to agents but without the safety guardrails (explicit file allowlists, hard constraints, verification gates, `git diff --stat` checks). The temptation to "just make a quick fix" in chat grows as context fills. Resist it. Write the agent prompt instead.

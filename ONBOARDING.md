@@ -304,6 +304,23 @@ Not just outcomes. The **Active Considerations** section exists specifically for
 2. `git add ONBOARDING.md && git commit -m "docs: update ONBOARDING.md — <what changed>"`
 3. Ask Brian before pushing
 
+### How to verify it's working
+
+```bash
+# Check update frequency — should show commits every few sessions
+git log --oneline ONBOARDING.md
+
+# Check state file — prompt_count should increment, pending_captures should flush periodically
+cat ~/auto-sdd/.onboarding-state
+
+# Spot check — ask a fresh chat "what are the active considerations for auto-sdd?"
+# If the answer is stale, the protocol failed.
+```
+
+### Scope
+
+This protocol is maintained **exclusively through chat sessions** (claude.ai with Desktop Commander). Claude Code build-loop agents must not read, write, or update `.onboarding-state` or ONBOARDING.md. See CLAUDE.md for the agent-facing rule.
+
 ### What NOT to put here
 
 - Implementation details that belong in `Agents.md` (per-round specifics, line-level changes)
