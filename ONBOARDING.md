@@ -46,6 +46,17 @@ Forked from [AdrianRogowski/auto-sdd](https://github.com/AdrianRogowski/auto-sdd
 
 ---
 
+## Active Considerations
+
+> Topics under discussion or exploration that haven't resolved yet. A fresh chat should pick these up.
+
+- **ONBOARDING.md update protocol**: Just finalized (2026-02-25). Two-trigger system: significance heuristic (update if there's even a question it matters) + interval fallback (re-read every 3-5 prompts). Captures in-progress thinking, not just decisions. See "Keeping This File Current" section below.
+- **Codebase summary for agent context**: Each build agent currently has no knowledge of what previous agents produced, causing type redeclarations and interface drift. Passing a codebase summary to each agent is the next logical addition. Not started.
+- **Local model integration**: Replacing cloud API calls with local LM Studio endpoints on Mac Studio. The archived `archive/local-llm-pipeline/` system is reference material for this. Not started.
+- **stakd/ build campaign**: Next major test — running the build loop against the Traded.co clone (28 features, 3 phases). Blocked on the codebase summary work if we want clean cross-feature builds.
+
+---
+
 ## Key Files — What to Read and When
 
 | File | What it contains | When to read |
@@ -233,21 +244,27 @@ auto-sdd/
 
 ## Keeping This File Current
 
-Any Claude instance that makes meaningful changes to the project **must update this file before the conversation ends.** This is not optional.
+This file is useless if it's stale. Context loss — compaction, crashes, new chats — happens without warning. The update protocol is designed around that reality.
 
-### What triggers an update
+### Two triggers, both mandatory
 
-- A new round is added to `Agents.md` → update the **Agent Work Log Summary** table
-- A known gap is resolved or a new one discovered → update **Known gaps** under Current State
-- A new key file is created → add it to the **Key Files** table and **File Tree**
-- The "what's next" priorities change → update **What's next** under Current State
-- A new process lesson is learned → add it to **Process Lessons**
-- The verification commands change (new tests, renamed scripts) → update **How to Verify**
-- The project version changes → update the version in the header
+**1. Significance trigger (immediate):** If there is even a question of whether the current exchange could matter to the next chat, update ONBOARDING.md now. Don't wait for a decision to be finalized. Don't deliberate about whether it's "significant enough." Bias aggressively toward updating. The cost of an unnecessary update is near zero. The cost of a missed one is a disoriented next chat.
+
+This includes:
+- Decisions and actions (new files, resolved gaps, changed priorities)
+- **Topics under active consideration** — if we're weighing a design direction, exploring an approach, or mid-discussion on something that hasn't landed yet, capture that too. The next chat needs to know what was being thought about, not just what was concluded.
+- New process lessons or failure modes observed
+- Anything Brian says that reframes the project or its priorities
+
+**2. Interval trigger (every 3-5 prompts):** Regardless of whether any single exchange felt significant, re-read ONBOARDING.md every 3-5 prompts and check whether it still reflects reality. Slow drift — where no single message changes the picture but five in a row shift it — is the failure mode this catches. If the doc is current, move on. If not, update.
+
+### What to capture
+
+Not just outcomes. The **Active Considerations** section (below) exists specifically for in-progress thinking: directions being weighed, open questions, things Brian raised that haven't resolved yet. A fresh chat that knows what was being discussed is 10x more useful than one that only knows what was decided.
 
 ### How to update
 
-1. Make your edits to this file
+1. Edit this file
 2. `git add ONBOARDING.md && git commit -m "docs: update ONBOARDING.md — <what changed>"`
 3. Brian pushes (or push if you have access)
 
@@ -257,7 +274,7 @@ Any Claude instance that makes meaningful changes to the project **must update t
 - Prompt methodology that belongs in `Brians-Notes/PROMPT-ENGINEERING-GUIDE.md`
 - Agent instructions that belong in `CLAUDE.md`
 
-This file is the **orientation layer**. It tells you what exists and where to find it. The other files contain the depth.
+This file is the **orientation layer**. It tells you what exists and where to find it, what's active, and what's being considered. The other files contain the depth.
 
 ---
 
