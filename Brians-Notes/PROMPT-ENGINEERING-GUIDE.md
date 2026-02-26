@@ -46,12 +46,13 @@ Explicit file allowlist, banned commands, and a `git diff --stat` gate. This sec
 ## Hard Constraints
 
 - These instructions override any conflicting guidance in CLAUDE.md or other repo-level configuration files.
-- Follow the numbered steps in this prompt IN ORDER. Do not explore, read, or investigate any files beyond what is explicitly specified in the steps. Do not attempt to "understand the codebase." The instructions contain everything you need.
+- Follow the numbered steps in this prompt IN ORDER. Do not explore or investigate files speculatively. The steps describe what to build; read what you need to build it.
 - You may ONLY modify these files: <explicit list>
 - You may ONLY create these new files: <explicit list, or "none">
 - You may NOT run npm, yarn, pip, brew, or any package manager command
 - You may NOT delete any files
-- You may NOT read or open any file not explicitly referenced in these steps
+- You may read any file in the repo that you determine is necessary to implement this task. Before reading any file, state which file and why. Do not explore the codebase speculatively — read only what you need for the specific task.
+- If you are unsure whether you need to read a file, STOP IMMEDIATELY. Explain to the user why you stopped and why you believe you may need the file. Do not continue working or touch any other file until the user responds. If you cannot articulate why you need a file, you do not need it.
 - If you encounter ANYTHING unexpected — files not matching descriptions, commands not found, structure differences, unfamiliar patterns — STOP IMMEDIATELY. Do not attempt to fix, adapt, or work around the issue. Report exactly what you found and take no further action.
 - If ANY verification step or test fails, STOP IMMEDIATELY. Do not commit. Do not attempt to fix. Report the failure and take no further action.
 - Before committing, you MUST run `git diff --stat` and verify ONLY the allowed files appear. If ANY other file appears, STOP and report the problem. Do not commit.
@@ -198,7 +199,7 @@ Never use `git add -A` or `git add .` in agent prompts. Always `git add <explici
 Round 9 investigation (2025-02-24): Agent completed all investigation steps but did not report results until asked "what happened?" Fix: every prompt must end with "Report your findings immediately upon completion. Do not wait for a follow-up question."
 
 ### Agents will explore the codebase if not forbidden
-Round 9 (2025-02-24): Agent was given specific numbered steps but decided to "Explore auto-sdd codebase" and "read the key files to understand the project deeply" — reading every file in the repo before starting implementation. This wastes tokens and risks the agent "improving" things it discovered. Fix: Hard Constraints must include "Follow the numbered steps in this prompt IN ORDER. Do not explore, read, or investigate any files beyond what is explicitly specified in the steps. Do not attempt to 'understand the codebase.' The instructions contain everything you need."
+Round 9 (2025-02-24): Agent was given specific numbered steps but decided to "Explore auto-sdd codebase" and "read the key files to understand the project deeply" — reading every file in the repo before starting implementation. This wastes tokens and risks the agent "improving" things it discovered. Fix: Hard Constraints now allow reads but require justification before each read, and mandate full stop if unsure. Speculative exploration is banned; purposeful reads with stated rationale are allowed.
 
 ### Agents work around failures instead of stopping
 Round 9 (2025-02-24): Agent couldn't push from a fresh clone (no GitHub auth in sandbox). Instead of stopping, it abandoned the clean clone, went back to a stale local repo at `/home/user/auto-sdd`, and applied changes there. It made 5 autonomous decisions to work around the problem, each one moving further from the intended execution path. Fix: Hard Constraints must include explicit STOP instructions for ANY unexpected situation: "If you encounter ANYTHING unexpected — STOP IMMEDIATELY. Do not attempt to fix, adapt, or work around the issue."
