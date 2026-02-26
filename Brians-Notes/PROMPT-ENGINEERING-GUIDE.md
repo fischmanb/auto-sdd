@@ -62,6 +62,7 @@ Explicit file allowlist, banned commands, and a `git diff --stat` gate. This sec
 - Confirm working directory with `pwd`
 - Confirm clean working tree with `git status`
 - `git fetch origin`
+- **Verify local main is pushed**: `git log --oneline origin/main..main` — if this shows ANY commits, STOP IMMEDIATELY. Local main is ahead of origin/main. Report the divergence and take no further action. Brian must `git push origin main` before the prompt can proceed. (Agents fork from `origin/main`, not local `main` — stale origin means the agent works against an old codebase and produces merge conflicts.)
 - Identify current state (main HEAD, latest claude/* branch)
 - Fork a new branch from the most recent
 - Report which branch was forked from and why
