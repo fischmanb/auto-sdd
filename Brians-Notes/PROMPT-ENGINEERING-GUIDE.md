@@ -106,6 +106,25 @@ Brian runs the investigation prompt, pastes the results, then Claude writes the 
 
 ---
 
+## Prompt Sizing and Splitting
+
+The project's core principle — fresh contexts per stage to avoid context rot — applies to agent prompts themselves. A prompt that tries to do too much produces the same degradation it's trying to prevent: agents lose track of constraints, skip steps, define functions without calling them, and exceed scope.
+
+**Rule of thumb**: A single implementation prompt should target one cohesive unit of work that modifies no more than 3-4 files with interrelated changes. When a task exceeds this, split it into sequential prompts where each round commits its work and the next round builds on a verified foundation.
+
+**Splitting criteria** (any one of these warrants a split):
+- More than ~4 files being modified with non-trivial changes in each
+- Changes to core orchestration logic AND a new algorithm/function AND test additions AND prompt template rewrites in the same prompt
+- The prompt itself exceeds ~200 lines (the prompt is consuming the agent's context budget before implementation starts)
+- Changes span two independently testable systems (e.g., build-loop-local.sh and overnight-autonomous.sh)
+- You find yourself writing "also do X" after the main implementation is already fully specified
+
+**How to split**: Each sub-prompt is a full Round with its own branch, Hard Constraints, Implementation, Verification, and Agents.md entry. The second prompt's Preconditions include verifying that the first round's commit exists and tests pass. This is strictly better than one large prompt because each round gets verified independently — a failure in round N doesn't contaminate round N+1's context.
+
+**Anti-pattern**: "Let's just add one more thing to the prompt since the agent is already in there." This is how Round 1-class failures happen. The marginal cost of a fresh agent session is near zero. The marginal risk of scope creep in a bloated prompt is high.
+
+---
+
 ## Merge Prompts
 
 Structure:
