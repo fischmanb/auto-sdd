@@ -446,6 +446,7 @@ MAX_DRIFT_RETRIES=1       # Retry attempts for fixing drift (default: 1)
 
 ## Git Discipline
 
+- **Before starting work**: After `git fetch origin`, run `git log --oneline origin/main..main`. If ANY commits appear, STOP IMMEDIATELY — local main is ahead of origin/main. Report the divergence and take no further action. Brian must push before work can proceed.
 - Commit your work to your feature branch. Do NOT merge to main — Brian merges manually after verification.
 - Do NOT push to origin — Brian pushes manually.
 - Do NOT use `git add -A` or `git add .`. Always `git add <explicit file list>`.
