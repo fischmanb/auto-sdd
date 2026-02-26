@@ -2,7 +2,9 @@
 
 > **Read this file first.** It gives a fresh Claude instance everything needed to pick up work on `auto-sdd` with Brian.
 >
-> Last updated: 2026-02-25
+> Last updated: 2026-02-26
+
+> **⚠️ Per-response protocol**: Read and update `.onboarding-state` on every project-related response. See "Keeping This File Current" for full rules.
 
 ---
 
@@ -19,25 +21,35 @@ Forked from [AdrianRogowski/auto-sdd](https://github.com/AdrianRogowski/auto-sdd
 
 ---
 
+## Chat Session Permissions
+
+Chat sessions (claude.ai with Desktop Commander or any equivalent tool or capability that provides filesystem or system access) must ask Brian for explicit permission before making any file changes, git commits, or GitHub operations. The only exceptions are `.onboarding-state` reads/writes and `ONBOARDING.md` reads/writes required by the onboarding state protocol. This applies to documentation edits, prompt files, script changes, and any other filesystem modification. Do not batch multiple changes into a single approval request in a way that obscures what's being changed — describe each change clearly.
+
+**Merge/push rule**: Claude must never run `git merge` or `git push` in the same response where it presents verification results or proposes the action. The response must end with the request. The merge or push can only happen in a subsequent response after Brian's explicit approval in the intervening message. This creates a forced wait state that prevents inferred permission from context.
+
+**Documentation-as-code discipline**: Documentation and protocol changes (ONBOARDING.md reconciliation excluded) carry the same ask-first requirement as code changes. Edits to the prompt engineering guide, Agents.md, README.md, CLAUDE.md, or any other documentation file require explicit permission before execution.
+
+---
+
 ## Current State (as of 2026-02-25)
 
 ### What works
 
 - **Build loop runs end-to-end.** Validated Feb 22, 2026: 2 features built autonomously against a React+TS+Vite app. 19 tests passing, TypeScript clean, drift auto-reconciled.
 - **Reliability layer**: locking, exponential backoff, context truncation, cycle detection, crash recovery with `--resume`.
-- **Test suite**: 57 unit assertions (`test-reliability.sh`), 10 validation assertions (`test-validation.sh`), structural dry-run.
+- **Test suite**: 68 unit assertions (`test-reliability.sh`), 10 validation assertions (`test-validation.sh`), structural dry-run.
 - **Cost tracking**: `lib/claude-wrapper.sh` logs token/cost data as JSONL.
 - **Build summary reports**: per-feature timing, test counts, token usage, written to `logs/build-summary-{timestamp}.json`.
 - **Git stash hardening**: dirty worktree can't cascade failures across features.
 - **Credit exhaustion detection**: loop halts immediately when API credits run out instead of retrying doomed calls.
+- **Topological sort + pre-flight**: shell-side Kahn's algorithm orders features by dependency, pre-flight summary with user confirmation before build starts.
 
 ### What's next
 
-1. **Topological sort + pre-flight summary** — shell-side Kahn's algorithm for feature ordering, pre-flight confirmation before build start
-2. **Codebase summary injection** — generate summary after each commit, pass to next agent. Fixes cross-feature type/interface drift.
-3. **Local model integration** — replace cloud API with local LM Studio on Mac Studio
-4. **stakd/ build campaign + issue triage** — full 28-feature test run, then triage last run's issues
-5. **Adaptive routing / parallelism** — only if data from 1-3 shows remaining sequential bottleneck justifies the complexity
+1. **Codebase summary injection** — generate summary after each commit, pass to next agent. Fixes cross-feature type/interface drift.
+2. **Local model integration** — replace cloud API with local LM Studio on Mac Studio
+3. **stakd/ build campaign + issue triage** — full 28-feature test run, then triage last run's issues
+4. **Adaptive routing / parallelism** — only if data from 1-3 shows remaining sequential bottleneck justifies the complexity
 
 ### Known gaps
 
@@ -50,13 +62,15 @@ Forked from [AdrianRogowski/auto-sdd](https://github.com/AdrianRogowski/auto-sdd
 
 ## Active Considerations
 
+> **⚠️ Per-response protocol**: Read and update `.onboarding-state` on every project-related response. No exceptions.
+
 > What's next and what's in-flight. Priority stack is the execution plan; everything below it is context a fresh chat should pick up.
 
 ### Priority stack (updated 2026-02-25)
 
 Ordered by efficiency gain per complexity added:
 
-1. **Topological sort + pre-flight summary** — Use the existing `check_circular_deps` dependency graph parser to emit optimal feature order via Kahn's algorithm (shell-side, not agent-side). Independent features first, then dependents. Gets 80% of adaptive routing's benefit with near-zero complexity. Pre-flight prints sorted feature list with t-shirt sizes and total count, requires user confirmation before build starts (`AUTO_APPROVE=true` skips for overnight). Design decided; implementation via dedicated Claude Code agent. *Not started.*
+1. ~~**Topological sort + pre-flight summary**~~ — ✅ Done (Rounds 17-18). Shell-side Kahn's algorithm for feature ordering in both `build-loop-local.sh` and `overnight-autonomous.sh`. Pre-flight prints sorted feature list with t-shirt sizes, requires user confirmation (`AUTO_APPROVE=true` skips for overnight). 68 test assertions passing.
 2. **Codebase summary injection** — Generate summary after each commit, pass to next agent. Fixes cross-feature type/interface drift. Each build agent currently has no knowledge of what previous agents produced, causing type redeclarations and interface drift. High quality gain, moderate speed gain (fewer retries), low complexity. *Not started.*
 3. **Local model integration** — Replace cloud API calls with local LM Studio endpoints on Mac Studio. The archived `archive/local-llm-pipeline/` system is reference material. *Not started.*
 4. **stakd/ build campaign + issue triage** — Full 28-feature end-to-end run against the Traded.co clone (3 phases). Benefits from codebase summary being in place first. After topo sort, triage issues from last stakd build run. *Not started.*
@@ -134,7 +148,7 @@ bash -n lib/reliability.sh
 bash -n lib/validation.sh
 
 # Unit tests
-./tests/test-reliability.sh        # 57 assertions
+./tests/test-reliability.sh        # 68 assertions
 ./tests/test-validation.sh         # 10 assertions
 
 # Structural dry-run (no agent/API needed)
@@ -168,6 +182,8 @@ Full details in `Agents.md`. Here's the arc:
 | 14 | Investigate adaptive routing | Investigation only — results lost to compaction, re-analyzed in Round 16 |
 | 15 | Build summary report | Per-feature metrics, JSON + human-readable output |
 | 16 | ONBOARDING.md + maintenance protocol + adaptive routing analysis | Created onboarding file, mechanical state-tracking protocol, full edge case analysis of adaptive routing → deprioritized in favor of codebase summary + topo sort |
+| 17 | Topological sort + pre-flight summary | `emit_topo_order()` in reliability.sh, `build_feature_prompt()` + `show_preflight_summary()` in build-loop-local.sh, 10 new tests (68 total) |
+| 18 | Overnight script parity for topo sort | `build_feature_prompt_overnight()` + topo iteration in overnight-autonomous.sh |
 
 **Key lesson that repeats**: Agent self-assessments are unreliable. Always verify with grep, `bash -n`, and tests. Never trust the agent's narrative summary.
 
@@ -193,12 +209,6 @@ These are documented in detail in `Brians-Notes/PROMPT-ENGINEERING-GUIDE.md` and
 - Deep technical understanding — he reads the code and verifies claims.
 - The `stakd/` directory inside the repo is a separate project (Traded.co clone). It has its own `.git`, `.specs/`, and `CLAUDE.md`. Don't conflate them.
 - Brian pushes to GitHub manually. Agents should commit locally but not push.
-
-### Chat session permissions
-
-Chat sessions (claude.ai with Desktop Commander or any equivalent tool or capability that provides filesystem or system access) must ask Brian for explicit permission before making any file changes, git commits, or GitHub operations. The only exceptions are `.onboarding-state` reads/writes and `ONBOARDING.md` reads/writes required by the onboarding state protocol. This applies to documentation edits, prompt files, script changes, and any other filesystem modification. Do not batch multiple changes into a single approval request in a way that obscures what's being changed — describe each change clearly.
-
-**Merge/push rule**: Claude must never run `git merge` or `git push` in the same response where it presents verification results or proposes the action. The response must end with the request. The merge or push can only happen in a subsequent response after Brian's explicit approval in the intervening message. This creates a forced wait state that prevents inferred permission from context.
 
 ---
 
@@ -245,7 +255,7 @@ auto-sdd/
 │   ├── claude-wrapper.sh          # Claude CLI wrapper + cost logging
 │   └── validation.sh              # YAML frontmatter validation
 ├── tests/
-│   ├── test-reliability.sh        # 57 unit assertions
+│   ├── test-reliability.sh        # 68 unit assertions
 │   ├── test-validation.sh         # 10 unit assertions
 │   ├── dry-run.sh                 # Structural integration test
 │   └── fixtures/dry-run/          # Test fixtures
@@ -304,6 +314,7 @@ A JSON state file at `~/auto-sdd/.onboarding-state` tracks update status:
 **Fresh onboard (state file missing or `last_check_ts` > 24h stale)**:
 - Full read of ONBOARDING.md. This is the only case where the whole file gets read.
 - Read the "Lessons Learned (Failure Catalog)" section of `Brians-Notes/PROMPT-ENGINEERING-GUIDE.md`. These hard-won failure modes repeat if not internalized at session start. Do not read the full guide — only the failure catalog.
+- **The first response of any new session must be read-only.** Read ONBOARDING.md, read the failure catalog, read the state file, report status. No file writes (except `.onboarding-state`), no commits, no edits. The first response is always a status report.
 
 **Cost profile**: 95% of responses = read/write a 5-line file (negligible). Every ~4th response = one md5 + maybe 15 lines (minimal). New chat after a break = full read (appropriate).
 
