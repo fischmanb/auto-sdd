@@ -262,18 +262,20 @@ This file is useless if it's stale. Context loss — compaction, crashes, new ch
 
 ### Enforcement mechanism: `.onboarding-state`
 
-A state file at `~/auto-sdd/.onboarding-state` tracks update status:
+A JSON state file at `~/auto-sdd/.onboarding-state` tracks update status:
 
-```
-last_check_ts=<ISO timestamp of last reconciliation>
-last_check_hash=<md5 of ONBOARDING.md at last full read>
-prompt_count=<responses since last interval check>
-pending_captures=["item 1", "item 2"]
+```json
+{
+  "last_check_ts": "<ISO timestamp of last reconciliation>",
+  "last_check_hash": "<md5 of ONBOARDING.md at last full read>",
+  "prompt_count": 0,
+  "pending_captures": ["item 1", "item 2"]
+}
 ```
 
 **Every project-related response** (silent, no meta-commentary):
 1. Read `.onboarding-state`, increment `prompt_count`
-2. If the current exchange has something that might need capturing, append a one-liner to `pending_captures` and flag inline with 📌 (e.g. "📌 Possibly worth capturing: deprioritized adaptive routing in favor of codebase summary")
+2. If the current exchange has something that might need capturing, append a one-liner to `pending_captures`, flag inline with 📌, and **write the state file immediately in the same response** (not deferred to next response — protects against context compaction)
 3. Write state file back
 
 **At interval (prompt_count >= 4)**:
