@@ -388,6 +388,25 @@ The loop ran to completion without human intervention.
 
 ---
 
+### Round 23: Operational hygiene (branch: `claude/operational-hygiene-2MIJa`)
+
+**Date**: Feb 26, 2026
+
+**What was asked**: Fix four operational gaps identified during the stakd campaign investigation: no build log for runs 2-3 (#20), model not logged per feature (#14, #37), 39 orphan branches never cleaned (#19), and NODE_ENV=production breaking dev builds (#5).
+
+**What was changed**:
+- `scripts/build-loop-local.sh`: Added build log auto-rotation — `exec > >(tee -a "$BUILD_LOG") 2>&1` pipes all stdout/stderr to `logs/build-{timestamp}.log` at startup (finding #20)
+- `scripts/build-loop-local.sh`: Added `FEATURE_MODELS[]` accumulator array. Model identifier (`BUILD_MODEL` or `AGENT_MODEL` fallback) captured on both success and failure paths. Included in `write_build_summary()` JSON output (per-feature `"model"` field) and human-readable table (new Model column) (findings #14, #37)
+- `scripts/build-loop-local.sh`: Added `cleanup_merged_branches()` function. After build summary prints, deletes local branches matching `auto/chained-*` or `auto/independent-*` that are already merged into the current branch. Called from both "both" mode and "single" mode final sections (finding #19)
+- `scripts/build-loop-local.sh`: Added `export NODE_ENV=development` after config loading with comment explaining why (finding #5)
+- `Agents.md`: This entry
+
+**What was NOT changed**: lib/reliability.sh, tests/, overnight-autonomous.sh, any other files
+
+**Verification**: `bash -n` passes, 68/68 unit tests pass, dry-run passes, grep confirms all four changes present, `git diff --stat` shows only allowed files
+
+---
+
 ## What This Is
 
 A spec-driven development system optimized for 256GB unified memory. Uses multiple local LLMs with **fresh contexts per stage** to avoid context rot.
