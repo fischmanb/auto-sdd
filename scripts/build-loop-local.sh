@@ -61,12 +61,17 @@
 #   Each agent-based step runs in a FRESH context window.
 #   Available steps:
 #     test          - Run test suite (shell cmd, uses TEST_CHECK_CMD)
-#     code-review   - Agent reviews code quality (fresh context)
+#                     Includes test-count regression gate (high-water mark, warn-only)
+#     dead-code     - Scan for exported symbols with zero import sites (shell, no API)
+#     lint          - Auto-detect and run linter: eslint, biome, flake8, ruff, clippy,
+#                     golangci-lint (shell, no API, warn-only)
+#     code-review   - Agent reviews code quality (fresh context, uses API)
 #   Note: drift check is controlled separately via DRIFT_CHECK.
-#   Default: "test"
+#   Default: "test,dead-code,lint"
 #   Examples:
-#     POST_BUILD_STEPS="test"                  # Just tests (default)
-#     POST_BUILD_STEPS="test,code-review"      # Tests + quality review
+#     POST_BUILD_STEPS="test"                  # Just tests
+#     POST_BUILD_STEPS="test,dead-code,lint"   # Tests + dead exports + lint (default)
+#     POST_BUILD_STEPS="test,dead-code,lint,code-review"  # All gates + agent review
 #     POST_BUILD_STEPS=""                       # Skip all post-build steps
 #
 # MODEL SELECTION: which AI model to use for each agent invocation.
@@ -177,7 +182,7 @@ MIN_RETRY_DELAY="${MIN_RETRY_DELAY:-30}"
 BRANCH_STRATEGY="${BRANCH_STRATEGY:-chained}"
 DRIFT_CHECK="${DRIFT_CHECK:-true}"
 MAX_DRIFT_RETRIES="${MAX_DRIFT_RETRIES:-1}"
-POST_BUILD_STEPS="${POST_BUILD_STEPS:-test}"
+POST_BUILD_STEPS="${POST_BUILD_STEPS:-test,dead-code,lint}"
 PARALLEL_VALIDATION="${PARALLEL_VALIDATION:-false}"
 
 # Model selection (per-step overrides with AGENT_MODEL fallback)
@@ -502,6 +507,15 @@ check_tests() {
     if [ $exit_code -eq 0 ]; then
         success "Tests passed"
         LAST_TEST_OUTPUT=""
+        # Gate 1: Test count regression (high-water mark, warn-only)
+        if [ -n "$LAST_TEST_COUNT" ] && [ "$LAST_TEST_COUNT" -gt 0 ] 2>/dev/null; then
+            if [ "$PREV_TEST_COUNT" -gt 0 ] && [ "$LAST_TEST_COUNT" -lt "$PREV_TEST_COUNT" ]; then
+                warn "Test count regression: $LAST_TEST_COUNT passing (was $PREV_TEST_COUNT) — $((PREV_TEST_COUNT - LAST_TEST_COUNT)) test(s) dropped"
+            fi
+            if [ "$LAST_TEST_COUNT" -gt "$PREV_TEST_COUNT" ]; then
+                PREV_TEST_COUNT="$LAST_TEST_COUNT"
+            fi
+        fi
     else
         LAST_TEST_OUTPUT=$(tail -80 "$tmpfile")
         error "Tests failed"
@@ -512,6 +526,141 @@ check_tests() {
 
 should_run_step() {
     echo ",$POST_BUILD_STEPS," | grep -q ",$1,"
+}
+
+# ── Gate 2: Dead export detection (mechanical, no API) ────────────────────
+# Scans project source files for exported symbols with zero import sites.
+# Warns with a list of dead exports. Always returns 0 (non-blocking).
+check_dead_exports() {
+    log "Scanning for dead exports..."
+    local src_files_file exports_file dead_file
+    src_files_file=$(mktemp)
+    exports_file=$(mktemp)
+    dead_file=$(mktemp)
+
+    find . -type f \( -name '*.ts' -o -name '*.tsx' -o -name '*.js' -o -name '*.jsx' \
+        -o -name '*.py' -o -name '*.rs' -o -name '*.go' \) \
+        -not -path '*/node_modules/*' -not -path '*/.git/*' -not -path '*/dist/*' \
+        -not -path '*/build/*' -not -path '*/.next/*' -not -path '*/__pycache__/*' \
+        -not -path '*/target/*' -not -name '*.test.*' -not -name '*.spec.*' \
+        -not -name '*.d.ts' > "$src_files_file" 2>/dev/null || true
+
+    if [ ! -s "$src_files_file" ]; then
+        log "No source files found for dead export scan"
+        rm -f "$src_files_file" "$exports_file" "$dead_file"
+        return 0
+    fi
+
+    # Extract exported symbols: file<TAB>symbol
+    while IFS= read -r f; do
+        [ -z "$f" ] && continue
+        # TS/JS: export (default) function/const/class/type/interface/enum NAME
+        grep -oE 'export\s+(default\s+)?(function|const|let|var|class|type|interface|enum)\s+[A-Za-z_$][A-Za-z0-9_$]*' "$f" 2>/dev/null | \
+            grep -oE '[A-Za-z_$][A-Za-z0-9_$]*$' | while IFS= read -r sym; do printf '%s\t%s\n' "$f" "$sym"; done
+        # Python: module-level def/class
+        case "$f" in *.py)
+            grep -oE '^(def|class)\s+[A-Za-z_][A-Za-z0-9_]*' "$f" 2>/dev/null | \
+                grep -oE '[A-Za-z_][A-Za-z0-9_]*$' | while IFS= read -r sym; do printf '%s\t%s\n' "$f" "$sym"; done
+        ;; esac
+        # Rust: pub items
+        case "$f" in *.rs)
+            grep -oE 'pub\s+(fn|struct|enum|type|trait|const|static|mod)\s+[A-Za-z_][A-Za-z0-9_]*' "$f" 2>/dev/null | \
+                grep -oE '[A-Za-z_][A-Za-z0-9_]*$' | while IFS= read -r sym; do printf '%s\t%s\n' "$f" "$sym"; done
+        ;; esac
+    done < "$src_files_file" > "$exports_file"
+
+    # Check each exported symbol for references in other files
+    local dead_count=0
+    while IFS=$'\t' read -r file sym; do
+        [ -z "$sym" ] && continue
+        # Skip overly generic names
+        case "$sym" in default|index|main|test|setup|config|app|App|mod) continue ;; esac
+        # Look for the symbol in any other file (word-boundary match, bail on first hit)
+        local found
+        found=$(grep -rlw "$sym" --include='*.ts' --include='*.tsx' --include='*.js' --include='*.jsx' \
+            --include='*.py' --include='*.rs' --include='*.go' \
+            . 2>/dev/null | grep -v 'node_modules' | grep -v '\.git/' | grep -v "$file" | head -1)
+        if [ -z "$found" ]; then
+            echo "    $file: $sym" >> "$dead_file"
+            dead_count=$((dead_count + 1))
+        fi
+    done < "$exports_file"
+
+    if [ "$dead_count" -gt 0 ]; then
+        warn "Found $dead_count potentially dead export(s):"
+        head -20 "$dead_file"
+        if [ "$dead_count" -gt 20 ]; then
+            warn "  ... and $((dead_count - 20)) more (showing first 20)"
+        fi
+    else
+        success "No dead exports detected"
+    fi
+
+    rm -f "$src_files_file" "$exports_file" "$dead_file"
+    return 0
+}
+
+# ── Gate 3: Static analysis / lint detection (mechanical, no API) ─────────
+# Auto-detects linter config in PROJECT_DIR and runs it if found.
+# Always returns 0 (non-blocking, warn-only).
+
+detect_lint_check() {
+    # ESLint (legacy config files)
+    if [ -f ".eslintrc.js" ] || [ -f ".eslintrc.json" ] || [ -f ".eslintrc.yml" ] || \
+       [ -f ".eslintrc.yaml" ] || [ -f ".eslintrc.cjs" ] || [ -f ".eslintrc.mjs" ]; then
+        echo "npx eslint . --max-warnings=0"; return
+    fi
+    # ESLint (flat config)
+    if [ -f "eslint.config.js" ] || [ -f "eslint.config.mjs" ] || [ -f "eslint.config.cjs" ] || [ -f "eslint.config.ts" ]; then
+        echo "npx eslint . --max-warnings=0"; return
+    fi
+    # ESLint via package.json
+    if [ -f "package.json" ] && grep -qE '"eslintConfig"' package.json 2>/dev/null; then
+        echo "npx eslint . --max-warnings=0"; return
+    fi
+    # Biome
+    if [ -f "biome.json" ] || [ -f "biome.jsonc" ]; then
+        echo "npx biome check ."; return
+    fi
+    # Python: flake8
+    if [ -f ".flake8" ]; then echo "flake8 ."; return; fi
+    if [ -f "setup.cfg" ] && grep -q '\[flake8\]' setup.cfg 2>/dev/null; then
+        echo "flake8 ."; return
+    fi
+    # Python: ruff
+    if [ -f "ruff.toml" ]; then echo "ruff check ."; return; fi
+    if [ -f "pyproject.toml" ] && grep -q '\[tool\.ruff\]' pyproject.toml 2>/dev/null; then
+        echo "ruff check ."; return
+    fi
+    # Rust: clippy
+    if [ -f "Cargo.toml" ]; then echo "cargo clippy -- -D warnings"; return; fi
+    # Go: golangci-lint
+    if [ -f ".golangci.yml" ] || [ -f ".golangci.yaml" ] || [ -f ".golangci.json" ]; then
+        echo "golangci-lint run"; return
+    fi
+    echo ""
+}
+
+check_lint() {
+    local lint_cmd
+    lint_cmd=$(detect_lint_check)
+    if [ -z "$lint_cmd" ]; then
+        log "No linter config detected (skipping lint gate)"
+        return 0
+    fi
+    log "Running linter: $lint_cmd"
+    local tmpfile
+    tmpfile=$(mktemp)
+    bash -c "$lint_cmd" 2>&1 | tee "$tmpfile"
+    local exit_code=${PIPESTATUS[0]}
+    if [ $exit_code -eq 0 ]; then
+        success "Lint check passed"
+    else
+        warn "Lint check failed (non-blocking):"
+        tail -20 "$tmpfile"
+    fi
+    rm -f "$tmpfile"
+    return 0
 }
 
 # truncate_for_context is provided by lib/reliability.sh
@@ -1158,6 +1307,16 @@ run_build_loop() {
                                     fi
                                 fi
 
+                                # Gate 2: Dead export detection (mechanical, no API)
+                                if should_run_step "dead-code"; then
+                                    check_dead_exports
+                                fi
+
+                                # Gate 3: Static analysis lint (mechanical, no API)
+                                if should_run_step "lint"; then
+                                    check_lint
+                                fi
+
                                 LOOP_BUILT=$((LOOP_BUILT + 1))
                                 local feature_end=$(date +%s)
                                 local feature_duration=$((feature_end - FEATURE_START))
@@ -1530,6 +1689,7 @@ FEATURE_TOKEN_USAGE=()
 FEATURE_STATUSES=()
 FEATURE_MODELS=()
 LAST_TEST_COUNT=""
+PREV_TEST_COUNT=0
 
 # ── Topological sort + pre-flight summary (shown once, even in "both" mode) ──
 # emit_topo_order is provided by lib/reliability.sh
