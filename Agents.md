@@ -658,6 +658,19 @@ DRY_RUN_SKIP_AGENT=true ./tests/dry-run.sh
 
 **Verification**: File reviewed for completeness and accuracy. Count corrected (33→36), cost discrepancy fixed (#17 aligned with #34).
 
+### Round 21: Resume state persistence + nested session guard (branch: claude/resume-state-persistence-h3PKB)
+
+**What was asked**: Two fixes: (1) Commit resume.json to git after each successful feature build so crash recovery works across runs. (2) Detect CLAUDECODE env var at startup and exit with instructions to prevent silent hangs from nested sessions.
+
+**What was changed**:
+- scripts/build-loop-local.sh: Added `git add -f .sdd-state/resume.json && git commit` after write_state on feature success path. Added CLAUDECODE env var guard after library sourcing.
+- scripts/overnight-autonomous.sh: Same two changes (guard after library sourcing, resume commit after both write_state calls on success paths).
+- Agents.md: This entry.
+
+**What was NOT changed**: lib/reliability.sh, tests/, write_state/read_state/clean_state functions, state file format, retry logic, branch handling, signal parsing, any other files.
+
+**Verification**: `bash -n` passes on all 3 scripts. `test-reliability.sh` 68/68 pass. `DRY_RUN_SKIP_AGENT=true ./tests/dry-run.sh` passes. grep confirms `git add -f .sdd-state/resume.json` on non-comment lines in both scripts (1 line in build-loop-local.sh, 2 lines in overnight-autonomous.sh). grep confirms CLAUDECODE guard in both scripts. `git diff --stat` shows only 3 allowed files.
+
 ## Known Gaps
 
 - No live integration testing — all validation is `bash -n` + unit tests + structural dry-run
