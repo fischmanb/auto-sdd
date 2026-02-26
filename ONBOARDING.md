@@ -48,7 +48,7 @@ Chat sessions (claude.ai with Desktop Commander or any equivalent tool or capabi
 
 1. **Codebase summary injection** — generate summary after each commit, pass to next agent. Fixes cross-feature type/interface drift.
 2. **Local model integration** — replace cloud API with local LM Studio on Mac Studio
-3. **stakd/ build campaign + issue triage** — full 28-feature test run, then triage last run's issues
+3. **stakd issue triage (in progress)** — map page fix done, NODE_ENV issue identified. Remaining: triage 21 features that had failures/retries, clean up orphaned code from failed builds, verify all routes end-to-end.
 4. **Adaptive routing / parallelism** — only if data from 1-3 shows remaining sequential bottleneck justifies the complexity
 
 ### Known gaps
@@ -73,7 +73,7 @@ Ordered by efficiency gain per complexity added:
 1. ~~**Topological sort + pre-flight summary**~~ — ✅ Done (Rounds 17-18). Shell-side Kahn's algorithm for feature ordering in both `build-loop-local.sh` and `overnight-autonomous.sh`. Pre-flight prints sorted feature list with t-shirt sizes, requires user confirmation (`AUTO_APPROVE=true` skips for overnight). 68 test assertions passing.
 2. **Codebase summary injection** — Generate summary after each commit, pass to next agent. Fixes cross-feature type/interface drift. Each build agent currently has no knowledge of what previous agents produced, causing type redeclarations and interface drift. High quality gain, moderate speed gain (fewer retries), low complexity. *Not started.*
 3. **Local model integration** — Replace cloud API calls with local LM Studio endpoints on Mac Studio. The archived `archive/local-llm-pipeline/` system is reference material. *Not started.*
-4. **stakd/ build campaign + issue triage** — Full 28-feature end-to-end run against the Traded.co clone (3 phases). Benefits from codebase summary being in place first. After topo sort, triage issues from last stakd build run. *Not started.*
+4. ~~**stakd/ build campaign + issue triage**~~ — ✅ Build campaign done (2026-02-25). All 28 features built autonomously. 88 failures/retries during run. Now in issue triage phase — root cause of all browser 500s identified and fixed (map page, commit 42d7a3a in stakd). *Issue triage in progress.*
 5. **Adaptive routing / parallelism** — Only if data from 1–3 shows remaining sequential bottleneck justifies the complexity. Investigated in Round 14 (results lost to compaction), re-analyzed in Round 16. Full edge case analysis done: diamond deps, merge conflicts at convergence, complex resume state, drift check ordering, resource contention, partial parallel failure. Conclusion: ~400-500 new lines and new failure classes don't justify savings until simpler levers are exhausted. *Deprioritized.*
 
 ### Historical build estimator (designed, not yet built)
@@ -83,6 +83,7 @@ After at least one full campaign, a function will correlate t-shirt sizes from r
 ### Other active items
 
 - **Onboarding state protocol**: Implemented 2026-02-25. Mechanical enforcement via `~/auto-sdd/.onboarding-state` file — tracks prompt count, buffers pending captures, triggers interval checks. Memory instruction points all future chats to the protocol. See "Keeping This File Current" section.
+- **stakd issue triage (2026-02-26)**: Root cause of all browser 500s was map page — agent put `"use client"` on a server component using `dynamic(ssr:false)`, which Next.js 15 disallows. Fix: DealMapLoader client wrapper (commit 42d7a3a). Cascade behavior: single broken module poisoned webpack graph, causing unrelated routes (/news, /data) to 500 with the map error. Middleware EvalError was also cascade, not independent. Separate issue: `NODE_ENV=production` in shell breaks Tailwind PostCSS processing on cold start — transient session variable, not in shell config. stakd branch merged to main locally (fast-forward, 132 files, 20k lines). No GitHub remote for stakd yet.
 
 ---
 
