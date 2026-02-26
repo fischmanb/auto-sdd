@@ -116,6 +116,14 @@ error() { echo "[$(date '+%H:%M:%S')] ✗ $1"; }
 # ── Source shared reliability library ─────────────────────────────────────
 source "$SCRIPT_DIR/../lib/reliability.sh"
 
+# Guard: detect nested Claude Code session (finding #8)
+if [ -n "${CLAUDECODE:-}" ]; then
+  error "Detected active Claude Code session (CLAUDECODE env var set)."
+  error "The build loop spawns child 'claude -p' processes that will hang inside a nested session."
+  error "Run this script from a regular terminal, not from within Claude Code or Desktop Commander."
+  exit 1
+fi
+
 # ── File locking (concurrency protection) ──────────────────────────────────
 LOCK_DIR="/tmp"
 LOCK_FILE="${LOCK_DIR}/sdd-build-loop-$(echo "$PROJECT_DIR" | tr '/' '_' | tr ' ' '_').lock"
@@ -1111,6 +1119,9 @@ run_build_loop() {
                                 # Save resume state
                                 if [ "$ENABLE_RESUME" = "true" ]; then
                                     write_state "$i" "$strategy" "$(completed_features_json)" "${CURRENT_FEATURE_BRANCH:-}"
+                                    # Persist resume state to git (survives crashes — finding #17)
+                                    git add -f .sdd-state/resume.json 2>/dev/null && \
+                                      git commit -m "state: checkpoint after ${feature_name}" --no-verify 2>/dev/null || true
                                 fi
 
                                 break
