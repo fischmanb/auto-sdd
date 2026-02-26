@@ -332,6 +332,10 @@ Confirms finding #18 (rapid branch creation). The loop created a new branch per 
 ### Finding #36: Stash confirms partial feature 26 work exists
 `stash@{0}: On auto/chained-20260225-094223: partial feature 4 work` — mislabeled as "feature 4" but on a feature-26 branch. This is the work-in-progress that was lost when run 3a crashed. Could potentially be applied to avoid rebuilding, but run 3b already rebuilt it.
 
+### Finding #37: Build loop ran wrong model — Haiku instead of Sonnet
+Brian instructed the loop to use Sonnet 4.6 for runs 2-3. cost-log.jsonl shows claude-haiku-4-5-20251001 for all 20 sessions. The model selection override didn't propagate — either .env.local was ignored, CLI flag was dropped, or agent_cmd() defaulted to Haiku. Features 8-28 were built at Haiku quality tier instead of intended Sonnet tier. Agent confusion bugs (map page server/client, dotall regex twice, unused imports) may not have occurred on Sonnet. This is a config bug, not a user decision.
+Fix: Log the actual model used per-feature in build summary. Add model verification to pre-flight check.
+
 ---
 
 ## Synthesis: Prioritized Remediation
@@ -391,7 +395,7 @@ Confirms finding #18 (rapid branch creation). The loop created a new branch per 
 
 ## Investigation Complete
 
-**36 findings** across 4 batches:
+**37 findings** across 4 batches:
 - Batch 1 (findings 1-16): build.log, cost-log, git log, prior chat transcripts
 - Batch 2 (findings 17-28): learnings files, CLAUDE.md audit, prior chat deep dive  
 - Batch 3 (findings 29-33): config audit, cost analysis, design.md
