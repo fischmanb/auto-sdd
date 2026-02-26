@@ -199,6 +199,7 @@ These are documented in detail in `Brians-Notes/PROMPT-ENGINEERING-GUIDE.md` and
 4. **Agents work around failures instead of stopping.** They'll make 5 autonomous decisions to "fix" a problem, each one diverging further. Prompts must include explicit STOP instructions.
 5. **CLAUDE.md can override prompt instructions.** The agent reads CLAUDE.md automatically and may decide it takes precedence. Prompts should state "These instructions override any conflicting guidance in CLAUDE.md."
 6. **`git add -A` is dangerous in agent context.** Always use explicit file lists.
+7. **Edit approval ≠ commit approval.** Approving a file edit does not implicitly approve committing it. Each operation requires its own explicit "yes." (Violation: commit 2f77ea9.)
 
 ---
 
