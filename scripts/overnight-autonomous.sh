@@ -329,6 +329,37 @@ if [ -n "$AGENT_MODEL" ] || [ -n "$BUILD_MODEL" ] || [ -n "$DRIFT_MODEL" ] || [ 
     log "Models: default=${AGENT_MODEL:-CLI default} build=${BUILD_MODEL:-↑} drift=${DRIFT_MODEL:-↑} review=${REVIEW_MODEL:-↑}"
 fi
 
+# ── Launch eval sidecar (background process) ─────────────────────────────
+# The sidecar watches for new commits and evaluates them. Purely observational
+# — never modifies code or blocks the build loop. Guarded so sidecar failure
+# never takes down the overnight run.
+EVAL_SIDECAR_PID=""
+if [ -f "$SCRIPT_DIR/eval-sidecar.sh" ]; then
+    mkdir -p "$PROJECT_DIR/logs"
+    PROJECT_DIR="$PROJECT_DIR" AGENT_MODEL="${AGENT_MODEL:-}" \
+        bash "$SCRIPT_DIR/eval-sidecar.sh" >>"$PROJECT_DIR/logs/eval-sidecar.log" 2>&1 &
+    EVAL_SIDECAR_PID=$!
+    if kill -0 "$EVAL_SIDECAR_PID" 2>/dev/null; then
+        log "Eval sidecar launched (PID: $EVAL_SIDECAR_PID)"
+    else
+        warn "Eval sidecar failed to start — continuing without it"
+        EVAL_SIDECAR_PID=""
+    fi
+else
+    log "Eval sidecar not found — skipping"
+fi
+
+# Override trap to include sidecar cleanup (chained with lock cleanup from acquire_lock)
+cleanup_overnight() {
+    if [ -n "${EVAL_SIDECAR_PID:-}" ] && kill -0 "$EVAL_SIDECAR_PID" 2>/dev/null; then
+        log "Stopping eval sidecar (PID: $EVAL_SIDECAR_PID)..."
+        kill -TERM "$EVAL_SIDECAR_PID" 2>/dev/null || true
+        wait "$EVAL_SIDECAR_PID" 2>/dev/null || true
+    fi
+    rm -f "$LOCK_FILE"
+}
+trap cleanup_overnight INT TERM EXIT
+
 # truncate_for_context is provided by lib/reliability.sh
 # Config: MAX_CONTEXT_TOKENS (default in library)
 

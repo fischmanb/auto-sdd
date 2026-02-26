@@ -10,7 +10,7 @@
 # CONFIGURATION (env vars):
 #   PROJECT_DIR       - Project directory (required)
 #   EVAL_INTERVAL     - Poll interval in seconds (default: 30)
-#   EVAL_AGENT        - Run agent evals in addition to mechanical (default: false)
+#   EVAL_AGENT        - Run agent evals in addition to mechanical (default: true)
 #   EVAL_MODEL        - Model for agent evals (falls back to AGENT_MODEL)
 #   EVAL_OUTPUT_DIR   - Output directory for eval results (default: $PROJECT_DIR/logs/evals)
 
@@ -32,7 +32,7 @@ fi
 
 # ── Config with defaults ──────────────────────────────────────────────────
 EVAL_INTERVAL="${EVAL_INTERVAL:-30}"
-EVAL_AGENT="${EVAL_AGENT:-false}"
+EVAL_AGENT="${EVAL_AGENT:-true}"
 EVAL_MODEL="${EVAL_MODEL:-${AGENT_MODEL:-}}"
 EVAL_OUTPUT_DIR="${EVAL_OUTPUT_DIR:-$PROJECT_DIR/logs/evals}"
 
