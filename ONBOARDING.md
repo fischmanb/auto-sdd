@@ -106,10 +106,10 @@ After at least one full campaign, a function will correlate t-shirt sizes from r
 
 ### Other active items
 
-- **Build loop remediation (2026-02-26)**: All rounds complete (21-26). Rounds 21-23: resume persist, CLAUDECODE guard, retry hardening with branch reuse, overnight retry+credit detection, build log rotation, model logging, branch cleanup, NODE_ENV guard. Round 24: stakd CLAUDE.md Next.js 15 rules + learnings populated. Learnings consolidated into `.specs/learnings/` with `agent-operations.md` as single source of truth for process lessons. Round 25: codebase summary generation function + 23-assertion test suite. Round 26: wired summary into both build prompt functions. Process lessons from this batch: (1) keep agent prompts concise — describe intent, not implementation code; (2) push main to origin before running agent prompts, otherwise agents fork from stale `origin/main` and require merge cleanup after each round; (3) all learnings go in primary repos, not project-specific dirs.
+- **Build loop remediation (2026-02-26)**: All remediation rounds complete (21-26). Eval system rounds complete (27-29). Rounds 21-23: resume persist, CLAUDECODE guard, retry hardening with branch reuse, overnight retry+credit detection, build log rotation, model logging, branch cleanup, NODE_ENV guard. Round 24: stakd CLAUDE.md Next.js 15 rules + learnings populated. Learnings consolidated into `.specs/learnings/` with `agent-operations.md` as single source of truth for process lessons. Round 25: codebase summary generation function + 23-assertion test suite. Round 26: wired summary into both build prompt functions. Process lessons from this batch: (1) keep agent prompts concise — describe intent, not implementation code; (2) push main to origin before running agent prompts, otherwise agents fork from stale `origin/main` and require merge cleanup after each round; (3) all learnings go in primary repos, not project-specific dirs.
 - **Onboarding state protocol**: Implemented 2026-02-25. Mechanical enforcement via `~/auto-sdd/.onboarding-state` file — tracks prompt count, buffers pending captures, triggers interval checks. Memory instruction points all future chats to the protocol. See "Keeping This File Current" section.
 - **Agent git discipline**: Updated 2026-02-26. CLAUDE.md now has "Git Discipline" section (no merge, no push, always include Agents.md entry, origin divergence check). PROMPT-ENGINEERING-GUIDE.md clarified: allowlist always includes Agents.md for implementation prompts, Section 5 renamed "Commit (no merge)", merge prompts are Brian-initiated only.
-- **Eval sidecar system (2026-02-26)**: Round 27: `lib/eval.sh` — four functions (mechanical eval, eval prompt generation, signal parsing, result writing). 53-assertion test suite. Round 28: `scripts/eval-sidecar.sh` — standalone sidecar that polls for new commits, runs mechanical evals (and optionally agent evals), writes per-feature JSON, aggregates campaign summary on exit. Observational only — never blocks builds, never modifies files. Run alongside build loop: `EVAL_AGENT=true PROJECT_DIR=/path/to/project ./scripts/eval-sidecar.sh`
+- **Eval sidecar system (2026-02-26)**: Round 27: `lib/eval.sh` — four functions (mechanical eval, eval prompt generation, signal parsing, result writing). 53-assertion test suite. Round 28: `scripts/eval-sidecar.sh` — standalone sidecar that polls for new commits, runs mechanical evals (and optionally agent evals), writes per-feature JSON, aggregates campaign summary on exit. Round 28b: auto-launches sidecar from both build scripts as background process, `EVAL_AGENT=true` by default. Round 29: cooperative drain shutdown — sentinel file triggers graceful queue drain before campaign summary instead of hard SIGTERM. Both build scripts manage sidecar lifecycle (`start_eval_sidecar()` / `stop_eval_sidecar()`). Observational only — never blocks builds, never modifies files.
 
 ---
 
@@ -118,7 +118,7 @@ After at least one full campaign, a function will correlate t-shirt sizes from r
 | File | What it contains | When to read |
 |------|-----------------|--------------|
 | **ONBOARDING.md** (this file) | Full project context for a fresh chat | Always read first |
-| **Agents.md** | Agent work log (Rounds 1-23), architecture reference, signal protocol, verification checklist, known gaps, process lessons | Before making ANY changes — this is the source of truth for what happened and what works |
+| **Agents.md** | Agent work log (Rounds 1-29), architecture reference, signal protocol, verification checklist, known gaps, process lessons | Before making ANY changes — this is the source of truth for what happened and what works |
 | **README.md** | Public-facing docs: quick start, config, file structure, what works and what breaks | For understanding the user-facing narrative |
 | **CLAUDE.md** | Instructions that Claude Code agents read automatically when invoked by the build loop | When modifying agent behavior or build prompts |
 | **ARCHITECTURE.md** | Design decisions for the local LLM pipeline (system 2, archived) and context management philosophy | When working on the local model integration |
@@ -225,7 +225,8 @@ Full details in `Agents.md`. Here's the arc:
 | 25 | Codebase summary generation | `lib/codebase-summary.sh` + 23-assertion test suite. Scans project dir, emits component/type/import/learnings summary. |
 | 26 | Codebase summary wiring | Injected summary into `build_feature_prompt()` and `build_feature_prompt_overnight()` in both scripts. |
 | 27 | Eval function library | `lib/eval.sh` — mechanical eval, prompt generation, signal parsing, result writing. 53-assertion test suite. |
-| 28 | Eval sidecar script | `scripts/eval-sidecar.sh` — standalone sidecar polling for commits, running evals, aggregating campaign summary. |
+| 28 | Eval sidecar script + build loop integration | `scripts/eval-sidecar.sh` — standalone sidecar polling for commits, running evals, aggregating campaign summary. 28b: auto-launch from both build scripts, `EVAL_AGENT=true` default. |
+| 29 | Eval sidecar cooperative drain shutdown | Sentinel file triggers graceful queue drain. Both build scripts manage sidecar lifecycle. |
 
 **Key lesson that repeats**: Agent self-assessments are unreliable. Always verify with grep, `bash -n`, and tests. Never trust the agent's narrative summary.
 
