@@ -44,22 +44,23 @@ Chat sessions (claude.ai with Desktop Commander or any equivalent tool or capabi
 - **Model logging per feature**: actual model used recorded in build summary JSON and human-readable table (Round 23).
 - **Post-run branch cleanup**: merged `auto/chained-*` and `auto/independent-*` branches auto-deleted after build summary (Round 23).
 - **NODE_ENV guard**: explicitly sets `NODE_ENV=development` before agent calls (Round 23).
-- **Test suite**: 68 unit assertions (`test-reliability.sh`), 10 validation assertions (`test-validation.sh`), structural dry-run.
+- **Test suite**: 68 unit assertions (`test-reliability.sh`), 10 validation assertions (`test-validation.sh`), 23 codebase-summary assertions (`test-codebase-summary.sh`), structural dry-run.
 - **Cost tracking**: `lib/claude-wrapper.sh` logs token/cost data as JSONL.
 - **Build summary reports**: per-feature timing, test counts, token usage, model used, written to `logs/build-summary-{timestamp}.json`.
 - **Git stash hardening**: dirty worktree can't cascade failures across features.
 - **Credit exhaustion detection**: both scripts halt immediately when API credits run out instead of retrying doomed calls.
 - **Topological sort + pre-flight**: shell-side Kahn's algorithm orders features by dependency, pre-flight summary with user confirmation before build starts.
+- **Codebase summary injection**: each build agent receives a summary of existing components, type exports, import graph, and recent learnings from prior features. Prevents type redeclaration and repeated mistakes across features (Rounds 25-26, findings #11, #21, #23).
 
 ### What's next
 
-1. **Remediation Round 26: Codebase summary wiring** — Findings #11, #21, #23. Round 25 done (function + tests). Round 26: source lib and inject summary into build prompts in both scripts. Prompt drafted.
+1. ~~**Remediation Rounds 25-26: Codebase summary injection**~~ — ✅ Done. Findings #11, #21, #23 resolved. Round 25: `lib/codebase-summary.sh` + 23-assertion test suite. Round 26: wired into `build_feature_prompt()` and `build_feature_prompt_overnight()` in both scripts.
 2. **Local model integration** — replace cloud API with local LM Studio on Mac Studio
 3. **Adaptive routing / parallelism** — only if data from 1-2 shows remaining sequential bottleneck justifies the complexity
 
 ### Remediation status (Rounds 21-26)
 
-Build loop remediation from `build-loop-failure-investigation.md` (37 findings). **Rounds 21-24 complete. Rounds 25-26 remaining.**
+Build loop remediation from `build-loop-failure-investigation.md` (37 findings). **All rounds complete (21-26).**
 
 - ~~Resume state lost on crash~~ — ✅ Fixed Round 21 (findings #17, #28, #34)
 - ~~Nested Claude Code session hang~~ — ✅ Fixed Round 21 (finding #8)
@@ -72,7 +73,7 @@ Build loop remediation from `build-loop-failure-investigation.md` (37 findings).
 - ~~stakd CLAUDE.md + learnings~~ — ✅ Fixed Round 24 (findings #3, #12, #22, #25, #26, #27, #33). stakd CLAUDE.md has Next.js 15 rules. Primary learnings catalog populated.
 - ~~Learnings consolidation~~ — ✅ Done (2026-02-26). All learnings in `.specs/learnings/`. Agent process lessons consolidated in `agent-operations.md`. Duplicates removed from Agents.md, ONBOARDING.md, PROMPT-ENGINEERING-GUIDE.md.
 - **Codebase summary generation function + tests** — ✅ Done Round 25 (findings #11, #21, #23). `lib/codebase-summary.sh` provides `generate_codebase_summary()`. 23-assertion test suite in `tests/test-codebase-summary.sh`.
-- **Codebase summary wiring into build loop** — Round 26 (same findings, completes integration). Source `lib/codebase-summary.sh` in both scripts. Call `generate_codebase_summary "$PROJECT_DIR"` inside `build_feature_prompt()` and `build_feature_prompt_overnight()` to inject summary into agent prompts. *Prompt drafted, not yet executed.*
+- **Codebase summary wiring into build loop** — ✅ Done Round 26 (same findings, completes integration). Sourced in both scripts. Injected into `build_feature_prompt()` and `build_feature_prompt_overnight()` via `${codebase_summary:+...}` pattern.
 
 ### Known gaps
 
@@ -105,7 +106,7 @@ After at least one full campaign, a function will correlate t-shirt sizes from r
 
 ### Other active items
 
-- **Build loop remediation (2026-02-26)**: Rounds 21-24 complete. Rounds 25-26 remaining (codebase summary generation function + wiring into build loop, findings #11, #21, #23). Rounds 21-23: resume persist, CLAUDECODE guard, retry hardening with branch reuse, overnight retry+credit detection, build log rotation, model logging, branch cleanup, NODE_ENV guard. Round 24: stakd CLAUDE.md Next.js 15 rules + learnings populated. Learnings consolidated into `.specs/learnings/` with `agent-operations.md` as single source of truth for process lessons. Process lessons from this batch: (1) keep agent prompts concise — describe intent, not implementation code; (2) push main to origin before running agent prompts, otherwise agents fork from stale `origin/main` and require merge cleanup after each round; (3) all learnings go in primary repos, not project-specific dirs.
+- **Build loop remediation (2026-02-26)**: All rounds complete (21-26). Rounds 21-23: resume persist, CLAUDECODE guard, retry hardening with branch reuse, overnight retry+credit detection, build log rotation, model logging, branch cleanup, NODE_ENV guard. Round 24: stakd CLAUDE.md Next.js 15 rules + learnings populated. Learnings consolidated into `.specs/learnings/` with `agent-operations.md` as single source of truth for process lessons. Round 25: codebase summary generation function + 23-assertion test suite. Round 26: wired summary into both build prompt functions. Process lessons from this batch: (1) keep agent prompts concise — describe intent, not implementation code; (2) push main to origin before running agent prompts, otherwise agents fork from stale `origin/main` and require merge cleanup after each round; (3) all learnings go in primary repos, not project-specific dirs.
 - **Onboarding state protocol**: Implemented 2026-02-25. Mechanical enforcement via `~/auto-sdd/.onboarding-state` file — tracks prompt count, buffers pending captures, triggers interval checks. Memory instruction points all future chats to the protocol. See "Keeping This File Current" section.
 - **Agent git discipline**: Updated 2026-02-26. CLAUDE.md now has "Git Discipline" section (no merge, no push, always include Agents.md entry). PROMPT-ENGINEERING-GUIDE.md clarified: allowlist always includes Agents.md for implementation prompts, Section 5 renamed "Commit (no merge)", merge prompts are Brian-initiated only.
 
@@ -122,6 +123,7 @@ After at least one full campaign, a function will correlate t-shirt sizes from r
 | **ARCHITECTURE.md** | Design decisions for the local LLM pipeline (system 2, archived) and context management philosophy | When working on the local model integration |
 | **Brians-Notes/PROMPT-ENGINEERING-GUIDE.md** | Methodology for writing hardened agent prompts. Failure catalog and process lessons are in `.specs/learnings/agent-operations.md` | Before writing any new agent prompts |
 | **lib/reliability.sh** | Shared runtime: lock, backoff, state, truncation, cycle detection (~594 lines) | When debugging build failures or modifying shared behavior |
+| **lib/codebase-summary.sh** | Generates cross-feature context summary (component registry, type exports, import graph, learnings) | When modifying the summary format or debugging agent context issues |
 | **lib/claude-wrapper.sh** | Wraps `claude` CLI, extracts text to stdout, logs cost data to JSONL | When debugging cost tracking or agent invocation |
 | **scripts/build-loop-local.sh** | Main orchestration script (~1806 lines) | When modifying the build loop |
 | **scripts/overnight-autonomous.sh** | Overnight automation variant (~1041 lines) | When modifying overnight runs |
@@ -175,6 +177,7 @@ bash -n lib/validation.sh
 # Unit tests
 ./tests/test-reliability.sh        # 68 assertions
 ./tests/test-validation.sh         # 10 assertions
+./tests/test-codebase-summary.sh   # 23 assertions
 
 # Structural dry-run (no agent/API needed)
 DRY_RUN_SKIP_AGENT=true ./tests/dry-run.sh
@@ -275,11 +278,13 @@ auto-sdd/
 │   └── uninstall-overnight.sh     # Remove launchd jobs
 ├── lib/
 │   ├── reliability.sh             # Shared runtime (594 lines)
+│   ├── codebase-summary.sh        # Cross-feature context summary generation
 │   ├── claude-wrapper.sh          # Claude CLI wrapper + cost logging
 │   └── validation.sh              # YAML frontmatter validation
 ├── tests/
 │   ├── test-reliability.sh        # 68 unit assertions
 │   ├── test-validation.sh         # 10 unit assertions
+│   ├── test-codebase-summary.sh   # 23 unit assertions
 │   ├── dry-run.sh                 # Structural integration test
 │   └── fixtures/dry-run/          # Test fixtures
 ├── .specs/                        # Spec-driven development specs (templates)
