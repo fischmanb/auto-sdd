@@ -789,6 +789,25 @@ DRY_RUN_SKIP_AGENT=true ./tests/dry-run.sh
 
 ---
 
+### Round 30: Mechanical validation gates — test regression, dead exports, lint (branch: claude/update-build-loop-script-lsSfD)
+
+**Date**: Feb 26, 2026
+
+**What was asked**: Add three non-blocking mechanical validation gates to both `scripts/build-loop-local.sh` and `scripts/overnight-autonomous.sh`. All three warn on failure — they never fail the build. Zero API calls. Gate 1: test count regression (high-water mark). Gate 2: dead export detection. Gate 3: static analysis / lint auto-detection. Update `POST_BUILD_STEPS` default to `"test,dead-code,lint"`.
+
+**What actually happened**:
+- **Gate 1 — Test count regression**: Added `PREV_TEST_COUNT=0` high-water mark tracking. In `check_tests()`, after successful test run, compares `LAST_TEST_COUNT` against `PREV_TEST_COUNT`. If count dropped, warns with the delta. Updates high-water mark on increase. In overnight-autonomous.sh, also added `LAST_TEST_COUNT` parsing (vitest/jest/pytest patterns) which was previously missing from that script's `check_tests()`.
+- **Gate 2 — Dead export detection**: New `check_dead_exports()` function in both scripts. Scans project source files (`.ts`, `.tsx`, `.js`, `.jsx`, `.py`, `.rs`, `.go`) for exported symbols (TS/JS `export`, Python `def`/`class`, Rust `pub`). For each symbol, checks for references in other files via `grep -rlw`. Skips test files, `node_modules`, `.git`, `dist`, `build`, `.next`, `__pycache__`, `target`, `.d.ts` files. Warns with list of dead exports (capped at 20). Wired via `should_run_step "dead-code"`.
+- **Gate 3 — Static analysis lint**: New `detect_lint_check()` function following `detect_build_check()` pattern. Auto-detects: ESLint (legacy + flat config + package.json), Biome, flake8, ruff, Cargo clippy, golangci-lint. New `check_lint()` runs the detected linter, warns on failure. Always returns 0. Wired via `should_run_step "lint"`.
+- **Config**: `POST_BUILD_STEPS` default updated from `"test"` to `"test,dead-code,lint"` in both scripts. Config comments updated in build-loop-local.sh header to document all available steps including new gates. Overnight-autonomous.sh got a new config comment block above the `POST_BUILD_STEPS` assignment.
+- `Agents.md`: This entry.
+
+**What was NOT changed**: `lib/reliability.sh`, `lib/codebase-summary.sh`, `lib/claude-wrapper.sh`, `lib/validation.sh`, `lib/eval.sh`, all test scripts, all other scripts, `.specs/`, `CLAUDE.md`, `ONBOARDING.md`. No functions were removed or renamed. Existing `check_build()`, `check_tests()`, `should_run_step()`, `detect_build_check()`, `detect_test_check()` logic unchanged (only additions within `check_tests()`).
+
+**Verification**: `bash -n` clean on both scripts. All test suites pass. `git diff --stat` shows only the 3 allowed files (scripts/build-loop-local.sh, scripts/overnight-autonomous.sh, Agents.md).
+
+---
+
 ## Known Gaps
 
 - No live integration testing — all validation is `bash -n` + unit tests + structural dry-run
