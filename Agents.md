@@ -752,19 +752,21 @@ DRY_RUN_SKIP_AGENT=true ./tests/dry-run.sh
 
 **Verification**: `bash -n` clean on both new files. 53/53 new assertions pass. 68/68 reliability tests pass. 10/10 validation tests pass. 23/23 codebase-summary tests pass. `git diff --stat` shows only the 3 expected files.
 
-### Round 28: Eval sidecar script (branch: claude/eval-sidecar-script-QLQhk)
+### Round 28: Eval sidecar script + build loop integration (branch: claude/eval-sidecar-script-QLQhk, claude/cleanup-eval-sidecar-vq8VY)
 
 **Date**: Feb 26, 2026
 
-**What was asked**: Create `scripts/eval-sidecar.sh` — a standalone script that runs alongside the build loop, polling for new feature commits and evaluating them using `lib/eval.sh` and `lib/claude-wrapper.sh`. Purely observational: never modifies the project, never blocks the build, fails gracefully.
+**What was asked**: (28a) Create `scripts/eval-sidecar.sh` — a standalone script that runs alongside the build loop, polling for new feature commits and evaluating them using `lib/eval.sh` and `lib/claude-wrapper.sh`. Purely observational: never modifies the project, never blocks the build, fails gracefully. (28b) Integrate the sidecar into both build scripts so it auto-launches, and change `EVAL_AGENT` default to `true` (agent evals are the normal mode; mechanical-only is the degraded fallback).
 
 **What actually happened**:
-- `scripts/eval-sidecar.sh`: ~220-line standalone sidecar script. Sources `lib/reliability.sh`, `lib/eval.sh`, `lib/claude-wrapper.sh`. Accepts config via env vars (`PROJECT_DIR` required, `EVAL_INTERVAL`, `EVAL_AGENT`, `EVAL_MODEL`, `EVAL_OUTPUT_DIR`). Main loop polls `git log` for new commits since last evaluated, skips merges, runs `run_mechanical_eval` on each. If `EVAL_AGENT=true`, generates eval prompt and runs through claude wrapper with `run_agent_with_backoff`, then writes combined result via `write_eval_result`. Credit exhaustion detection disables agent evals for remainder of run (continues mechanical-only). On SIGINT/SIGTERM, aggregates all eval JSON files into `eval-campaign-{timestamp}.json` with per-signal breakdowns and prints human-readable summary table. All git operations are read-only (`git log`, `git rev-parse`, no checkout/commit/modify).
+- `scripts/eval-sidecar.sh`: ~220-line standalone sidecar script. Sources `lib/reliability.sh`, `lib/eval.sh`, `lib/claude-wrapper.sh`. Accepts config via env vars (`PROJECT_DIR` required, `EVAL_INTERVAL`, `EVAL_AGENT`, `EVAL_MODEL`, `EVAL_OUTPUT_DIR`). Main loop polls `git log` for new commits since last evaluated, skips merges, runs `run_mechanical_eval` on each. If `EVAL_AGENT=true`, generates eval prompt and runs through claude wrapper with `run_agent_with_backoff`, then writes combined result via `write_eval_result`. Credit exhaustion detection disables agent evals for remainder of run (continues mechanical-only). On SIGINT/SIGTERM, aggregates all eval JSON files into `eval-campaign-{timestamp}.json` with per-signal breakdowns and prints human-readable summary table. All git operations are read-only (`git log`, `git rev-parse`, no checkout/commit/modify). **28b**: `EVAL_AGENT` default changed from `false` to `true` — agent evals are the normal mode; set `EVAL_AGENT=false` to get mechanical-only (degraded fallback for low credits).
+- `scripts/build-loop-local.sh`: **28b**: After config load and library sourcing, launches `eval-sidecar.sh` as a background process with the same `PROJECT_DIR`. Stores PID. On exit (INT/TERM/EXIT trap), sends SIGTERM to sidecar so it generates its campaign summary. Sidecar output goes to `logs/eval-sidecar.log`. Guarded: if sidecar is missing or fails to start, build loop continues normally.
+- `scripts/overnight-autonomous.sh`: **28b**: Same sidecar integration pattern as build-loop-local.sh. Background launch after config, SIGTERM on exit, guarded against failure.
 - `Agents.md`: This entry.
 
-**What was NOT changed**: No existing files modified. lib/eval.sh, lib/reliability.sh, lib/claude-wrapper.sh, lib/validation.sh, lib/codebase-summary.sh, all untouched. No tests added (this is a wiring script, not a library).
+**What was NOT changed**: lib/eval.sh, lib/reliability.sh, lib/claude-wrapper.sh, lib/validation.sh, lib/codebase-summary.sh, all untouched. No new files created. No tests added (wiring-only changes to existing scripts).
 
-**Verification**: `bash -n` clean. All existing test suites pass (68 reliability, 10 validation, 23 codebase-summary, 53 eval). `git diff --stat` shows only the 2 expected files.
+**Verification**: `bash -n` clean on all three modified scripts. All existing test suites pass (68 reliability, 10 validation, 23 codebase-summary, 53 eval). `grep` confirms: sidecar background launch in both build scripts, `EVAL_AGENT` default is `true`. `git diff --stat` shows only the 4 allowed files.
 
 ---
 
