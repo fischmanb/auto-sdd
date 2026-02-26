@@ -44,7 +44,7 @@ Chat sessions (claude.ai with Desktop Commander or any equivalent tool or capabi
 - **Model logging per feature**: actual model used recorded in build summary JSON and human-readable table (Round 23).
 - **Post-run branch cleanup**: merged `auto/chained-*` and `auto/independent-*` branches auto-deleted after build summary (Round 23).
 - **NODE_ENV guard**: explicitly sets `NODE_ENV=development` before agent calls (Round 23).
-- **Test suite**: 68 unit assertions (`test-reliability.sh`), 10 validation assertions (`test-validation.sh`), 23 codebase-summary assertions (`test-codebase-summary.sh`), 53 eval assertions (`test-eval.sh`), structural dry-run.
+- **Test suite**: 68 unit assertions (`test-reliability.sh`), 10 validation assertions (`test-validation.sh`), 23 codebase-summary assertions (`test-codebase-summary.sh`), 53 eval assertions (`test-eval.sh`), structural dry-run. **154 total assertions passing.**
 - **Cost tracking**: `lib/claude-wrapper.sh` logs token/cost data as JSONL.
 - **Build summary reports**: per-feature timing, test counts, token usage, model used, written to `logs/build-summary-{timestamp}.json`.
 - **Git stash hardening**: dirty worktree can't cascade failures across features.
@@ -54,13 +54,13 @@ Chat sessions (claude.ai with Desktop Commander or any equivalent tool or capabi
 
 ### What's next
 
-1. **Rerun stakd 28-feature campaign** — First real validation of Rounds 21-28 remediation. Run build loop with eval sidecar in parallel. Data from this run informs all future decisions.
+1. **Rerun stakd 28-feature campaign** — First real validation of Rounds 21-30 remediation including new mechanical gates (test regression, dead exports, lint) and eval sidecar with cooperative drain. Use the existing `stakd/.specs/vision.md` and `stakd/.specs/roadmap.md` from the previous campaign — do not rewrite specs. Run on **Sonnet 4.6** (`BUILD_MODEL=claude-sonnet-4-6`). Run build loop with eval sidecar in parallel. Data from this run informs all future decisions.
 2. **Local model integration** — replace cloud API with local LM Studio on Mac Studio
 3. **Adaptive routing / parallelism** — only if data from 1-2 shows remaining sequential bottleneck justifies the complexity
 
-### Remediation status (Rounds 21-26)
+### Remediation status (Rounds 21-30)
 
-Build loop remediation from `build-loop-failure-investigation.md` (37 findings). **All rounds complete (21-26).**
+Build loop remediation from `build-loop-failure-investigation.md` (37 findings). **All remediation rounds complete (21-26).** Eval system (27-29) and mechanical validation (30) added on top.
 
 - ~~Resume state lost on crash~~ — ✅ Fixed Round 21 (findings #17, #28, #34)
 - ~~Nested Claude Code session hang~~ — ✅ Fixed Round 21 (finding #8)
@@ -74,6 +74,10 @@ Build loop remediation from `build-loop-failure-investigation.md` (37 findings).
 - ~~Learnings consolidation~~ — ✅ Done (2026-02-26). All learnings in `.specs/learnings/`. Agent process lessons consolidated in `agent-operations.md`. Duplicates removed from Agents.md, ONBOARDING.md, PROMPT-ENGINEERING-GUIDE.md.
 - **Codebase summary generation function + tests** — ✅ Done Round 25 (findings #11, #21, #23). `lib/codebase-summary.sh` provides `generate_codebase_summary()`. 23-assertion test suite in `tests/test-codebase-summary.sh`.
 - **Codebase summary wiring into build loop** — ✅ Done Round 26 (same findings, completes integration). Sourced in both scripts. Injected into `build_feature_prompt()` and `build_feature_prompt_overnight()` via `${codebase_summary:+...}` pattern.
+- **Eval function library + tests** — ✅ Done Round 27. `lib/eval.sh` — mechanical eval, prompt generation, signal parsing, result writing. 53-assertion test suite.
+- **Eval sidecar script + integration** — ✅ Done Rounds 28-28b. `scripts/eval-sidecar.sh` — standalone sidecar. Auto-launches from both build scripts. `EVAL_AGENT=true` by default.
+- **Eval sidecar cooperative drain** — ✅ Done Round 29. Sentinel file triggers graceful queue drain. Both build scripts manage sidecar lifecycle.
+- **Mechanical validation gates** — ✅ Done Round 30. Three non-blocking gates: test count regression, dead export detection, static analysis/lint. Default `POST_BUILD_STEPS=test,dead-code,lint`.
 
 ### Known gaps
 
@@ -94,11 +98,9 @@ Build loop remediation from `build-loop-failure-investigation.md` (37 findings).
 
 Ordered by efficiency gain per complexity added:
 
-1. **Remediation Rounds 25-26: Codebase summary injection** — Findings #11, #21, #23. **Round 25: COMPLETE** — `lib/codebase-summary.sh` merged to main with 23-assertion test suite (`tests/test-codebase-summary.sh`). Function scans project dir, emits component registry, type exports, import graph, recent learnings to stdout. Round 26: wire into build loop (call `generate_codebase_summary` inside `build_feature_prompt()` and `build_feature_prompt_overnight()`, source lib in both scripts). *Round 26 prompt drafted, not yet executed.*
-2. ~~**Topological sort + pre-flight summary**~~ — ✅ Done (Rounds 17-18). Shell-side Kahn's algorithm for feature ordering in both `build-loop-local.sh` and `overnight-autonomous.sh`. Pre-flight prints sorted feature list with t-shirt sizes, requires user confirmation (`AUTO_APPROVE=true` skips for overnight). 68 test assertions passing.
-3. ~~**stakd/ build campaign + issue triage**~~ — ✅ Build campaign done (2026-02-25). Issue triage complete (2026-02-26). 37 findings in `build-loop-failure-investigation.md`. **Remediation Rounds 21-24 complete. Rounds 25-26 above.** See "Remediation status" in Current State for full checklist.
-4. **Local model integration** — Replace cloud API calls with local LM Studio endpoints on Mac Studio. The archived `archive/local-llm-pipeline/` system is reference material. *Not started.*
-5. **Adaptive routing / parallelism** — Only if data from 1–4 shows remaining sequential bottleneck justifies the complexity. *Deprioritized.*
+1. **Rerun stakd 28-feature campaign** — First real validation of all remediation (Rounds 21-30). Run build loop with eval sidecar against stakd/ using original spec and vision files. New mechanical gates (test regression, dead exports, lint) will generate signal during this run. Data from this campaign informs all future decisions.
+2. **Local model integration** — Replace cloud API calls with local LM Studio endpoints on Mac Studio. The archived `archive/local-llm-pipeline/` system is reference material. *Not started.*
+3. **Adaptive routing / parallelism** — Only if data from 1–2 shows remaining sequential bottleneck justifies the complexity. *Deprioritized.*
 
 ### Historical build estimator (designed, not yet built)
 
