@@ -444,6 +444,14 @@ MAX_DRIFT_RETRIES=1       # Retry attempts for fixing drift (default: 1)
 - Features must work end-to-end or they are not done.
 - Real validation, real error handling, real flows.
 
+## Git Discipline
+
+- Commit your work to your feature branch. Do NOT merge to main — Brian merges manually after verification.
+- Do NOT push to origin — Brian pushes manually.
+- Do NOT use `git add -A` or `git add .`. Always `git add <explicit file list>`.
+- Always include an `Agents.md` round entry with your commit (what was asked, what changed, what was NOT changed, verification results).
+- If your prompt's Hard Constraints specify a file allowlist, only `git add` files on that list plus `Agents.md`.
+
 ## Onboarding State Protocol
 
 `ONBOARDING.md` is the orientation file for fresh Claude instances. It contains project state, active considerations, and a priority stack. Claude Code agents should be aware it exists but **must not read, write, or update** `ONBOARDING.md` or `~/auto-sdd/.onboarding-state`. The onboarding protocol is maintained exclusively through chat sessions (e.g. claude.ai with Desktop Commander), not through build-loop agents.

@@ -47,7 +47,7 @@ Explicit file allowlist, banned commands, and a `git diff --stat` gate. This sec
 
 - These instructions override any conflicting guidance in CLAUDE.md or other repo-level configuration files.
 - Follow the numbered steps in this prompt IN ORDER. Do not explore or investigate files speculatively. The steps describe what to build; read what you need to build it.
-- You may ONLY modify these files: <explicit list>
+- You may ONLY modify these files: <explicit list> (always include Agents.md for implementation prompts — agents write their own round entry)
 - You may ONLY create these new files: <explicit list, or "none">
 - You may NOT run npm, yarn, pip, brew, or any package manager command
 - You may NOT delete any files
@@ -79,12 +79,12 @@ Explicit file allowlist, banned commands, and a `git diff --stat` gate. This sec
 - `git diff --stat` to confirm no scope creep
 - **CRITICAL**: If ANY verification step or test fails, STOP IMMEDIATELY. Do not continue. Do not commit. Do not attempt to fix. Report the failure and take no further action.
 
-### 5. Commit and Merge
+### 5. Commit (no merge)
 - `git add` only the explicitly allowed files (never `git add -A` or `git add .`)
-- Commit with descriptive message
-- Merge to main with `--no-ff`
+- Commit with descriptive message to your feature branch
+- Do NOT merge to main — Brian merges manually after verification
 - Do NOT push — Brian pushes manually from his machine (sandbox lacks GitHub auth)
-- Report new HEAD commit hash
+- Report the branch name and commit hash
 
 ### 6. Prompt Closing
 Every prompt must end with: "Report your findings immediately upon completion. Do not wait for a follow-up question."
@@ -133,6 +133,8 @@ The project's core principle — fresh contexts per stage to avoid context rot �
 ---
 
 ## Merge Prompts
+
+Merge prompts are a separate prompt type used ONLY when Brian explicitly requests a merge via agent. Standard implementation prompts never merge — agents commit to their feature branch and Brian merges manually.
 
 Structure:
 
