@@ -226,13 +226,11 @@ generate_codebase_summary() {
 
     local learnings_dir="$project_dir/.specs/learnings"
     local learnings_cap=40
+    local learnings_content=""
+    local learnings_found=false
 
-    if [ ! -d "$learnings_dir" ]; then
-        _gcs_append "No learnings directory found."
-    else
-        local learnings_content=""
-        local learnings_found=false
-
+    # Read in-project learnings (.specs/learnings/)
+    if [ -d "$learnings_dir" ]; then
         for md_file in "$learnings_dir"/*.md; do
             [ -f "$md_file" ] || continue
             # Skip empty files
@@ -247,20 +245,47 @@ generate_codebase_summary() {
             learnings_content="${learnings_content}$(cat "$md_file")
 "
         done
+    fi
 
-        if [ "$learnings_found" = false ]; then
-            _gcs_append "No learnings files found."
-        else
-            local line_count=0
-            while IFS= read -r lline; do
-                if [ "$line_count" -ge "$learnings_cap" ]; then
-                    _gcs_append "... (learnings truncated at ${learnings_cap} lines)"
-                    break
-                fi
-                _gcs_append "$lline"
-                line_count=$((line_count + 1))
-            done <<< "$learnings_content"
-        fi
+    # Read persistent campaign learnings (.campaign-learnings/<project>/)
+    # WHY: Campaign resets (git reset --hard) destroy in-project learnings.
+    # Persistent learnings survive resets so retry agents learn from prior failures.
+    local _gcs_lib_dir
+    _gcs_lib_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    local _gcs_repo_root
+    _gcs_repo_root="$(dirname "$_gcs_lib_dir")"
+    local project_basename
+    project_basename=$(basename "$project_dir")
+    local persistent_learnings_dir="$_gcs_repo_root/.campaign-learnings/$project_basename"
+
+    if [ -d "$persistent_learnings_dir" ]; then
+        for md_file in "$persistent_learnings_dir"/*.md; do
+            [ -f "$md_file" ] || continue
+            if [ ! -s "$md_file" ]; then
+                continue
+            fi
+            learnings_found=true
+            local basename
+            basename=$(basename "$md_file")
+            learnings_content="${learnings_content}### [persistent] ${basename}
+"
+            learnings_content="${learnings_content}$(cat "$md_file")
+"
+        done
+    fi
+
+    if [ "$learnings_found" = false ]; then
+        _gcs_append "No learnings files found."
+    else
+        local line_count=0
+        while IFS= read -r lline; do
+            if [ "$line_count" -ge "$learnings_cap" ]; then
+                _gcs_append "... (learnings truncated at ${learnings_cap} lines)"
+                break
+            fi
+            _gcs_append "$lline"
+            line_count=$((line_count + 1))
+        done <<< "$learnings_content"
     fi
 
     # Output the accumulated result

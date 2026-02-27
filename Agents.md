@@ -808,6 +808,38 @@ DRY_RUN_SKIP_AGENT=true ./tests/dry-run.sh
 
 ---
 
+### Round 31: Fix retry path — failure learnings, persistent storage, node_modules exclusion (branch: claude/review-hard-constraints-eWH7p)
+
+**Date**: Feb 27, 2026
+
+**What was asked**: Fix three related bugs in the build-loop retry path, all observable when a feature fails its build check and the loop retries:
+- Bug A: Failure learnings are never recorded (eval sidecar only fires on commits; failures never commit, so nothing is written to `.specs/learnings/`).
+- Bug B: Learnings don't survive campaign resets (`git reset --hard` back to init commit destroys `.specs/learnings/`).
+- Bug C: `node_modules/` is destroyed on retry (`git clean -fd` removes all untracked files including `node_modules/`, forcing redundant `npm install`).
+
+Also: update `lib/codebase-summary.sh` to read from the persistent `.campaign-learnings/` location in addition to `.specs/learnings/`.
+
+**What actually happened**:
+- **Bug A fix** (`build-loop-local.sh`): Added a failure learnings block in the retry path (lines 1210-1237) that writes `LAST_BUILD_OUTPUT` and `LAST_TEST_OUTPUT` to `$PROJECT_DIR/.specs/learnings/build-failures.md` BEFORE the `git reset --hard` and `git clean` that wipe the working tree. This ensures the retry agent gets failure context via codebase summary injection.
+- **Bug B fix** (`build-loop-local.sh`): Same block also writes failure learnings to `auto-sdd/.campaign-learnings/<project-basename>/build-failures.md`. This directory is at the auto-sdd repo root, outside any project's git tree, so it survives project-level resets. Uses `$(basename "$PROJECT_DIR")` as namespace to avoid collisions across projects.
+- **Bug C fix** (`build-loop-local.sh`): Changed `git clean -fd` to `git clean -fd -e node_modules` so `node_modules/` is excluded from cleanup and doesn't require reinstallation on retry.
+- **codebase-summary.sh**: Added a second learnings reader loop after the in-project learnings reader. Derives the auto-sdd repo root from `BASH_SOURCE[0]` (the library file itself). Reads `.campaign-learnings/<project-basename>/*.md` and labels entries with `[persistent]` prefix to distinguish from in-project learnings.
+- `Agents.md`: This entry.
+
+**What was NOT changed**: `scripts/overnight-autonomous.sh`, `lib/reliability.sh`, `lib/validation.sh`, `lib/eval.sh`, `lib/claude-wrapper.sh`, all test scripts, `.specs/`, `CLAUDE.md`, `ONBOARDING.md`, `.gitignore`. No existing functions modified — only additions within the retry `if [ "$attempt" -gt 0 ]` block and the `generate_codebase_summary` function's learnings section.
+
+**Verification**:
+- `bash -n scripts/build-loop-local.sh` — passed
+- `bash -n lib/codebase-summary.sh` — passed
+- Grep confirms failure learnings written (lines 1231, 1236) BEFORE `git reset --hard` (line 1240) and `git clean` (line 1242)
+- Grep confirms `git clean -fd -e node_modules` (line 1242)
+- Grep confirms `codebase-summary.sh` reads from both `.specs/learnings/` (line 227) and `.campaign-learnings/` (line 259)
+- `DRY_RUN_SKIP_AGENT=true tests/dry-run.sh` — all passed
+- `tests/test-reliability.sh` — 68/68 passed
+- `git diff --stat` — only `scripts/build-loop-local.sh`, `lib/codebase-summary.sh`, and `Agents.md`
+
+---
+
 ## Known Gaps
 
 - No live integration testing — all validation is `bash -n` + unit tests + structural dry-run

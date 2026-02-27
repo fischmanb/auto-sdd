@@ -1202,9 +1202,44 @@ run_build_loop() {
                 echo ""
                 warn "Retry $attempt/$MAX_RETRIES — waiting ${MIN_RETRY_DELAY}s before retry (findings #2, #18, #35)"
                 sleep "$MIN_RETRY_DELAY"
+
+                # ── Record failure learnings BEFORE wiping (Bug A + Bug B fix) ──
+                # WHY: The retry agent needs to know what went wrong. Without this,
+                # failure context is lost on reset and never reaches future agents.
+                local project_basename
+                project_basename=$(basename "$PROJECT_DIR")
+                local timestamp
+                timestamp=$(date '+%Y%m%d-%H%M%S')
+                local failure_entry=""
+                if [ -n "$LAST_BUILD_OUTPUT" ]; then
+                    failure_entry="### Build failure at $timestamp (attempt $((attempt)))
+\`\`\`
+$LAST_BUILD_OUTPUT
+\`\`\`
+"
+                fi
+                if [ -n "$LAST_TEST_OUTPUT" ]; then
+                    failure_entry="${failure_entry}### Test failure at $timestamp (attempt $((attempt)))
+\`\`\`
+$LAST_TEST_OUTPUT
+\`\`\`
+"
+                fi
+                if [ -n "$failure_entry" ]; then
+                    # Write to in-project learnings (available to codebase summary)
+                    mkdir -p "$PROJECT_DIR/.specs/learnings"
+                    printf '%s\n' "$failure_entry" >> "$PROJECT_DIR/.specs/learnings/build-failures.md"
+                    # Write to persistent location (survives campaign resets)
+                    local persistent_dir
+                    persistent_dir="$(dirname "$SCRIPT_DIR")/.campaign-learnings/$project_basename"
+                    mkdir -p "$persistent_dir"
+                    printf '%s\n' "$failure_entry" >> "$persistent_dir/build-failures.md"
+                fi
+
                 # Reset branch to starting point for clean retry (reuse branch, don't create new one)
                 git reset --hard "$BRANCH_START_COMMIT" 2>/dev/null || true
-                git clean -fd 2>/dev/null || true
+                # WHY: Exclude node_modules/ from clean to avoid redundant npm install (Bug C fix)
+                git clean -fd -e node_modules 2>/dev/null || true
                 echo ""
             fi
 
