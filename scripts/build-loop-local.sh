@@ -354,6 +354,11 @@ else
     if [ -z "$MAIN_BRANCH" ]; then
         MAIN_BRANCH="main"
     fi
+    # Reject stale campaign branches left by previous failed runs.
+    if [[ "$MAIN_BRANCH" == auto/* ]]; then
+        echo "Warning: MAIN_BRANCH detected as '$MAIN_BRANCH' (stale campaign branch). Resetting to 'main'."
+        MAIN_BRANCH="main"
+    fi
 fi
 
 if ! command -v claude &> /dev/null; then

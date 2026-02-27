@@ -640,6 +640,11 @@ DRIFT_UNRESOLVABLE: {what needs human attention}
 SYNC_BRANCH="$BASE_BRANCH"
 if [ "$BASE_BRANCH" = "current" ]; then
     SYNC_BRANCH=$(git branch --show-current 2>/dev/null || echo "main")
+    # Reject stale campaign branches left by previous failed runs.
+    if [[ "$SYNC_BRANCH" == auto/* ]]; then  # MAIN_BRANCH would inherit stale base
+        echo "Warning: SYNC_BRANCH detected as '$SYNC_BRANCH' (stale campaign branch). Resetting to 'main'."
+        SYNC_BRANCH="main"
+    fi
 fi
 
 section "STEP 0: Sync with $SYNC_BRANCH"
