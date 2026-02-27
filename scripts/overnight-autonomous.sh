@@ -107,6 +107,7 @@ SCRIPT_START=$(date +%s)
 # Load configuration
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="${PROJECT_DIR:-$(dirname "$SCRIPT_DIR")}"
+PROJECT_DIR="$(cd "$PROJECT_DIR" && pwd)"
 
 if [ -f "$PROJECT_DIR/.env.local" ]; then
     source "$PROJECT_DIR/.env.local"
