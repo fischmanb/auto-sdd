@@ -79,7 +79,15 @@ Agents have landed on wrong branches and wrong commits multiple times. Precondit
 - `bash -n` syntax checks on modified scripts
 - grep to confirm expected changes exist
 - `cat` to verify file contents
-- Run existing test suites: `tests/test-reliability.sh` and `DRY_RUN_SKIP_AGENT=true tests/dry-run.sh`
+- Run **ALL** test suites — every prompt must include all five:
+  ```bash
+  ./tests/test-reliability.sh
+  ./tests/test-eval.sh
+  ./tests/test-validation.sh
+  ./tests/test-codebase-summary.sh
+  DRY_RUN_SKIP_AGENT=true ./tests/dry-run.sh
+  ```
+  Do not cherry-pick which suites to run. A change to any file can break any suite. Run all five, every time.
 - `git diff --stat` to confirm no scope creep
 - **CRITICAL**: If ANY verification step or test fails, STOP IMMEDIATELY. Do not continue. Do not commit. Do not attempt to fix. Report the failure and take no further action.
 
