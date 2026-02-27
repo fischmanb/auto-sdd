@@ -1062,6 +1062,9 @@ PROMPT_EOF
 }
 
 build_retry_prompt() {
+    local feature_id="${1:-}"
+    local feature_name="${2:-}"
+
     local prompt='The previous build attempt FAILED. There are uncommitted changes or build errors from the last attempt.
 
 Your job:
@@ -1074,6 +1077,14 @@ Your job:
 7. Update roadmap to mark the feature ✅ completed
 
 CRITICAL: Seed data is fine; stub functions are not. All features must use real function implementations, not placeholder stubs.
+
+After completion, output EXACTLY these signals (each on its own line):
+FEATURE_BUILT: '"${feature_name:-{feature name}}"'
+SPEC_FILE: {path to the .feature.md file}
+SOURCE_FILES: {comma-separated paths to source files created/modified}
+
+Or if build fails:
+BUILD_FAILED: {reason}
 '
 
     # Append failure context if available
@@ -1092,13 +1103,17 @@ $LAST_TEST_OUTPUT
     fi
 
     prompt="$prompt
-After completion, output EXACTLY these signals (each on its own line):
-FEATURE_BUILT: {feature name}
+═══════════════════════════════════════════════════════════
+CRITICAL — REQUIRED OUTPUT SIGNAL:
+Your FINAL output lines MUST include exactly:
+FEATURE_BUILT: ${feature_name:-{feature name}}
 SPEC_FILE: {path to the .feature.md file}
-SOURCE_FILES: {comma-separated paths to source files created/modified}
+SOURCE_FILES: {comma-separated paths to source files}
 
-Or if build fails:
-BUILD_FAILED: {reason}
+The build loop uses the FEATURE_BUILT signal to detect success.
+If you omit it, your successful build will be marked as FAILED.
+If the build truly failed, output: BUILD_FAILED: {reason}
+═══════════════════════════════════════════════════════════
 "
     echo "$prompt"
 }
@@ -1217,7 +1232,7 @@ run_build_loop() {
             if [ "$attempt" -eq 0 ]; then
                 run_agent_with_backoff "$BUILD_OUTPUT" $(agent_cmd "$BUILD_MODEL") "$(build_feature_prompt "$i" "$feature_label")"
             else
-                run_agent_with_backoff "$BUILD_OUTPUT" $(agent_cmd "$RETRY_MODEL") "$(build_retry_prompt)"
+                run_agent_with_backoff "$BUILD_OUTPUT" $(agent_cmd "$RETRY_MODEL") "$(build_retry_prompt "$i" "$feature_label")"
             fi
 
             if [ "$AGENT_EXIT" -ne 0 ]; then
