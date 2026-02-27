@@ -882,6 +882,31 @@ DRY_RUN_SKIP_AGENT=true ./tests/dry-run.sh
 
 ---
 
+### Round 34 — Fix wrapper silent death + MAIN_BRANCH stale branch detection
+
+**Date**: Feb 27, 2026
+
+**What was asked**: (1) Rewrite claude-wrapper.sh to remove set -e, capture stderr instead of /dev/null, unset CLAUDECODE. (2) Add auto/* branch rejection to MAIN_BRANCH detection in both build scripts.
+
+**What actually happened**:
+- `lib/claude-wrapper.sh`: Removed `-e` from `set` flags (now `set -uo pipefail`) with comment explaining why. Added `unset CLAUDECODE` before claude invocation to prevent nested-session detection. Replaced `2>/dev/null` on the claude invocation with `2>"$tmp_stderr"` (temp file). On non-zero exit, diagnostics (stderr + stdout) are surfaced to the caller before exiting. Success path (jq extraction, cost logging) unchanged.
+- `scripts/build-loop-local.sh`: After the `MAIN_BRANCH` fallback assignment (line ~353), added a check: if `MAIN_BRANCH` matches `auto/*`, reset to `"main"` with a warning.
+- `scripts/overnight-autonomous.sh`: After the `SYNC_BRANCH` fallback assignment (line ~642, inside `BASE_BRANCH="current"` block), added the same `auto/*` rejection. `SYNC_BRANCH` feeds `MAIN_BRANCH` on line 653.
+
+**What was NOT changed**: No other files. No new files created.
+
+**Verification**:
+- `grep 'set -' lib/claude-wrapper.sh` → `set -uo pipefail` (no -e)
+- `grep 'claude.*2>/dev/null' lib/claude-wrapper.sh` → no matches
+- `grep 'unset CLAUDECODE' lib/claude-wrapper.sh` → 1 match
+- `grep 'auto/' scripts/build-loop-local.sh | grep -i main_branch` → shows new check
+- `grep 'auto/' scripts/overnight-autonomous.sh | grep -i main_branch` → shows new check
+- `bash -n` → OK on all 3 files
+- `tests/test-reliability.sh` → 68 passed, 0 failed
+- `git diff --stat` → 4 files (lib/claude-wrapper.sh, scripts/build-loop-local.sh, scripts/overnight-autonomous.sh, Agents.md)
+
+---
+
 ## Known Gaps
 
 - No live integration testing — all validation is `bash -n` + unit tests + structural dry-run
