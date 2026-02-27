@@ -823,6 +823,20 @@ DRY_RUN_SKIP_AGENT=true ./tests/dry-run.sh
 
 **Verification**: `bash -n` clean. `grep -n 'git clean.*-e node_modules'` matches. `grep -n 'Retry produced passing build'` matches. `DRY_RUN_SKIP_AGENT=true bash tests/dry-run.sh` passes. `bash tests/test-reliability.sh` all assertions pass. `git diff --stat` shows only allowed files.
 
+### Round 31.1: Harden FEATURE_BUILT signal in retry prompt (branch: claude/update-build-and-agents-1dVAe)
+
+**Date**: Feb 27, 2026
+
+**What was asked**: The retry agent in the last campaign built passing code but never emitted the `FEATURE_BUILT:` signal, causing the loop to mark a successful build as failed. Investigate why the signal instruction in `build_retry_prompt` is being ignored, then harden the prompt so the agent cannot miss it.
+
+**What actually happened**:
+- **Investigation**: Compared `build_retry_prompt` (lines 1064-1104) against `build_feature_prompt` (lines 1022-1062). Found two issues: (1) The signal instruction in the retry prompt was appended after all other content, but dynamically appended failure context (up to 130 lines of `LAST_BUILD_OUTPUT` + `LAST_TEST_OUTPUT`) could push it far from the core instructions, making it easy for the agent to lose focus. (2) The retry prompt used a generic `{feature name}` placeholder instead of the actual feature name variable, giving the agent less clarity on what to emit. (3) The wording lacked urgency — no "CRITICAL" emphasis, no explanation of consequences.
+- **Fix**: (a) Added `feature_id` and `feature_name` parameters to `build_retry_prompt`. (b) Kept the original signal instruction in its mid-prompt position (provides useful context alongside the task steps). (c) Added a visually prominent CRITICAL block as the absolute last content in the prompt, after all failure context, with emphatic wording: explains the signal is required, the loop depends on it, and omitting it causes a successful build to be marked failed. (d) Both signal instruction locations now use the actual `$feature_name` value (with `{feature name}` fallback). (e) Updated the call site to pass `"$i" "$feature_label"`.
+
+**What was NOT changed**: `lib/reliability.sh`, `lib/codebase-summary.sh`, `lib/claude-wrapper.sh`, `lib/validation.sh`, `lib/eval.sh`, `scripts/overnight-autonomous.sh`, all test scripts, `.specs/`, `CLAUDE.md`, `ONBOARDING.md`. No functions removed or renamed. `build_feature_prompt` unchanged. Signal fallback logic from Round 31 unchanged.
+
+**Verification**: `bash -n` clean. `FEATURE_BUILT` count increased from 17 to 19. `DRY_RUN_SKIP_AGENT=true bash tests/dry-run.sh` passes. `bash tests/test-reliability.sh` all assertions pass. `git diff --stat` shows only allowed files.
+
 ---
 
 ## Known Gaps
