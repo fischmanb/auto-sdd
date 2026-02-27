@@ -101,3 +101,33 @@ The broken pattern fails because `grep -rn` prepends `filename:linenum:` before 
 
 ### Learnings go in primary repos
 Learnings/patterns belong in the main `.specs/learnings/` catalog, not in project-specific directories (e.g., `stakd/.specs/learnings/`). Project-specific dirs only get fixes specific to that build/app. (Corrected: 2026-02-26.)
+
+---
+
+## Data & Log Loss Prevention (Round 37)
+
+### Build logs inside PROJECT_DIR will be destroyed
+**Root cause**: `$PROJECT_DIR/logs/` sits inside the git working tree. Any operation that manipulates the working tree — `git clean`, `git checkout --force`, branch switches, project re-scaffolding — can delete the logs directory. When `tee` is writing via `exec > >(tee -a "$BUILD_LOG")`, the process keeps an open fd to the deleted inode. The data exists but is unrecoverable on macOS without SIP bypass.
+
+**Fix (Round 37)**: All logs now write to `$SCRIPT_DIR/../logs/<project-name>/` (resolves to `~/auto-sdd/logs/<project-name>/`), outside the project's git working tree. Affected: BUILD_LOG, COST_LOG_FILE, build-summary JSON, eval-sidecar.log, eval output dir. Override with `LOGS_DIR` env var.
+
+**Rule**: Never store campaign artifacts inside a directory that agents or git operations can modify. Campaign data goes in the infra repo, not the target project.
+
+### Terminal.app `history` property recovers scrollback
+If build logs ARE lost (deleted inodes, killed tee), Terminal.app retains full scrollback accessible via AppleScript:
+```bash
+osascript -e 'tell application "Terminal" to return history of tab 1 of window id WINID' > recovered.txt
+```
+To find the right window: `osascript -e 'tell application "Terminal" ... get tty of tab 1 of window id WINID ...'` and cross-reference with `ps -o pid,tty -p <build-loop-pid>`.
+
+**Note**: `contents` returns only the visible area. `history` returns full scrollback. This is the only known no-root recovery path on macOS when tee's target file is deleted.
+
+### Cost log defaults to cwd — must be explicitly set
+`claude-wrapper.sh` writes cost data to `$COST_LOG_FILE` (default: `./cost-log.jsonl`). Without explicit override, this lands in whatever directory the agent last `cd`'d to — fragile and project-dependent. The build loop now exports `COST_LOG_FILE="$LOGS_DIR/cost-log.jsonl"` to centralize it.
+
+### `lsof +L1` finds deleted-but-open files
+To check if build data still exists in deleted inodes:
+```bash
+lsof +L1 | grep build
+```
+Shows tee processes with open fds to deleted files. On Linux, recoverable via `/proc/<pid>/fd/<N>`. On macOS, unrecoverable without root/SIP bypass — use Terminal.app `history` fallback instead.
