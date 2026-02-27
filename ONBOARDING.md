@@ -2,7 +2,7 @@
 
 > **Read this file first.** It gives a fresh Claude instance everything needed to pick up work on `auto-sdd` with Brian.
 >
-> Last updated: 2026-02-26
+> Last updated: 2026-02-27
 
 > **⚠️ Per-response protocol**: Read and update `.onboarding-state` on every project-related response. See "Keeping This File Current" for full rules.
 
@@ -78,6 +78,8 @@ Build loop remediation from `build-loop-failure-investigation.md` (37 findings).
 - **Eval sidecar script + integration** — ✅ Done Rounds 28-28b. `scripts/eval-sidecar.sh` — standalone sidecar. Auto-launches from both build scripts. `EVAL_AGENT=true` by default.
 - **Eval sidecar cooperative drain** — ✅ Done Round 29. Sentinel file triggers graceful queue drain. Both build scripts manage sidecar lifecycle.
 - **Mechanical validation gates** — ✅ Done Round 30. Three non-blocking gates: test count regression, dead export detection, static analysis/lint. Default `POST_BUILD_STEPS=test,dead-code,lint`.
+- **Retry resilience** — ✅ Done Round 31. Three bugs from failed stakd-v2 campaign: (1) `git clean -fd` exclusions for node_modules et al. (2) Signal fallback detection when retry agent omits `FEATURE_BUILT:`. (3) Cascade failure (Bug 3 = consequence of Bug 1).
+- **Retry prompt signal hardening** — ✅ Done Round 31.1. Parameterized retry prompt with actual feature name, added emphatic CRITICAL signal block as final prompt content.
 
 ### Known gaps
 
@@ -98,7 +100,7 @@ Build loop remediation from `build-loop-failure-investigation.md` (37 findings).
 
 Ordered by efficiency gain per complexity added:
 
-1. **Rerun stakd 28-feature campaign** — First real validation of all remediation (Rounds 21-30). Run build loop with eval sidecar against stakd/ using original spec and vision files. New mechanical gates (test regression, dead exports, lint) will generate signal during this run. Data from this campaign informs all future decisions.
+1. **Rerun stakd 28-feature campaign** — First real validation of all remediation (Rounds 21-31.1). Campaign target is `stakd-v2/` (clean at commit `16159d8` — specs + CLAUDE.md only, no node_modules or build artifacts). Run build loop with eval sidecar using original spec and vision files on **Sonnet 4.6** (`BUILD_MODEL=claude-sonnet-4-6`). Rounds 31/31.1 fixed three retry bugs that caused the previous campaign to fail (git clean nuking node_modules, missing signal fallback, cascade failure). Data from this campaign informs all future decisions.
 2. **Local model integration** — Replace cloud API calls with local LM Studio endpoints on Mac Studio. The archived `archive/local-llm-pipeline/` system is reference material. *Not started.*
 3. **Adaptive routing / parallelism** — Only if data from 1–2 shows remaining sequential bottleneck justifies the complexity. *Deprioritized.*
 
@@ -112,7 +114,9 @@ After at least one full campaign, a function will correlate t-shirt sizes from r
 - **Onboarding state protocol**: Implemented 2026-02-25. Mechanical enforcement via `~/auto-sdd/.onboarding-state` file — tracks prompt count, buffers pending captures, triggers interval checks. Memory instruction points all future chats to the protocol. See "Keeping This File Current" section.
 - **Agent git discipline**: Updated 2026-02-26. CLAUDE.md now has "Git Discipline" section (no merge, no push, always include Agents.md entry, origin divergence check). PROMPT-ENGINEERING-GUIDE.md clarified: allowlist always includes Agents.md for implementation prompts, Section 5 renamed "Commit (no merge)", merge prompts are Brian-initiated only.
 - **Eval sidecar system (2026-02-26)**: Round 27: `lib/eval.sh` — four functions (mechanical eval, eval prompt generation, signal parsing, result writing). 53-assertion test suite. Round 28: `scripts/eval-sidecar.sh` — standalone sidecar that polls for new commits, runs mechanical evals (and optionally agent evals), writes per-feature JSON, aggregates campaign summary on exit. Round 28b: auto-launches sidecar from both build scripts as background process, `EVAL_AGENT=true` by default. Round 29: cooperative drain shutdown — sentinel file triggers graceful queue drain before campaign summary instead of hard SIGTERM. Both build scripts manage sidecar lifecycle (`start_eval_sidecar()` / `stop_eval_sidecar()`). Observational only — never blocks builds, never modifies files.
+- **claude-wrapper.sh path fix (2026-02-26)**: Relative path to `lib/claude-wrapper.sh` broke when `PROJECT_DIR` != repo root. Fixed in both `build-loop-local.sh` and `overnight-autonomous.sh` to use `$SCRIPT_DIR/../lib/` instead.
 - **Mechanical validation gates (2026-02-26)**: Round 30: Three non-blocking post-build gates added to both build scripts. (1) Test count regression — tracks high-water mark of passing tests across features, warns on drop. (2) Dead export detection — scans for exported symbols with zero import sites. (3) Static analysis — auto-detects linter config (ESLint, Biome, flake8, ruff, Clippy, golangci-lint) and runs if present. Default `POST_BUILD_STEPS` is now `test,dead-code,lint`. All gates warn only, never fail the build.
+- **Retry resilience + signal hardening (2026-02-27)**: Round 31: Fixed three bugs from failed stakd-v2 campaign — `git clean -fd` exclusions for node_modules/env/state/logs, fallback signal detection when retry agent omits `FEATURE_BUILT:`, cascade failure (Bugs 2-28 instant-failing was consequence of Bug 1 nuking node_modules). Round 31.1: Hardened retry prompt — parameterized with actual feature name, added emphatic CRITICAL signal block as final content after all failure context. Both merged to main (`1a7dfa4`). Ready for campaign retest.
 
 ---
 
@@ -231,6 +235,8 @@ Full details in `Agents.md`. Here's the arc:
 | 28 | Eval sidecar script + build loop integration | `scripts/eval-sidecar.sh` — standalone sidecar polling for commits, running evals, aggregating campaign summary. 28b: auto-launch from both build scripts, `EVAL_AGENT=true` default. |
 | 29 | Eval sidecar cooperative drain shutdown | Sentinel file triggers graceful queue drain. Both build scripts manage sidecar lifecycle. |
 | 30 | Mechanical validation gates | Three non-blocking gates: test count regression detection, dead export detection, static analysis/lint. Default `POST_BUILD_STEPS=test,dead-code,lint`. |
+| 31 | Retry resilience | Three bugs from failed stakd-v2 campaign: git clean exclusions, signal fallback detection, cascade failure fix. 68/68 tests passing. |
+| 31.1 | Retry prompt signal hardening | Parameterized retry prompt with actual feature name, emphatic CRITICAL signal block as final prompt content. |
 
 **Key lesson that repeats**: Agent self-assessments are unreliable. Always verify with grep, `bash -n`, and tests. Never trust the agent's narrative summary.
 
