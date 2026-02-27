@@ -14,14 +14,19 @@ Forked from [AdrianRogowski/auto-sdd](https://github.com/AdrianRogowski/auto-sdd
 
 Two identical 28-feature campaigns were run against the same React + TypeScript + Next.js codebase, one on Sonnet 4.6 and one on Haiku 4.5, to answer a simple question: does a faster model build faster?
 
+The Sonnet campaign completed all 28 features with zero failures in 6.8 hours.
+
 | Metric | Sonnet 4.6 | Haiku 4.5 |
 |---|---|---|
-| Features built | 24 | 11 |
-| Build window | 5.9 hours | 2.9 hours |
+| Features built | **28/28** | 11 (in progress) |
+| Features failed | **0** | 0 |
+| Build window | 6.8 hours | 2.9 hours* |
 | **Throughput** | **4.0 features/hour** | **3.8 features/hour** |
-| Median feature time | 6.0 min | 7.4 min |
+| Median feature time | 9.2 min | 7.4 min |
 | Cost per feature | $0.07 | $0.08 |
-| Drift reconciliation rate | 71% | 73% |
+| Drift reconciliation rate | 75% | 73% |
+
+*Haiku campaign in progress — metrics based on partial data
 
 ### Key findings
 
