@@ -296,13 +296,19 @@ SCRIPT_START=$(date +%s)
 
 cd "$PROJECT_DIR"
 
-# ── Build log auto-rotation (finding #20) ────────────────────────────────
+# ── Build log auto-rotation (finding #20, hardened Round 37) ──────────────
 # WHY: Runs 2 and 3 of the stakd campaign had no build log because output
 # wasn't piped to a file. Tee all output to logs/build-{timestamp}.log.
-mkdir -p "$PROJECT_DIR/logs"
-BUILD_LOG="$PROJECT_DIR/logs/build-$(date '+%Y%m%d-%H%M%S').log"
+# HARDENING: Logs stored OUTSIDE PROJECT_DIR to survive git clean, branch
+# switches, and agent operations that manipulate the working tree.
+# Override with LOGS_DIR env var if needed.
+LOGS_DIR="${LOGS_DIR:-$SCRIPT_DIR/../logs/$(basename "$PROJECT_DIR")}"
+LOGS_DIR="$(mkdir -p "$LOGS_DIR" && cd "$LOGS_DIR" && pwd)"
+BUILD_LOG="$LOGS_DIR/build-$(date '+%Y%m%d-%H%M%S').log"
+export COST_LOG_FILE="$LOGS_DIR/cost-log.jsonl"
 exec > >(tee -a "$BUILD_LOG") 2>&1
-log "Build log: $BUILD_LOG"
+log "Build log: $BUILD_LOG (outside project tree)"
+log "Cost log: $COST_LOG_FILE"
 
 # EVAL_SIDECAR_PID is set later by start_eval_sidecar() — see lifecycle below.
 EVAL_SIDECAR_PID=""
@@ -1568,8 +1574,8 @@ write_build_summary() {
     done
 
     # ── Write JSON summary ──
-    mkdir -p "$PROJECT_DIR/logs"
-    local summary_file="$PROJECT_DIR/logs/build-summary-${file_timestamp}.json"
+    mkdir -p "$LOGS_DIR"
+    local summary_file="$LOGS_DIR/build-summary-${file_timestamp}.json"
 
     # Build features JSON array using indexed arrays (no associative arrays for bash 3.x)
     local features_json=""
@@ -1814,7 +1820,8 @@ start_eval_sidecar() {
     fi
     log "Starting eval sidecar..."
     PROJECT_DIR="$PROJECT_DIR" AGENT_MODEL="${AGENT_MODEL:-}" \
-        bash "$sidecar_script" >>"$PROJECT_DIR/logs/eval-sidecar.log" 2>&1 &
+        EVAL_OUTPUT_DIR="$LOGS_DIR/evals" \
+        bash "$sidecar_script" >>"$LOGS_DIR/eval-sidecar.log" 2>&1 &
     EVAL_SIDECAR_PID=$!
     log "Eval sidecar started (PID: $EVAL_SIDECAR_PID)"
 }
