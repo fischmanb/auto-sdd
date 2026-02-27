@@ -929,6 +929,25 @@ DRY_RUN_SKIP_AGENT=true ./tests/dry-run.sh
 
 ---
 
+### Round 36 — Add signal fallback detection to primary build path
+
+**Date**: Feb 27, 2026
+
+**What was asked**: The primary build path in `build-loop-local.sh` lacks signal fallback detection. When a build agent completes successfully but omits the `FEATURE_BUILT:` signal, the loop treats it as a failure and retries — destroying the successful work via `git reset --hard`. Round 31 added signal fallback for the retry path only. Add equivalent fallback to the primary (attempt 0) path.
+
+**What actually happened**:
+- `scripts/build-loop-local.sh`: Added signal fallback block between the `FEATURE_BUILT` check (line ~1367) and the "If we get here, the attempt failed" block. When `FEATURE_BUILT` is absent from build output, the new code checks `$BUILD_RESULT` for `NO_DRIFT` or `DRIFT_FIXED` signals. If either is present AND HEAD advanced AND working tree is clean AND build+tests pass, the feature is inferred as successfully built. Logs a warning that success was inferred from drift check signals rather than the build agent's `FEATURE_BUILT` signal. Follows the same pattern as the Round 31 retry fallback (tracking arrays, resume state, break).
+
+**What was NOT changed**: Retry fallback logic (Round 31), drift check function, validation gates, build prompts, overnight script, no new files created, no files deleted.
+
+**Verification**:
+- `bash -n scripts/build-loop-local.sh` passes
+- `grep -n "signal fallback\|Signal fallback"` shows both primary (Round 36) and retry (Round 31) fallbacks
+- All 5 test suites pass: test-reliability, test-eval, test-validation, test-codebase-summary, dry-run
+- `git diff --stat` shows only `scripts/build-loop-local.sh` and `Agents.md`
+
+---
+
 ## Known Gaps
 
 - No live integration testing — all validation is `bash -n` + unit tests + structural dry-run

@@ -1366,13 +1366,54 @@ run_build_loop() {
                 fi
             fi
 
+            # ── Signal fallback (primary path): infer success when agent forgot FEATURE_BUILT ──
+            # WHY: Build agents sometimes complete successfully (spec+code aligned, drift clean)
+            # but forget to emit FEATURE_BUILT. If the build output contains NO_DRIFT or
+            # DRIFT_FIXED, HEAD advanced, and build+tests pass, the feature is done.
+            # Don't waste it by retrying. (Round 36)
+            if [ "$feature_done" != true ] && ! echo "$BUILD_RESULT" | grep -q "FEATURE_BUILT"; then
+                if echo "$BUILD_RESULT" | grep -qE "NO_DRIFT|DRIFT_FIXED"; then
+                    local head_now_primary
+                    head_now_primary=$(git rev-parse HEAD 2>/dev/null || echo "")
+                    if [ -n "$head_now_primary" ] && [ "$head_now_primary" != "$BRANCH_START_COMMIT" ]; then
+                        if check_working_tree_clean && check_build; then
+                            if ! should_run_step "test" || check_tests; then
+                                warn "Primary build produced drift-clean output without FEATURE_BUILT signal — inferring success from drift check"
+                                LOOP_BUILT=$((LOOP_BUILT + 1))
+                                local feature_end=$(date +%s)
+                                local feature_duration=$((feature_end - FEATURE_START))
+                                success "Feature $LOOP_BUILT inferred-built (drift signal): $feature_label ($(format_duration $feature_duration))"
+                                LOOP_TIMINGS+=("✓ $feature_label (inferred-drift): $(format_duration $feature_duration)")
+                                feature_done=true
+
+                                BUILT_FEATURE_NAMES+=("$feature_label")
+                                FEATURE_TIMINGS+=("$feature_duration")
+                                FEATURE_SOURCE_FILES+=("")
+                                FEATURE_TEST_COUNTS+=("${LAST_TEST_COUNT:-}")
+                                FEATURE_TOKEN_USAGE+=("$(parse_token_usage "$BUILD_RESULT")")
+                                FEATURE_STATUSES+=("built")
+                                FEATURE_MODELS+=("${BUILD_MODEL:-${AGENT_MODEL:-default}}")
+
+                                if [ "$ENABLE_RESUME" = "true" ]; then
+                                    write_state "$i" "$strategy" "$(completed_features_json)" "${CURRENT_FEATURE_BRANCH:-}"
+                                    git add -f .sdd-state/resume.json 2>/dev/null && \
+                                      git commit -m "state: checkpoint after ${feature_label} (inferred-drift)" --no-verify 2>/dev/null || true
+                                fi
+
+                                break
+                            fi
+                        fi
+                    fi
+                fi
+            fi
+
             # ── If we get here, the attempt failed ──
             if echo "$BUILD_RESULT" | grep -q "BUILD_FAILED"; then
                 local reason
                 reason=$(parse_signal "BUILD_FAILED" "$BUILD_RESULT")
                 warn "Build failed: $reason"
             else
-                # ── Fallback: infer success on retries when agent forgot FEATURE_BUILT signal ──
+                # ── Signal fallback (retry path): infer success on retries when agent forgot FEATURE_BUILT signal ──
                 # WHY: Retry agents sometimes fix everything and commit but forget to emit
                 # the FEATURE_BUILT signal. If HEAD advanced and build+tests pass, the feature
                 # is done — don't waste it. (Round 31, Bug 2)
