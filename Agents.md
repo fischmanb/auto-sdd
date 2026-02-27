@@ -905,6 +905,28 @@ DRY_RUN_SKIP_AGENT=true ./tests/dry-run.sh
 - `tests/test-reliability.sh` → 68 passed, 0 failed
 - `git diff --stat` → 4 files (lib/claude-wrapper.sh, scripts/build-loop-local.sh, scripts/overnight-autonomous.sh, Agents.md)
 
+### Round 35 — Fix campaign observability: model log, sidecar source, sidecar dedup + health check
+
+**Date**: Feb 27, 2026
+
+**What was asked**: Fix three campaign observability bugs found during the stakd-v2 28-feature campaign: (1) model log extraction picks wrong model, (2) eval sidecar dies on startup from sourcing claude-wrapper.sh, (3) sidecar launched twice with orphaned PID + no health check.
+
+**What actually happened**:
+- `lib/claude-wrapper.sh`: Replaced `keys[0]` model extraction (which sorted alphabetically and returned haiku over sonnet) with `max_by(.total)` on input+output tokens. The primary/requested model always has the highest token count. Preserved `"unknown"` fallback for empty modelUsage.
+- `scripts/eval-sidecar.sh`: Removed `source "$LIB_DIR/claude-wrapper.sh"` (line 47). The wrapper is a standalone script — sourcing it executes the `claude` invocation inline, which fails with no arguments under `set -euo pipefail`, killing the sidecar. The sidecar already invokes the wrapper correctly as a subprocess via `agent_cmd()`.
+- `scripts/build-loop-local.sh` (3a): Removed the inline sidecar launch (lines 307-324) that fired before `start_eval_sidecar()`. The second launch at line 1816 was overwriting `EVAL_SIDECAR_PID`, orphaning the first process. Kept the `start_eval_sidecar()` lifecycle which has proper start/stop management. Updated `start_eval_sidecar()` to forward `AGENT_MODEL` and redirect output to `$PROJECT_DIR/logs/eval-sidecar.log` (both were only in the now-removed inline launch).
+- `scripts/build-loop-local.sh` (3b): Added sidecar health check at end of each feature iteration in `run_build_loop()`. If `EVAL_SIDECAR_PID` is set but process is dead, prints highly visible warning and unsets PID so warning fires only once.
+
+**What was NOT changed**: Build logic, feature building, retry mechanism, drift check, validation gates, overnight script, no new files created.
+
+**Verification**:
+- `bash -n` passes on all 3 modified files
+- `source.*claude-wrapper` removed from eval-sidecar.sh
+- Only one sidecar launch remains in build-loop-local.sh
+- Health check (`kill -0.*EVAL_SIDECAR_PID`) present in build loop
+- Model extraction no longer uses `keys[0]`
+- All 5 test suites pass
+
 ---
 
 ## Known Gaps

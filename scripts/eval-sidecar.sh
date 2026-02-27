@@ -44,7 +44,6 @@ DRAIN_SENTINEL="$PROJECT_DIR/.sdd-eval-drain"
 # ── Source libraries ──────────────────────────────────────────────────────
 source "$LIB_DIR/reliability.sh"
 source "$LIB_DIR/eval.sh"
-source "$LIB_DIR/claude-wrapper.sh"
 
 # ── Logging ───────────────────────────────────────────────────────────────
 log()     { echo "[$(date '+%H:%M:%S')] [eval-sidecar] $1"; }

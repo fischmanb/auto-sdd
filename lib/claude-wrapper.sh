@@ -50,7 +50,7 @@ if jq -e '.result' "$tmp" > /dev/null 2>&1; then
         duration_ms: .duration_ms,
         duration_api_ms: .duration_api_ms,
         num_turns: .num_turns,
-        model: (.modelUsage | keys[0] // "unknown"),
+        model: (if (.modelUsage | length) > 0 then [.modelUsage | to_entries[] | {key, total: (.value.input_tokens + .value.output_tokens)}] | max_by(.total) | .key else "unknown" end),
         session_id: .session_id,
         stop_reason: .stop_reason
     }' "$tmp" >> "$COST_LOG" 2>/dev/null
