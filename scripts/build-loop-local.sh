@@ -662,6 +662,105 @@ check_lint() {
 # truncate_for_context is provided by lib/reliability.sh
 # Config: MAX_CONTEXT_TOKENS (default in library)
 
+# ── Sidecar eval feedback helpers ────────────────────────────────────────
+
+# read_latest_eval_feedback
+# Find the most recent (by mtime) non-campaign eval JSON and extract
+# non-passing fields as advisory warnings for the next build agent.
+# Returns empty string if no eval dir or no eval files exist.
+read_latest_eval_feedback() {
+    local eval_dir="${EVAL_OUTPUT_DIR:-$PROJECT_DIR/logs/evals}"
+    if [ ! -d "$eval_dir" ]; then
+        echo ""
+        return 0
+    fi
+
+    local latest
+    latest=$(ls -t "$eval_dir"/eval-*.json 2>/dev/null | grep -v 'eval-campaign-' | head -1)
+    if [ -z "$latest" ]; then
+        echo ""
+        return 0
+    fi
+
+    # Extract fields using -F'"' pattern (same as eval-sidecar.sh).
+    # Field-walk variant handles both multi-line and single-line JSON.
+    local fw sc rm iq en
+    fw=$(awk -F'"' '{for(i=1;i<=NF;i++) if($i=="framework_compliance"){print $(i+2); exit}}' "$latest" 2>/dev/null || echo "")
+    sc=$(awk -F'"' '{for(i=1;i<=NF;i++) if($i=="scope_assessment"){print $(i+2); exit}}' "$latest" 2>/dev/null || echo "")
+    rm=$(awk -F'"' '{for(i=1;i<=NF;i++) if($i=="repeated_mistakes"){print $(i+2); exit}}' "$latest" 2>/dev/null || echo "")
+    iq=$(awk -F'"' '{for(i=1;i<=NF;i++) if($i=="integration_quality"){print $(i+2); exit}}' "$latest" 2>/dev/null || echo "")
+    en=$(awk -F'"' '{for(i=1;i<=NF;i++) if($i=="eval_notes"){print $(i+2); exit}}' "$latest" 2>/dev/null || echo "")
+
+    local feedback=""
+
+    if [ "$fw" = "warn" ] || [ "$fw" = "fail" ]; then
+        feedback="${feedback}⚠ FRAMEWORK COMPLIANCE ($fw): Ensure roadmap status is updated, Agents.md entry is present, and spec frontmatter is complete.
+"
+    fi
+
+    if [ "$sc" = "moderate" ] || [ "$sc" = "sprawling" ]; then
+        feedback="${feedback}⚠ SCOPE CREEP ($sc): Only modify files required by the spec. Do not refactor or improve unrelated code.
+"
+    fi
+
+    if [ -n "$rm" ] && [ "$rm" != "none" ]; then
+        feedback="${feedback}🚨 REPEATED MISTAKE: This pattern has occurred before — $rm
+"
+    fi
+
+    if [ "$iq" = "major_issues" ]; then
+        feedback="${feedback}⚠ INTEGRATION QUALITY ($iq): Check server/client component boundaries and ensure authorization filters are applied to all queries.
+"
+    fi
+
+    if [ -n "$en" ]; then
+        feedback="${feedback}📝 EVAL NOTE: $en
+"
+    fi
+
+    echo "$feedback"
+}
+
+# update_repeated_mistakes <mistake_string>
+# Append a repeated-mistake pattern to the cumulative file if not already present.
+# No-op on empty string or "none". Creates dir/file if needed.
+update_repeated_mistakes() {
+    local mistake="$1"
+    if [ -z "$mistake" ] || [ "$mistake" = "none" ]; then
+        return 0
+    fi
+
+    local mistakes_file="$STATE_DIR/repeated-mistakes.txt"
+    mkdir -p "$STATE_DIR"
+
+    if [ -f "$mistakes_file" ] && grep -qF "$mistake" "$mistakes_file"; then
+        return 0
+    fi
+
+    echo "$mistake" >> "$mistakes_file"
+}
+
+# get_cumulative_mistakes
+# Read the cumulative repeated-mistakes file and return a formatted block.
+# Returns empty string if file is missing or empty.
+get_cumulative_mistakes() {
+    local mistakes_file="$STATE_DIR/repeated-mistakes.txt"
+    if [ ! -f "$mistakes_file" ] || [ ! -s "$mistakes_file" ]; then
+        echo ""
+        return 0
+    fi
+
+    local block="Known mistakes from previous builds in this campaign:"
+    while IFS= read -r line; do
+        if [ -n "$line" ]; then
+            block="${block}
+  - $line"
+        fi
+    done < "$mistakes_file"
+
+    echo "$block"
+}
+
 # ── Drift check helpers ──────────────────────────────────────────────────
 
 # Extract spec file and source files from build output or git diff.
@@ -1022,6 +1121,12 @@ build_feature_prompt() {
     local codebase_summary
     codebase_summary=$(generate_codebase_summary "$PROJECT_DIR" 2>/dev/null || true)
 
+    local eval_feedback
+    eval_feedback=$(read_latest_eval_feedback)
+
+    local cumulative_mistakes
+    cumulative_mistakes=$(get_cumulative_mistakes)
+
     cat <<PROMPT_EOF
 Build feature #${feature_id}: ${feature_name}
 
@@ -1043,6 +1148,11 @@ CRITICAL IMPLEMENTATION RULES:
 
 ${codebase_summary:+## Codebase Summary (auto-generated)
 ${codebase_summary}
+}
+${eval_feedback:+## Sidecar Eval Feedback (from previous build)
+${eval_feedback}
+}${cumulative_mistakes:+## Known Mistakes (accumulated across this campaign)
+${cumulative_mistakes}
 }
 After completion, output EXACTLY these signals (each on its own line):
 FEATURE_BUILT: ${feature_name}
@@ -1341,6 +1451,12 @@ run_build_loop() {
                                 # Track feature name for 'both' mode
                                 BUILT_FEATURE_NAMES+=("$feature_name")
 
+                                # Queue sidecar feedback for next build
+                                local _eval_rm
+                                _eval_rm=$(awk -F'"' '{for(i=1;i<=NF;i++) if($i=="repeated_mistakes"){print $(i+2); exit}}' "$(ls -t "${EVAL_OUTPUT_DIR:-$PROJECT_DIR/logs/evals}"/eval-*.json 2>/dev/null | grep -v 'eval-campaign-' | head -1)" 2>/dev/null || echo "")
+                                update_repeated_mistakes "$_eval_rm"
+                                log "Sidecar feedback queued for next build agent"
+
                                 # Track build summary data
                                 FEATURE_TIMINGS+=("$feature_duration")
                                 FEATURE_SOURCE_FILES+=("${DRIFT_SOURCE_FILES:-}")
@@ -1393,6 +1509,13 @@ run_build_loop() {
                                 feature_done=true
 
                                 BUILT_FEATURE_NAMES+=("$feature_label")
+
+                                # Queue sidecar feedback for next build
+                                local _eval_rm_drift
+                                _eval_rm_drift=$(awk -F'"' '{for(i=1;i<=NF;i++) if($i=="repeated_mistakes"){print $(i+2); exit}}' "$(ls -t "${EVAL_OUTPUT_DIR:-$PROJECT_DIR/logs/evals}"/eval-*.json 2>/dev/null | grep -v 'eval-campaign-' | head -1)" 2>/dev/null || echo "")
+                                update_repeated_mistakes "$_eval_rm_drift"
+                                log "Sidecar feedback queued for next build agent"
+
                                 FEATURE_TIMINGS+=("$feature_duration")
                                 FEATURE_SOURCE_FILES+=("")
                                 FEATURE_TEST_COUNTS+=("${LAST_TEST_COUNT:-}")
@@ -1437,6 +1560,13 @@ run_build_loop() {
                             feature_done=true
 
                             BUILT_FEATURE_NAMES+=("$feature_label")
+
+                            # Queue sidecar feedback for next build
+                            local _eval_rm_retry
+                            _eval_rm_retry=$(awk -F'"' '{for(i=1;i<=NF;i++) if($i=="repeated_mistakes"){print $(i+2); exit}}' "$(ls -t "${EVAL_OUTPUT_DIR:-$PROJECT_DIR/logs/evals}"/eval-*.json 2>/dev/null | grep -v 'eval-campaign-' | head -1)" 2>/dev/null || echo "")
+                            update_repeated_mistakes "$_eval_rm_retry"
+                            log "Sidecar feedback queued for next build agent"
+
                             FEATURE_TIMINGS+=("$feature_duration")
                             FEATURE_SOURCE_FILES+=("")
                             FEATURE_TEST_COUNTS+=("${LAST_TEST_COUNT:-}")
@@ -1477,6 +1607,13 @@ run_build_loop() {
 
             # Track failed feature in build summary
             BUILT_FEATURE_NAMES+=("#$i $feature_label")
+
+            # Queue sidecar feedback for next build
+            local _eval_rm_fail
+            _eval_rm_fail=$(awk -F'"' '{for(i=1;i<=NF;i++) if($i=="repeated_mistakes"){print $(i+2); exit}}' "$(ls -t "${EVAL_OUTPUT_DIR:-$PROJECT_DIR/logs/evals}"/eval-*.json 2>/dev/null | grep -v 'eval-campaign-' | head -1)" 2>/dev/null || echo "")
+            update_repeated_mistakes "$_eval_rm_fail"
+            log "Sidecar feedback queued for next build agent"
+
             FEATURE_TIMINGS+=("$feature_duration")
             FEATURE_SOURCE_FILES+=("")
             FEATURE_TEST_COUNTS+=("")
