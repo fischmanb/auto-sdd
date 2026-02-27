@@ -2,9 +2,9 @@
 
 Spec-driven development with autonomous AI agents. You define features as Gherkin specs in a roadmap. The build loop picks the next one, hands it to a fresh agent, validates the output mechanically (compile, tests, drift check), commits, and moves on. No human in the loop during builds. No shared context between features except what you explicitly define.
 
-The system has been hardened over 35 rounds of iterative development against documented failure modes — agents fabricating work, ignoring explicit instructions, self-assessing incorrectly, failing silently. Every architectural decision traces back to a specific observed failure.
+The system has been hardened over 35 rounds of iterative development against documented failure modes — agents fabricating work, ignoring explicit instructions, self-assessing incorrectly, failing silently. Every architectural decision traces back to a specific observed failure. 5,200+ lines of orchestration and reliability code. 
 
-35 rounds of iterative development. 5,200+ lines of orchestration and reliability code. Two full multi-feature campaigns with published performance data, and a documented taxonomy of how AI agents actually fail in production loops.
+To date: Two full 28-feature campaigns fully autonomous with published performance data, and a documented taxonomy of how AI agents actually fail in production loops.
 
 Forked from [AdrianRogowski/auto-sdd](https://github.com/AdrianRogowski/auto-sdd), which introduced the concept. This fork rebuilt the runtime.
 
