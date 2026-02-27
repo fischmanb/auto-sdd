@@ -806,6 +806,21 @@ DRY_RUN_SKIP_AGENT=true ./tests/dry-run.sh
 
 **Verification**: `bash -n` clean on both scripts. All test suites pass. `git diff --stat` shows only the 3 allowed files (scripts/build-loop-local.sh, scripts/overnight-autonomous.sh, Agents.md).
 
+### Round 31: Fix retry path — failure learnings, persistent storage, node_modules preservation (branch: claude/review-hard-constraints-0DmBW)
+
+**Date**: Feb 27, 2026
+
+**What was asked**: Fix three related bugs in the build-loop retry path: (A) failure learnings are never recorded when a feature fails its build check, (B) learnings don't survive campaign resets because `.specs/learnings/` is destroyed by `git reset --hard`, and (C) `node_modules/` is destroyed by `git clean -fd` on every retry.
+
+**What actually happened**:
+- **Bug A fix**: Added `record_failure_learning()` function to `scripts/build-loop-local.sh`. Called in the retry block BEFORE `git reset --hard`, writing `LAST_BUILD_OUTPUT` and `LAST_TEST_OUTPUT` to timestamped failure entries.
+- **Bug B fix**: Added `CAMPAIGN_LEARNINGS_DIR` variable pointing to `auto-sdd/.campaign-learnings/<project-basename>/`. `record_failure_learning()` writes to both the persistent location (survives resets) and in-project `.specs/learnings/general.md`. Updated `lib/codebase-summary.sh` Section 4b to read from `CAMPAIGN_LEARNINGS_DIR` in addition to `.specs/learnings/`, so retry agents get failure context even after resets.
+- **Bug C fix**: Changed `git clean -fd` to `git clean -fd -e node_modules` in the retry block.
+
+**What was NOT changed**: `scripts/overnight-autonomous.sh`, `lib/reliability.sh`, `lib/validation.sh`, `lib/eval.sh`, all test scripts, `.specs/`, `CLAUDE.md`, `ONBOARDING.md`. No functions were removed or renamed. Existing `check_build()`, `check_tests()`, `generate_codebase_summary()` logic unchanged (only additions).
+
+**Verification**: `bash -n` clean on both modified files. 68 reliability tests pass. Dry-run passes. `git diff --stat` shows only 3 allowed files. Failure learnings write BEFORE `git reset --hard` (line 1256 vs 1258). `git clean` excludes `node_modules`. `codebase-summary.sh` reads from both learnings sources.
+
 ---
 
 ## Known Gaps

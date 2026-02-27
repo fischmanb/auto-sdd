@@ -263,6 +263,40 @@ generate_codebase_summary() {
         fi
     fi
 
+    # ── Section 4b: Persistent Campaign Learnings ─────────────────────────
+    # These survive project-level git resets (stored outside project git tree)
+    local campaign_learnings_dir="${CAMPAIGN_LEARNINGS_DIR:-}"
+    if [ -n "$campaign_learnings_dir" ] && [ -d "$campaign_learnings_dir" ]; then
+        local campaign_found=false
+        local campaign_cap=30
+
+        for md_file in "$campaign_learnings_dir"/*.md; do
+            [ -f "$md_file" ] || continue
+            if [ ! -s "$md_file" ]; then
+                continue
+            fi
+            if [ "$campaign_found" = false ]; then
+                _gcs_append ""
+                _gcs_append "## Campaign Learnings (persistent across resets)"
+                _gcs_append ""
+                campaign_found=true
+            fi
+            local basename
+            basename=$(basename "$md_file")
+            _gcs_append "### ${basename}"
+
+            local camp_line_count=0
+            while IFS= read -r cline; do
+                if [ "$camp_line_count" -ge "$campaign_cap" ]; then
+                    _gcs_append "... (campaign learnings truncated at ${campaign_cap} lines)"
+                    break
+                fi
+                _gcs_append "$cline"
+                camp_line_count=$((camp_line_count + 1))
+            done < "$md_file"
+        done
+    fi
+
     # Output the accumulated result
     printf '%s' "$output"
     return 0

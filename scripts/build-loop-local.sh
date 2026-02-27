@@ -147,6 +147,10 @@ STATE_FILE="$STATE_DIR/resume.json"
 ENABLE_RESUME="${ENABLE_RESUME:-true}"
 RESUME_MODE=false
 
+# Persistent learnings location (survives project-level git resets)
+# Uses project basename as namespace to avoid collisions across projects
+CAMPAIGN_LEARNINGS_DIR="$(dirname "$SCRIPT_DIR")/.campaign-learnings/$(basename "$PROJECT_DIR")"
+
 # Parse --resume flag
 for arg in "$@"; do
     if [ "$arg" = "--resume" ]; then
@@ -445,6 +449,52 @@ clean_working_tree() {
 
 LAST_BUILD_OUTPUT=""
 LAST_TEST_OUTPUT=""
+
+# ── Record failure learnings ──────────────────────────────────────────────
+# Writes failure context to both in-project and persistent locations so retry
+# agents (and all future agents) learn what went wrong.
+# Args: $1 = feature label, $2 = build output, $3 = test output
+record_failure_learning() {
+    local feature_label="${1:-unknown}"
+    local build_output="${2:-}"
+    local test_output="${3:-}"
+    local timestamp
+    timestamp=$(date '+%Y-%m-%d %H:%M:%S')
+
+    # Skip if there's nothing to record
+    if [ -z "$build_output" ] && [ -z "$test_output" ]; then
+        return 0
+    fi
+
+    local entry="## Failure: ${feature_label} (${timestamp})
+"
+    if [ -n "$build_output" ]; then
+        entry="${entry}
+### Build check output
+\`\`\`
+${build_output}
+\`\`\`
+"
+    fi
+    if [ -n "$test_output" ]; then
+        entry="${entry}
+### Test output
+\`\`\`
+${test_output}
+\`\`\`
+"
+    fi
+
+    # Write to persistent location (survives git resets)
+    mkdir -p "$CAMPAIGN_LEARNINGS_DIR"
+    echo "$entry" >> "$CAMPAIGN_LEARNINGS_DIR/failures.md"
+
+    # Write to in-project location (may not survive reset, but useful if it does)
+    local project_learnings_dir="$PROJECT_DIR/.specs/learnings"
+    if [ -d "$project_learnings_dir" ]; then
+        echo "$entry" >> "$project_learnings_dir/general.md"
+    fi
+}
 
 # run_agent_with_backoff is provided by lib/reliability.sh
 # Config: MAX_AGENT_RETRIES, BACKOFF_MAX_SECONDS (defaults in library)
@@ -1202,9 +1252,11 @@ run_build_loop() {
                 echo ""
                 warn "Retry $attempt/$MAX_RETRIES — waiting ${MIN_RETRY_DELAY}s before retry (findings #2, #18, #35)"
                 sleep "$MIN_RETRY_DELAY"
+                # Record failure learnings BEFORE wiping (Bug A + B fix)
+                record_failure_learning "$feature_label" "$LAST_BUILD_OUTPUT" "$LAST_TEST_OUTPUT"
                 # Reset branch to starting point for clean retry (reuse branch, don't create new one)
                 git reset --hard "$BRANCH_START_COMMIT" 2>/dev/null || true
-                git clean -fd 2>/dev/null || true
+                git clean -fd -e node_modules 2>/dev/null || true
                 echo ""
             fi
 
