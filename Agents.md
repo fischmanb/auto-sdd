@@ -859,6 +859,29 @@ DRY_RUN_SKIP_AGENT=true ./tests/dry-run.sh
 
 ---
 
+### Round 33 — Fix relative PROJECT_DIR resolution
+
+**Date**: Feb 27, 2026
+
+**What was asked**: Add `PROJECT_DIR="$(cd "$PROJECT_DIR" && pwd)"` after the default assignment in both build scripts so relative paths like `./stakd-v2` survive the later `cd "$PROJECT_DIR"`.
+
+**What actually happened**: Added one line to each script immediately after the `PROJECT_DIR` default assignment:
+- `scripts/build-loop-local.sh` line 98: `PROJECT_DIR="$(cd "$PROJECT_DIR" && pwd)"`
+- `scripts/overnight-autonomous.sh` line 110: `PROJECT_DIR="$(cd "$PROJECT_DIR" && pwd)"`
+
+**What was NOT changed**: No other lines in either script. No other files beyond the 2 scripts + this entry.
+
+**Verification**:
+- `grep -n 'cd "$PROJECT_DIR" && pwd' scripts/build-loop-local.sh` → `98:PROJECT_DIR="$(cd "$PROJECT_DIR" && pwd)"` (1 result)
+- `grep -n 'cd "$PROJECT_DIR" && pwd' scripts/overnight-autonomous.sh` → `110:PROJECT_DIR="$(cd "$PROJECT_DIR" && pwd)"` (1 result)
+- `bash -n scripts/build-loop-local.sh` → OK
+- `bash -n scripts/overnight-autonomous.sh` → OK
+- `tests/test-reliability.sh` → 68 passed, 0 failed
+- Functional test: `PROJECT_DIR=./stakd-v2` resolved to `/tmp/test-resolve/stakd-v2` (absolute path)
+- `git diff --stat` → 3 files changed (2 scripts + Agents.md)
+
+---
+
 ## Known Gaps
 
 - No live integration testing — all validation is `bash -n` + unit tests + structural dry-run

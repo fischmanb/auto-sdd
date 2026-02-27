@@ -95,6 +95,7 @@ set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="${PROJECT_DIR:-$(dirname "$SCRIPT_DIR")}"
+PROJECT_DIR="$(cd "$PROJECT_DIR" && pwd)"
 
 # Load .env.local but don't overwrite vars already set (command-line wins over .env.local)
 if [ -f "$PROJECT_DIR/.env.local" ]; then
