@@ -1,0 +1,254 @@
+{
+  "timestamp": "2026-02-27T22:39:25Z",
+  "total_time_seconds": 24634,
+  "model": "default",
+  "branch_strategy": "chained",
+  "features_built": 27,
+  "features_failed": 0,
+  "total_tests": 0,
+  "features": [
+    {
+      "name": "Project setup (Next.js, Tailwind, DB, env)",
+      "status": "built",
+      "model": "claude-sonnet-4-6",
+      "time_seconds": 478,
+      "source_files": ["package.json", "tsconfig.json", "next.config.ts", "tailwind.config.ts", "postcss.config.mjs", "vitest.config.ts", "drizzle.config.ts", ".env.example", ".gitignore", "src/app/globals.css", "src/app/layout.tsx", "src/app/page.tsx", "src/db/index.ts", "src/db/schema/index.ts", "src/__tests__/setup.test.ts", "scripts/generate-mapping.sh"],
+      "test_count": null,
+      "tokens": null
+    },
+    {
+      "name": "Core layout (header, nav, footer)",
+      "status": "built",
+      "model": "claude-sonnet-4-6",
+      "time_seconds": 370,
+      "source_files": ["src/components/layout/Header.tsx", "src/components/layout/Footer.tsx", "src/components/layout/MobileMenu.tsx", "src/app/layout.tsx", "src/__tests__/layout/core-layout.test.ts"],
+      "test_count": null,
+      "tokens": null
+    },
+    {
+      "name": "Auth: Sign up",
+      "status": "built",
+      "model": "claude-sonnet-4-6",
+      "time_seconds": 550,
+      "source_files": ["src/db/schema/users.ts", "src/db/schema/index.ts", "src/lib/auth.ts", "src/lib/session.ts", "src/app/api/auth/signup/route.ts", "src/app/auth/signup/page.tsx", "src/components/auth/SignupForm.tsx", "vitest.config.ts", "package.json"],
+      "test_count": null,
+      "tokens": null
+    },
+    {
+      "name": "Auth: Log in",
+      "status": "built",
+      "model": "claude-sonnet-4-6",
+      "time_seconds": 387,
+      "source_files": ["src/app/api/auth/login/route.ts", "src/components/auth/LoginForm.tsx", "src/app/auth/login/page.tsx", "src/__tests__/auth/auth-login.test.ts", ".specs/roadmap.md", ".specs/mapping.md", "Agents.md"],
+      "test_count": null,
+      "tokens": null
+    },
+    {
+      "name": "Deal model & database schema",
+      "status": "built",
+      "model": "claude-sonnet-4-6",
+      "time_seconds": 504,
+      "source_files": ["src/db/schema/deals.ts", "src/db/schema/deal-participants.ts", "src/db/schema/index.ts", "src/__tests__/deals/deal-schema.test.ts"],
+      "test_count": null,
+      "tokens": null
+    },
+    {
+      "name": "Agent/User profile model & schema",
+      "status": "built",
+      "model": "claude-sonnet-4-6",
+      "time_seconds": 327,
+      "source_files": ["src/db/schema/agent-profiles.ts", "src/db/schema/index.ts", "src/__tests__/agents/agent-profile-schema.test.ts", ".specs/roadmap.md"],
+      "test_count": null,
+      "tokens": null
+    },
+    {
+      "name": "",
+      "status": "built",
+      "model": "claude-sonnet-4-6",
+      "time_seconds": 470,
+      "source_files": ["src/db/schema/agent-profiles.ts", "src/db/schema/index.ts", "src/__tests__/agents/agent-profile-schema.test.ts", ".specs/roadmap.md"],
+      "test_count": null,
+      "tokens": null
+    },
+    {
+      "name": "Dark mode toggle",
+      "status": "built",
+      "model": "claude-sonnet-4-6",
+      "time_seconds": 3340,
+      "source_files": ["src/components/theme/ThemeProvider.tsx", "src/components/theme/DarkModeToggle.tsx", "src/app/layout.tsx", "src/components/layout/Header.tsx", "tailwind.config.ts", "src/app/globals.css", "src/__tests__/ui/dark-mode-toggle.test.ts"],
+      "test_count": null,
+      "tokens": null
+    },
+    {
+      "name": "Social links (footer, share)",
+      "status": "built",
+      "model": "claude-sonnet-4-6",
+      "time_seconds": 322,
+      "source_files": ["src/components/layout/Footer.tsx", "src/components/deals/ShareButton.tsx", "src/__tests__/social/social-links.test.ts"],
+      "test_count": null,
+      "tokens": null
+    },
+    {
+      "name": "Email newsletter signup (footer)",
+      "status": "built",
+      "model": "claude-sonnet-4-6",
+      "time_seconds": 425,
+      "source_files": ["src/db/schema/newsletter-subscriptions.ts", "src/db/schema/index.ts", "src/app/api/newsletter/subscribe/route.ts", "src/components/layout/NewsletterSignup.tsx", "src/components/layout/Footer.tsx", "src/__tests__/newsletter/newsletter-signup.test.ts"],
+      "test_count": null,
+      "tokens": null
+    },
+    {
+      "name": "Auth: Session & protected routes",
+      "status": "built",
+      "model": "claude-sonnet-4-6",
+      "time_seconds": 621,
+      "source_files": ["src/middleware.ts", "src/app/api/auth/logout/route.ts", "src/components/layout/Header.tsx", "src/components/layout/HeaderClient.tsx", "src/components/layout/MobileMenu.tsx", "src/components/auth/LoginForm.tsx", "src/__tests__/auth/auth-session.test.ts", "src/__tests__/layout/core-layout.test.ts", "src/__tests__/ui/dark-mode-toggle.test.ts"],
+      "test_count": null,
+      "tokens": null
+    },
+    {
+      "name": "Deal card component (status, image, amount, participants)",
+      "status": "built",
+      "model": "claude-sonnet-4-6",
+      "time_seconds": 380,
+      "source_files": ["src/components/deals/DealCard.tsx", "src/__tests__/deals/deal-card.test.ts", ".specs/roadmap.md", ".specs/mapping.md", "Agents.md"],
+      "test_count": null,
+      "tokens": null
+    },
+    {
+      "name": "News section / industry news feed",
+      "status": "built",
+      "model": "claude-sonnet-4-6",
+      "time_seconds": 927,
+      "source_files": ["src/db/schema/news-articles.ts", "src/db/schema/index.ts", "src/db/seed/news.ts", "src/db/seed/index.ts", "src/lib/news.ts", "src/app/api/news/route.ts", "src/components/news/NewsCard.tsx", "src/components/news/NewsCategoryFilter.tsx", "src/app/news/page.tsx", "src/app/news/[slug]/page.tsx", "src/__tests__/news/news-section.test.ts"],
+      "test_count": null,
+      "tokens": null
+    },
+    {
+      "name": "Deals list page (feed, filters, pagination)",
+      "status": "built",
+      "model": "claude-sonnet-4-6",
+      "time_seconds": 756,
+      "source_files": ["src/lib/deals.ts", "src/app/api/deals/route.ts", "src/components/deals/FilterSection.tsx", "src/components/deals/PaginationControls.tsx", "src/components/deals/SearchBarClient.tsx", "src/app/deals/page.tsx", "src/db/seed/deals.ts", "src/db/seed/index.ts", "src/__tests__/deals/deals-list-page.test.ts", ".specs/roadmap.md", ".specs/mapping.md"],
+      "test_count": null,
+      "tokens": null
+    },
+    {
+      "name": "User settings & profile edit",
+      "status": "built",
+      "model": "claude-sonnet-4-6",
+      "time_seconds": 5538,
+      "source_files": ["src/app/api/settings/profile/route.ts", "src/components/settings/ProfileEditForm.tsx", "src/app/settings/page.tsx", "src/__tests__/settings/user-settings.test.ts"],
+      "test_count": null,
+      "tokens": null
+    },
+    {
+      "name": "Agent profile page",
+      "status": "built",
+      "model": "claude-sonnet-4-6",
+      "time_seconds": 473,
+      "source_files": ["src/lib/agents.ts", "src/app/agents/[id]/page.tsx", "src/__tests__/agents/agent-profile-page.test.ts", ".specs/roadmap.md", "Agents.md"],
+      "test_count": null,
+      "tokens": null
+    },
+    {
+      "name": "Deal detail page",
+      "status": "built",
+      "model": "claude-sonnet-4-6",
+      "time_seconds": 572,
+      "source_files": ["src/app/deals/[slug]/page.tsx", "src/lib/deals.ts", "src/__tests__/deals/deal-detail-page.test.ts"],
+      "test_count": null,
+      "tokens": null
+    },
+    {
+      "name": "Market/submarket filters (state, city, neighborhood)",
+      "status": "built",
+      "model": "claude-sonnet-4-6",
+      "time_seconds": 520,
+      "source_files": ["src/lib/deals.ts", "src/components/deals/FilterSection.tsx", "src/app/deals/page.tsx", "src/app/api/deals/route.ts", "src/__tests__/deals/market-submarket-filters.test.ts", ".specs/roadmap.md", ".specs/mapping.md"],
+      "test_count": null,
+      "tokens": null
+    },
+    {
+      "name": "Search (address, advanced filters)",
+      "status": "built",
+      "model": "claude-sonnet-4-6",
+      "time_seconds": 646,
+      "source_files": ["src/components/deals/SearchSection.tsx", "src/lib/deals.ts", "src/app/deals/page.tsx", "src/app/api/deals/route.ts", "src/__tests__/deals/search.test.ts", "src/__tests__/deals/deals-list-page.test.ts"],
+      "test_count": null,
+      "tokens": null
+    },
+    {
+      "name": "Rankings page (top brokers, investors, lenders)",
+      "status": "built",
+      "model": "claude-sonnet-4-6",
+      "time_seconds": 922,
+      "source_files": ["src/lib/rankings.ts", "src/lib/rankings-utils.ts", "src/app/rankings/page.tsx", "src/components/rankings/RankingsTabsClient.tsx", "src/db/seed/agents.ts", "src/db/seed/index.ts", "src/__tests__/rankings/rankings-page.test.ts"],
+      "test_count": null,
+      "tokens": null
+    },
+    {
+      "name": "Listings page (active for-sale/for-lease)",
+      "status": "built",
+      "model": "claude-sonnet-4-6",
+      "time_seconds": 1710,
+      "source_files": ["src/db/schema/listings.ts", "src/db/schema/index.ts", "src/db/seed/listings.ts", "src/db/seed/index.ts", "src/lib/listings-utils.ts", "src/lib/listings.ts", "src/components/listings/ListingCard.tsx", "src/components/listings/ListingsFilterSection.tsx", "src/components/deals/PaginationControls.tsx", "src/app/listings/page.tsx", "src/app/api/listings/route.ts", "src/__tests__/listings/listings-page.test.ts", ".specs/roadmap.md", "Agents.md"],
+      "test_count": null,
+      "tokens": null
+    },
+    {
+      "name": "Map view (deal locations, gated for logged-in)",
+      "status": "built",
+      "model": "claude-sonnet-4-6",
+      "time_seconds": 724,
+      "source_files": ["src/app/map/page.tsx", "src/components/map/DealMap.tsx", "src/components/map/MapClientWrapper.tsx", "src/app/api/deals/map/route.ts", "src/components/layout/HeaderClient.tsx", "src/components/layout/MobileMenu.tsx", "src/__tests__/map/map-view.test.ts", ".specs/roadmap.md", ".specs/mapping.md", "Agents.md", "package.json", "package-lock.json"],
+      "test_count": null,
+      "tokens": null
+    },
+    {
+      "name": "Trending deals (homepage)",
+      "status": "built",
+      "model": "claude-sonnet-4-6",
+      "time_seconds": 419,
+      "source_files": ["src/__tests__/deals/trending-deals.test.ts", ".specs/features/deals/trending-deals.feature.md", ".specs/roadmap.md", ".specs/mapping.md"],
+      "test_count": null,
+      "tokens": null
+    },
+    {
+      "name": "CompStak API integration (comps link on deal)",
+      "status": "built",
+      "model": "claude-sonnet-4-6",
+      "time_seconds": 445,
+      "source_files": ["src/components/deals/CompStakLink.tsx", "src/app/deals/[slug]/page.tsx", "src/__tests__/deals/compstak-comps-link.test.ts"],
+      "test_count": null,
+      "tokens": null
+    },
+    {
+      "name": "Awards categories (Whales, Lease Beasts, etc.)",
+      "status": "built",
+      "model": "claude-sonnet-4-6",
+      "time_seconds": 701,
+      "source_files": ["src/lib/awards.ts", "src/lib/awards-utils.ts", "src/app/awards/page.tsx", "src/components/awards/AwardsCategoryClient.tsx", "src/__tests__/awards/awards-categories.test.ts", "src/components/layout/HeaderClient.tsx", "src/components/layout/MobileMenu.tsx"],
+      "test_count": null,
+      "tokens": null
+    },
+    {
+      "name": "Top brokers sidebar (deals page)",
+      "status": "built",
+      "model": "claude-sonnet-4-6",
+      "time_seconds": 647,
+      "source_files": ["src/components/deals/TopBrokersSidebar.tsx", "src/lib/rankings.ts", "src/app/deals/page.tsx", "src/__tests__/deals/top-brokers-sidebar.test.ts", "src/__tests__/deals/deals-list-page.test.ts"],
+      "test_count": null,
+      "tokens": null
+    },
+    {
+      "name": "Data / analytics page (CompStak insights)",
+      "status": "built",
+      "model": "claude-sonnet-4-6",
+      "time_seconds": 893,
+      "source_files": ["src/app/data/page.tsx", "src/lib/data-analytics.ts", "src/lib/data-analytics-utils.ts", "src/components/data/MarketStatsGrid.tsx", "src/components/data/DealVolumeByType.tsx", "src/components/data/TopMarketsTable.tsx", "src/components/data/CompStakMarketSearch.tsx", "src/components/layout/HeaderClient.tsx", "src/components/layout/MobileMenu.tsx", "src/__tests__/data/data-analytics-page.test.ts"],
+      "test_count": null,
+      "tokens": null
+    }
+  ]
+}
