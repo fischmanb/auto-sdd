@@ -31,7 +31,7 @@ Chat sessions (claude.ai with Desktop Commander or any equivalent tool or capabi
 
 ---
 
-## Current State (as of 2026-02-26)
+## Current State (as of 2026-02-27)
 
 ### What works
 
@@ -80,6 +80,9 @@ Build loop remediation from `build-loop-failure-investigation.md` (37 findings).
 - **Mechanical validation gates** — ✅ Done Round 30. Three non-blocking gates: test count regression, dead export detection, static analysis/lint. Default `POST_BUILD_STEPS=test,dead-code,lint`.
 - **Retry resilience** — ✅ Done Round 31. Three bugs from failed stakd-v2 campaign: (1) `git clean -fd` exclusions for node_modules et al. (2) Signal fallback detection when retry agent omits `FEATURE_BUILT:`. (3) Cascade failure (Bug 3 = consequence of Bug 1).
 - **Retry prompt signal hardening** — ✅ Done Round 31.1. Parameterized retry prompt with actual feature name, added emphatic CRITICAL signal block as final prompt content.
+- **Shell portability + path resolution** — ✅ Done Rounds 32-33. Round 32: all 17 scripts converted from `#!/bin/bash` to `#!/usr/bin/env bash`. Round 33: `PROJECT_DIR` resolved to absolute path via `realpath`/fallback.
+- **claude-wrapper.sh rewrite + MAIN_BRANCH hardening** — ✅ Done Round 34. Removed `set -e` from wrapper, stderr redirected to file instead of `/dev/null`, unset `CLAUDECODE` env var. `MAIN_BRANCH` detection rejects `auto/*` branches. Fixed `SCRIPT_DIR` path for wrapper invocation.
+- **Sidecar bug fixes + model log fix** — ✅ Done Round 35. Sidecar died from `source` inline execution + dual launch race. Fixed: sidecar runs in subshell, dedup via PID check, health monitoring. Model log cosmetic fix (jq `keys[0]`). **154 assertions passing.** Merged to main as `dbf2997`.
 
 ### Known gaps
 
@@ -96,11 +99,18 @@ Build loop remediation from `build-loop-failure-investigation.md` (37 findings).
 
 > What's next and what's in-flight. Priority stack is the execution plan; everything below it is context a fresh chat should pick up.
 
-### Priority stack (updated 2026-02-26)
+### Priority stack (updated 2026-02-27)
 
 Ordered by efficiency gain per complexity added:
 
-1. **Rerun stakd 28-feature campaign** — First real validation of all remediation (Rounds 21-31.1). Campaign target is `stakd-v2/` (clean at commit `16159d8` — specs + CLAUDE.md only, no node_modules or build artifacts). Run build loop with eval sidecar using original spec and vision files on **Sonnet 4.6** (`BUILD_MODEL=claude-sonnet-4-6`). Rounds 31/31.1 fixed three retry bugs that caused the previous campaign to fail (git clean nuking node_modules, missing signal fallback, cascade failure). Data from this campaign informs all future decisions.
+1. **stakd 28-feature campaign — IN PROGRESS.** Two parallel campaigns running:
+   - **stakd-v2 (Sonnet 4.6)**: 24/28 built as of 2026-02-27 ~16:00 EST. Eval sidecar + drift checks running. ~16.2 min/feature observed.
+   - **stakd-v3 (Haiku 4.5)**: 14/28 built. Parallel speed test. Same 28 features, fresh repo at `~/auto-sdd/stakd-v3`. ~18.1 min/feature observed.
+   - **Throughput finding**: Token speed does NOT translate to build speed. Haiku 2x faster tokens but only marginally faster builds (~16-18 min/feature both models) because npm install, TypeScript compile, tests, drift checks are fixed-cost CPU/disk-bound steps that dominate wall time. Model speed only affects agent thinking fraction. Parallelism across features matters more than per-feature model speed.
+   - **Build log recovery issue**: tee PIDs 76573 (v2) and 19527 (v3) hold open fds to build logs. Files active via lsof but stat/ls/cat fail — deleted dir entries with open inodes. macOS lacks /proc/pid/fd recovery path. v3 build log + cost log + evals captured to `~/auto-sdd/campaign-results/raw/`; v2 build log still unrecovered.
+   - **Agent push discipline**: Agents ignore "do NOT push" instructions 100% of the time across Rounds 32-34. Documented as expected behavior, not a bug to fix.
+   - Round 35 merged to main but **not yet pushed to origin** (`git push origin main` pending).
+   - **Data snapshot**: `~/auto-sdd/campaign-results/` created with `raw/v2-sonnet/` and `raw/v3-haiku/` subdirs. Git logs, roadmap snapshots, v3 cost logs + evals captured. Reports pending campaign completion.
 2. **Local model integration** — Replace cloud API calls with local LM Studio endpoints on Mac Studio. The archived `archive/local-llm-pipeline/` system is reference material. *Not started.*
 3. **Adaptive routing / parallelism** — Only if data from 1–2 shows remaining sequential bottleneck justifies the complexity. *Deprioritized.*
 
@@ -116,7 +126,9 @@ After at least one full campaign, a function will correlate t-shirt sizes from r
 - **Eval sidecar system (2026-02-26)**: Round 27: `lib/eval.sh` — four functions (mechanical eval, eval prompt generation, signal parsing, result writing). 53-assertion test suite. Round 28: `scripts/eval-sidecar.sh` — standalone sidecar that polls for new commits, runs mechanical evals (and optionally agent evals), writes per-feature JSON, aggregates campaign summary on exit. Round 28b: auto-launches sidecar from both build scripts as background process, `EVAL_AGENT=true` by default. Round 29: cooperative drain shutdown — sentinel file triggers graceful queue drain before campaign summary instead of hard SIGTERM. Both build scripts manage sidecar lifecycle (`start_eval_sidecar()` / `stop_eval_sidecar()`). Observational only — never blocks builds, never modifies files.
 - **claude-wrapper.sh path fix (2026-02-26)**: Relative path to `lib/claude-wrapper.sh` broke when `PROJECT_DIR` != repo root. Fixed in both `build-loop-local.sh` and `overnight-autonomous.sh` to use `$SCRIPT_DIR/../lib/` instead.
 - **Mechanical validation gates (2026-02-26)**: Round 30: Three non-blocking post-build gates added to both build scripts. (1) Test count regression — tracks high-water mark of passing tests across features, warns on drop. (2) Dead export detection — scans for exported symbols with zero import sites. (3) Static analysis — auto-detects linter config (ESLint, Biome, flake8, ruff, Clippy, golangci-lint) and runs if present. Default `POST_BUILD_STEPS` is now `test,dead-code,lint`. All gates warn only, never fail the build.
-- **Retry resilience + signal hardening (2026-02-27)**: Round 31: Fixed three bugs from failed stakd-v2 campaign — `git clean -fd` exclusions for node_modules/env/state/logs, fallback signal detection when retry agent omits `FEATURE_BUILT:`, cascade failure (Bugs 2-28 instant-failing was consequence of Bug 1 nuking node_modules). Round 31.1: Hardened retry prompt — parameterized with actual feature name, added emphatic CRITICAL signal block as final content after all failure context. Both merged to main (`1a7dfa4`). Ready for campaign retest.
+- **Retry resilience + signal hardening + shell fixes (2026-02-27)**: Round 31: git clean exclusions, signal fallback, cascade failure fix. Round 31.1: Parameterized retry prompt. Rounds 32-34: Shell portability (`#!/usr/bin/env bash` on 17 scripts), PROJECT_DIR absolute resolution, claude-wrapper.sh rewrite (no `set -e`, stderr to file, unset CLAUDECODE), MAIN_BRANCH rejects `auto/*`. Round 35: Sidecar source/dedup/health fixes, model log jq fix. All merged to main (`dbf2997`). **154 assertions passing.** Not yet pushed to origin.
+- **PROMPT-ENGINEERING-GUIDE.md (2026-02-27)**: Verification section updated to require all 5 test suites (test-reliability, test-eval, test-validation, test-codebase-summary, dry-run).
+- **Agent push discipline (2026-02-27)**: Agents ignore "do NOT push" instructions 100% of the time (Rounds 32-34). Documented as expected behavior — prompt wording makes no difference. Not a bug to fix.
 
 ---
 
@@ -240,6 +252,10 @@ Full details in `Agents.md`. Here's the arc:
 | 30 | Mechanical validation gates | Three non-blocking gates: test count regression detection, dead export detection, static analysis/lint. Default `POST_BUILD_STEPS=test,dead-code,lint`. |
 | 31 | Retry resilience | Three bugs from failed stakd-v2 campaign: git clean exclusions, signal fallback detection, cascade failure fix. 68/68 tests passing. |
 | 31.1 | Retry prompt signal hardening | Parameterized retry prompt with actual feature name, emphatic CRITICAL signal block as final prompt content. |
+| 32 | Shell portability | All 17 scripts converted from `#!/bin/bash` to `#!/usr/bin/env bash`. |
+| 33 | PROJECT_DIR resolution | `PROJECT_DIR` resolved to absolute path via `realpath`/fallback. |
+| 34 | claude-wrapper.sh rewrite | Removed `set -e`, stderr to file, unset CLAUDECODE, MAIN_BRANCH rejects `auto/*`, SCRIPT_DIR path fix. |
+| 35 | Sidecar + model log fixes | Sidecar source/dedup/health fixes, model log jq cosmetic fix. 154 assertions. Merged `dbf2997`. |
 
 **Key lesson that repeats**: Agent self-assessments are unreliable. Always verify with grep, `bash -n`, and tests. Never trust the agent's narrative summary.
 
