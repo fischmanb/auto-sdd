@@ -421,7 +421,7 @@ TEST_CMD=$(detect_test_check)
 agent_cmd() {
     local step_model="$1"
     local model="${step_model:-$AGENT_MODEL}"
-    local cmd="bash lib/claude-wrapper.sh -p --dangerously-skip-permissions"
+    local cmd="bash \"$SCRIPT_DIR/../lib/claude-wrapper.sh\" -p --dangerously-skip-permissions"
     if [ -n "$model" ]; then
         cmd="$cmd --model $model"
     fi
