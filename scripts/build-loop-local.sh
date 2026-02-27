@@ -304,24 +304,8 @@ BUILD_LOG="$PROJECT_DIR/logs/build-$(date '+%Y%m%d-%H%M%S').log"
 exec > >(tee -a "$BUILD_LOG") 2>&1
 log "Build log: $BUILD_LOG"
 
-# ── Launch eval sidecar (background process) ─────────────────────────────
-# The sidecar watches for new commits and evaluates them. Purely observational
-# — never modifies code or blocks the build loop. Guarded so sidecar failure
-# never takes down the build loop.
+# EVAL_SIDECAR_PID is set later by start_eval_sidecar() — see lifecycle below.
 EVAL_SIDECAR_PID=""
-if [ -f "$SCRIPT_DIR/eval-sidecar.sh" ]; then
-    PROJECT_DIR="$PROJECT_DIR" AGENT_MODEL="${AGENT_MODEL:-}" \
-        bash "$SCRIPT_DIR/eval-sidecar.sh" >>"$PROJECT_DIR/logs/eval-sidecar.log" 2>&1 &
-    EVAL_SIDECAR_PID=$!
-    if kill -0 "$EVAL_SIDECAR_PID" 2>/dev/null; then
-        log "Eval sidecar launched (PID: $EVAL_SIDECAR_PID)"
-    else
-        warn "Eval sidecar failed to start — continuing without it"
-        EVAL_SIDECAR_PID=""
-    fi
-else
-    log "Eval sidecar not found — skipping"
-fi
 
 # Override trap to include sidecar cleanup (chained with lock cleanup from acquire_lock)
 cleanup_build_loop() {
@@ -1473,6 +1457,17 @@ run_build_loop() {
                     ;;
             esac
         fi
+
+        # ── Sidecar health check ─────────────────────────────────────────
+        if [ -n "${EVAL_SIDECAR_PID:-}" ]; then
+            if ! kill -0 "$EVAL_SIDECAR_PID" 2>/dev/null; then
+                echo ""
+                echo "⚠⚠⚠ EVAL SIDECAR DIED (was PID $EVAL_SIDECAR_PID) — no eval coverage for remaining features ⚠⚠⚠"
+                echo ""
+                EVAL_SIDECAR_PID=""
+            fi
+        fi
+
         idx=$((idx + 1))
     done
 
@@ -1777,7 +1772,8 @@ start_eval_sidecar() {
         return
     fi
     log "Starting eval sidecar..."
-    PROJECT_DIR="$PROJECT_DIR" bash "$sidecar_script" &
+    PROJECT_DIR="$PROJECT_DIR" AGENT_MODEL="${AGENT_MODEL:-}" \
+        bash "$sidecar_script" >>"$PROJECT_DIR/logs/eval-sidecar.log" 2>&1 &
     EVAL_SIDECAR_PID=$!
     log "Eval sidecar started (PID: $EVAL_SIDECAR_PID)"
 }
