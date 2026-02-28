@@ -1,6 +1,6 @@
 # Post-Campaign Validation Pipeline
 
-**Status:** WIP — spec draft v0.2
+**Status:** WIP — spec draft v0.3
 **Location:** `auto-sdd/WIP/post-campaign-validation.md`
 **Scope:** Autonomous post-campaign validation for any auto-sdd target project. Boots the app, validates runtime, generates acceptance criteria from specs, tests them via Playwright, catalogs failures, performs root cause analysis, and fixes them through the existing build-loop gates.
 
@@ -10,6 +10,7 @@
 |---------|------------|---------|
 | v0.1    | 2026-02-28 | Initial spec draft |
 | v0.2    | 2026-02-28 | Phase 2a discrepancy classification (MISSING/PARTIAL/DRIFTED/UNEXPECTED). Phase 4 split into 4a (Catalog) and 4b (RCA). Documentation versioning system with flush toggle. |
+| v0.3    | 2026-02-28 | QA test account as build-phase deliverable. Phase 0 auth bootstrap. Cleanup teardown. |
 
 ---
 
@@ -136,6 +137,7 @@ Every artifact produced by the pipeline is registered in `.sdd-state/validation-
 | Phase | Document ID | Format |
 |-------|------------|--------|
 | 0     | `runtime-report` | JSON |
+| 0     | `qa-credentials` | JSON (ephemeral, never versioned, wiped on cleanup) |
 | 1     | `discovery-inventory` | JSON |
 | 2a    | `acceptance-criteria` | JSON |
 | 2b    | `gap-criteria` | JSON |
@@ -144,6 +146,49 @@ Every artifact produced by the pipeline is registered in `.sdd-state/validation-
 | 4a    | `failure-catalog` | JSON |
 | 4b    | `root-cause-analysis` | JSON |
 | 5     | `fix-reports` (one per fix) | JSON |
+
+---
+
+## QA Test Account (Build-Phase Deliverable)
+
+**Problem:** The discovery agent can't browse authenticated routes without credentials. Auth bypass middleware is invasive and a security risk. The build agent already knows the app's auth stack because it just built it.
+
+**Solution:** The build agent produces a `scripts/qa-seed.ts` (or `.sh`, `.js` — whatever matches the project) as a standard build deliverable for any project with authentication. This script:
+
+1. **Creates** a test user account through the app's actual user creation path (ORM insert, API call, auth provider SDK — whatever the app uses)
+2. **Outputs** credentials to stdout as JSON: `{"email": "qa-{uuid}@test.local", "password": "{random}", "role": "admin"}`
+3. **Accepts** a `--teardown` flag that deletes the test account and any associated data
+
+**Requirements:**
+- Credentials are randomly generated per run (UUID email prefix, random password). No hardcoded values.
+- The test user should have the highest permission level available (admin/superuser) so the discovery agent can reach all routes.
+- The script must be idempotent — running it twice doesn't create duplicate accounts.
+- The script must work with the app's actual auth system, not a backdoor. If login is broken, the test account won't help, and that's a real failure to catch.
+
+**Spec integration:** Feature specs for auth-gated features should note auth requirements (e.g., "requires authenticated user," "requires admin role"). The build agent uses this to ensure the seed script creates an account with appropriate access. If no spec mentions auth, the build agent should still produce a seed script if it detects an auth system in the codebase (NextAuth, Clerk, Supabase, etc.) — defensive by default.
+
+**Lifecycle:**
+```
+Build phase:  build agent produces scripts/qa-seed.ts alongside features
+Phase 0:      orchestrator runs `scripts/qa-seed.ts` → credentials written to .sdd-state/qa-credentials.json
+Phase 0 (auth verify): Playwright opens login page, submits credentials, confirms auth succeeds
+Phase 1+:     all Playwright sessions start by logging in with stored credentials
+Cleanup:      orchestrator runs `scripts/qa-seed.ts --teardown` → account deleted
+              .sdd-state/qa-credentials.json wiped
+              git status verified clean (no QA artifacts committed)
+```
+
+**Failure modes:**
+- Seed script doesn't exist → skip auth, discovery runs unauthenticated (will miss protected routes, but catalog captures this)
+- Seed script fails → `AUTH_SETUP_FAILED` in Phase 0 output. Pipeline continues unauthenticated with a warning.
+- Login fails with valid credentials → real bug. Catalog it.
+- Teardown fails → warning in final report. Credentials file still wiped. Orphaned test account is low-risk (random email, test DB).
+
+**Security constraints:**
+- `scripts/qa-seed.ts` is committed to the project repo (it's a legitimate test utility, not a backdoor)
+- `.sdd-state/qa-credentials.json` is gitignored and ephemeral — never committed
+- Credentials exist only for the duration of the validation run
+- The test account uses a `@test.local` domain that won't collide with real users
 
 ---
 
@@ -157,10 +202,21 @@ Every artifact produced by the pipeline is registered in `.sdd-state/validation-
 3. `npm run dev` (or detected dev command) — start dev server in background.
 4. Health check: poll localhost (port auto-detected from project config or default 3000/5173) until it responds with HTTP 200 or timeout after 60s.
 5. If health check fails, capture console output and exit with failure report.
+6. **Auth bootstrap** (if `scripts/qa-seed.ts` exists):
+   - Run the seed script. Parse JSON credentials from stdout.
+   - Write credentials to `.sdd-state/qa-credentials.json`.
+   - Launch Playwright, navigate to the app's login page, submit credentials, verify authentication succeeds (look for redirect to authenticated route or absence of login form).
+   - If login fails, report `AUTH_SETUP_FAILED` but continue — pipeline runs unauthenticated.
 
 **Output:**
 ```
 RUNTIME_READY: http://localhost:{port}
+AUTH_READY: qa-{uuid}@test.local (admin)
+```
+or
+```
+RUNTIME_READY: http://localhost:{port}
+AUTH_SETUP_FAILED: {reason} — continuing unauthenticated
 ```
 or
 ```
@@ -184,7 +240,8 @@ RUNTIME_FAILED: {phase} — {error summary}
 **Agent inputs:**
 - App URL (from Phase 0)
 - Playwright browser tools
-- Instruction: "Browse this web application systematically. Visit every discoverable page. On each page, inventory all interactive elements, visible text sections, and navigation links. Take a screenshot of each distinct page/state. Report any console errors, missing images, or broken layouts you observe."
+- QA credentials (from `.sdd-state/qa-credentials.json`, if auth bootstrap succeeded)
+- Instruction: "Log in using the provided credentials (if any), then browse this web application systematically. Visit every discoverable page. On each page, inventory all interactive elements, visible text sections, and navigation links. Take a screenshot of each distinct page/state. Report any console errors, missing images, or broken layouts you observe."
 
 **Agent does NOT get:**
 - Roadmap, specs, feature list, or any knowledge of what should exist
@@ -525,6 +582,13 @@ cd ~/auto-sdd && PROJECT_DIR=./stakd-v2 ./scripts/post-campaign-validation.sh --
 **Document persistence:** `.sdd-state/validation-docs.json` — tracks all versioned documents, their flush status, and lineage. See Documentation Versioning section.
 
 **Logging:** All agent outputs, screenshots, and Playwright results go to `logs/validation/{timestamp}/` with per-phase subdirectories.
+
+**Cleanup (always runs, even on crash):**
+1. Kill dev server process
+2. Run `scripts/qa-seed.ts --teardown` (if seed script exists) — deletes test account
+3. Wipe `.sdd-state/qa-credentials.json`
+4. Verify `git status` shows no QA artifacts staged or committed
+5. Optionally: `npm run build` one final time to confirm the app builds clean post-fixes
 
 **Exit codes:**
 - 0: All criteria pass (or pass after fixes)
