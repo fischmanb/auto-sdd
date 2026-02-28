@@ -100,13 +100,13 @@ Build loop remediation from `build-loop-failure-investigation.md` (37 findings).
 
 > What's next and what's in-flight. Priority stack is the execution plan; everything below it is context a fresh chat should pick up.
 
-### Priority stack (updated 2026-02-27)
+### Priority stack (updated 2026-02-28)
 
 Ordered by efficiency gain per complexity added:
 
-1. **stakd 28-feature campaign — IN PROGRESS.** Two parallel campaigns running:
-   - **stakd-v2 (Sonnet 4.6)**: 24/28 built as of 2026-02-27 ~16:00 EST. Eval sidecar + drift checks running. ~16.2 min/feature observed.
-   - **stakd-v3 (Haiku 4.5)**: 14/28 built. Parallel speed test. Same 28 features, fresh repo at `~/auto-sdd/stakd-v3`. ~18.1 min/feature observed.
+1. **stakd 28-feature campaign — v2 COMPLETE, v3 STALLED.**
+   - **stakd-v2 (Sonnet 4.6)**: ✅ 28/28 features built. Post-campaign `npm run build` fails — client component (NewsCategoryFilter.tsx) transitively imports postgres via news.ts → db/index.ts. Same root cause as stakd-v1. Fix prompt drafted, pending execution.
+   - **stakd-v3 (Haiku 4.5)**: ⏸️ Stalled at 11/28 features. Hung `claude` process (PID 94635) killed 2026-02-28. Build loop needs restart.
    - **Throughput finding**: Token speed does NOT translate to build speed. Haiku 2x faster tokens but only marginally faster builds (~16-18 min/feature both models) because npm install, TypeScript compile, tests, drift checks are fixed-cost CPU/disk-bound steps that dominate wall time. Model speed only affects agent thinking fraction. Parallelism across features matters more than per-feature model speed.
    - **Build logs**: Located at `stakd-v2/logs/build-*.log` and `stakd-v3/logs/build-*.log`. tee processes write them live. If `ls` or `cat` fail, the files still exist — search harder (check exact paths, use `find`, verify tee PID is alive).
    - **Agent push discipline**: Agents ignore "do NOT push" instructions 100% of the time across Rounds 32-34. Documented as expected behavior, not a bug to fix.
@@ -142,6 +142,7 @@ After at least one full campaign, a function will correlate t-shirt sizes from r
 - **Agent push discipline (2026-02-27)**: Agents ignore "do NOT push" instructions 100% of the time (Rounds 32-34). Documented as expected behavior — prompt wording makes no difference. Not a bug to fix.
 - **Sidecar feedback loop (2026-02-28)**: ✅ Done Round 37. Three functions added to `build-loop-local.sh`: `read_latest_eval_feedback()`, `update_repeated_mistakes()`, `get_cumulative_mistakes()`. Feedback injected into `build_feature_prompt()`. Mistake tracking at all 4 success paths. Advisory only. Merged `cecf7bb`.
 - **Prompt self-containment requirement (2026-02-28)**: Agent prompts must be fully self-contained for fresh context execution. No file references ("read the spec first") — agent in a fresh context has no access to prior files. All necessary context must be inline in the prompt itself. This applies to all prompts delivered in chat.
+- **Transitive import boundary failure catalog (2026-02-28)**: Root cause of stakd-v1 and stakd-v2 post-campaign build failures documented across three locations: (1) `.specs/learnings/agent-operations.md` failure catalog entry, (2) `.specs/learnings/general.md` debugging pattern, (3) `CLAUDE.md` prevention rule (both auto-sdd and stakd-v2). Commits: `e981489` (auto-sdd), `803728ae` (stakd-v2). Rule: every client component implementation must trace imports recursively and verify no server-only module (db drivers, Node builtins) is reachable. Production build required — dev mode won't catch it.
 
 ---
 
