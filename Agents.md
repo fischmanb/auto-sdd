@@ -948,6 +948,30 @@ DRY_RUN_SKIP_AGENT=true ./tests/dry-run.sh
 
 ---
 
+### Round 37 — Sidecar feedback loop: inject eval findings into build agent prompts
+
+**Date**: Feb 27, 2026
+
+**What was asked**: Wire sidecar eval findings into build agent prompts as advisory feedback. The eval sidecar writes JSON files to `$PROJECT_DIR/logs/evals/` assessing each feature's quality, but the build loop never reads them. Agents repeat the same mistakes because there's no feedback loop.
+
+**What actually happened**:
+- `scripts/build-loop-local.sh`: Added three new functions after `check_lint()`:
+  - `read_latest_eval_feedback()` — finds the most recent non-campaign eval JSON, extracts five fields (framework_compliance, scope_assessment, repeated_mistakes, integration_quality, eval_notes) using `awk -F'"'` field-walk pattern, and builds a warning string from non-passing values only
+  - `update_repeated_mistakes()` — appends a mistake pattern to `$STATE_DIR/repeated-mistakes.txt` with dedup via `grep -qF`; no-op on empty string or "none"
+  - `get_cumulative_mistakes()` — reads the cumulative mistakes file and returns a formatted block listing each known mistake
+- `build_feature_prompt()`: Computes eval feedback and cumulative mistakes before the heredoc; conditionally injects both blocks (using parameter expansion for empty suppression) between the codebase summary section and the signal instructions
+- All four `BUILT_FEATURE_NAMES+=` call sites (primary success, primary signal-fallback/inferred-drift, retry signal-fallback/inferred, and failure path): each now reads the latest eval's `repeated_mistakes` field and passes it to `update_repeated_mistakes()`, with a log message that feedback was queued
+
+**What was NOT changed**: eval-sidecar.sh, lib/eval.sh, lib/reliability.sh — the sidecar itself is untouched. No new files created, no files deleted. overnight-autonomous.sh unchanged.
+
+**Verification**:
+- `bash -n scripts/build-loop-local.sh` passes
+- Manual function tests: `read_latest_eval_feedback` returns warning text with all five non-passing fields; `update_repeated_mistakes` creates `.sdd-state/repeated-mistakes.txt`; `get_cumulative_mistakes` returns formatted output; duplicate calls don't duplicate entries; empty/"none" are no-ops
+- All 5 test suites pass: test-reliability (68/68), test-eval (53/53), test-validation (10/10), test-codebase-summary (23/23), dry-run (structural, all passed)
+- `git diff --stat` shows only `scripts/build-loop-local.sh` and `Agents.md`
+
+---
+
 ## Known Gaps
 
 - No live integration testing — all validation is `bash -n` + unit tests + structural dry-run
