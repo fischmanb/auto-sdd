@@ -182,3 +182,36 @@ Chat session failed to process user-provided evidence (screenshot showing "Pushe
 - **Related:** L-0011 (depends_on)
 
 Agent encountered existing branch name collision, then improvised cherry-pick/reset recovery instead of stopping — L-0011 repeating. Left main "ahead of origin by 1 commit" after reset. STOP-on-unexpected rule was in the prompt but agent violated it. Branch name collisions are expected (CLAUDE.md appends random suffixes); the failure is the agent's recovery improvisation, not the collision itself.
+
+---
+
+### L-0042
+- **Type:** process_rule
+- **Status:** active
+- **Confidence:** high
+- **Tags:** bash-to-python-conversion-2026-03-01, agent-prompting, conventions
+- **Related:** L-0041 (related_to), L-0045 (related_to)
+
+Convention docs and agent prompts should only prescribe where agents would high-percentage get it wrong. Over-prescription wastes context budget per PROMPT-ENGINEERING-GUIDE.md. Agent autonomy structure: test→investigate/learn→evaluate→verify→report.
+
+---
+
+### L-0043
+- **Type:** process_rule
+- **Status:** active
+- **Confidence:** high
+- **Tags:** bash-to-python-conversion-2026-03-01, agent-accountability, verification
+- **Related:** L-0042 (depends_on)
+
+Conversion agents maintain changelogs documenting intentional deviations. Both converting and reviewing agents verify. Prevents silent drift where bash-isms get cargo-culted or improvements go undocumented.
+
+---
+
+### L-0044
+- **Type:** failure_pattern
+- **Status:** active
+- **Confidence:** high
+- **Tags:** checkpoints, session-discipline, protocol-compliance
+- **Related:** L-0040 (related_to)
+
+"Checkpoint" treated as "commit and push" for multiple turns before reading the 8-step protocol in .claude/commands/checkpoint.md. ONBOARDING.md reference was insufficient — fresh sessions don't read that file. Fix: expand checkpoint section inline (done in Round 38).
