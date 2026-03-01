@@ -198,3 +198,27 @@ Date: 2026-03-01T21:00:00-05:00
 Related: L-0109 (related_to), L-0105 (related_to)
 
 Do not commit to main while an agent prompt referencing HEAD is in flight. After delivering Phase 2 agent prompt with precondition `HEAD: 6be9b74`, committed L-0111 to main and pushed — advancing HEAD to `a67c60c`. This invalidated the agent's precondition check. The commit (a learning + ACTIVE-CONSIDERATIONS update) was not time-sensitive and could have waited. Rule: once an agent prompt is delivered, main is frozen until the agent forks its branch or Brian confirms the prompt wasn't used yet. Housekeeping commits are never urgent enough to justify breaking an in-flight prompt.
+
+---
+
+## L-0119
+Type: failure_pattern
+Tags: checkpoint, learnings, self-diagnosis
+Confidence: high
+Status: active
+Date: 2026-03-02T03:00:00-05:00
+Related: L-0113 (depends_on), L-0117 (related_to)
+
+The system cannot self-diagnose protocol gaps without external prompting. The methodology signals already contained evidence that step 4 was broken ("under-capture is a failure mode," "checkpoint should be thorough not mechanical," "Brian expects capture density to match session density"). The step 4/5 asymmetry was visible in the protocol text. But the AI didn't connect them until Brian said "look up the meta-learnings and see if step 4 needs to be updated." The information was all present — the synthesis step was missing. Active scans partially address this, but the deeper issue is that protocol self-audit is not triggered mechanically.
+
+---
+
+## L-0120
+Type: failure_pattern
+Tags: checkpoint, active-scan, behavioral-inertia
+Confidence: high
+Status: active
+Date: 2026-03-02T03:00:00-05:00
+Related: L-0113 (depends_on), L-0116 (related_to), L-0117 (related_to)
+
+Performing the motions of an active scan while retaining a passive default produces the same outcome as not scanning. The checkpoint after L-0113 walked through all five scan categories, produced analysis for each, but concluded "no new learnings" — because the analytical frame was still "find reasons to include" rather than "assume capture, find reasons to skip." The form was correct (categories checked) but the substance was unchanged (nothing captured). A scan that reviews every category and finds zero candidates in a session that had agent completions, corrections, and system improvements is evidence of the scan failing, not evidence of nothing to capture.

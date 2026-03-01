@@ -77,3 +77,11 @@ Agents communicate via flat strings (`FEATURE_BUILT: {name}`, `BUILD_FAILED: {re
 **Why core:** Without this, every fresh session runs checkpoint step 4 passively ("anything come to mind?") and under-captures. The gap between step 4 (passive) and step 5 (active scan) caused a session to declare "none new" while skipping agent outcome validation, correction analysis, and near-miss review.
 
 Checkpoint step 4 must actively scan: agent completions (validate/contradict existing learnings?), Brian's corrections (each is a candidate), new rules or patterns, empirical findings, failures or near-misses. Under-capture is a failure mode equal to over-capture. Match capture density to session density.
+
+---
+
+## L-0116 — "Nothing to capture" is never the correct default
+**Source:** `process-rules.md`
+**Why core:** L-0113 added scan categories but the very next checkpoint still under-captured because the default assumption didn't flip. Without this, a session can walk through all five categories and still conclude "none new" because it's looking for reasons to include rather than reasons to skip. This is the behavioral root that makes L-0113 work or fail.
+
+"Nothing to capture" must never be the default assumption. The default is "something to capture" — the scan must find reasons to skip, not reasons to include. A scan that reviews every category and finds zero candidates in a session with agent completions, corrections, and system improvements is evidence of the scan failing, not evidence of nothing to capture.

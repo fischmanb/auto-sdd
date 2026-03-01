@@ -27,15 +27,18 @@ Single command to ensure all context management files are current. Prevents cont
 - If none → skip
 
 ### 4. Learnings
+- **Default assumption: something to capture.** Find reasons to skip, not reasons to include. A scan that finds zero candidates in a session with agent completions, corrections, or system changes is evidence of the scan failing. (L-0116)
 - Active scan — review the session for learnable moments. Do not rely on recall; check each category:
   - **Agent completions**: Did an agent finish this session? What worked, failed, or surprised? Does the outcome validate or contradict existing learnings?
   - **Corrections**: Did Brian correct something? Each correction is a candidate learning.
   - **New rules or patterns**: Were any stated or discovered?
   - **Empirical findings**: Any measurements, outcomes, or data points?
   - **Failures or near-misses**: Anything that went wrong or almost did?
+  - **Methodology signals review**: Scan HOW-I-WORK accumulation section for patterns that should become learnings or protocol changes. (L-0124)
 - For each candidate: propose entry to Brian (type, tags, body)
 - Do NOT auto-write to learnings files — Brian approves entries
-- Under-capture is a failure mode. Match capture density to session density. (L-0113)
+- **Self-test**: If this session wrote a new process rule, re-run the step it modifies to verify it works. Protocol adoption has a one-response latency (L-0117).
+- **Propagation check**: If any learning is written, check: does it belong in core.md? Did any counts or references change in ONBOARDING.md or ACTIVE-CONSIDERATIONS.md? (L-0114)
 
 ### 5. Methodology Signals
 - Scan session for operator-level insights: preferences, principles, reasoning patterns, workflow decisions, distinctions Brian drew, corrections that reveal generalizable observations
