@@ -31,10 +31,12 @@ Single command to ensure all context management files are current. Prevents cont
 - Do NOT auto-write to learnings files — Brian approves entries
 
 ### 5. Methodology Signals
-- Scan session for operator-level insights: preferences, principles, reasoning patterns, workflow decisions, distinctions Brian drew, corrections that reveal generalizable rules
+- Scan session for operator-level insights: preferences, principles, reasoning patterns, workflow decisions, distinctions Brian drew, corrections that reveal generalizable observations
 - Bias toward capture — a false positive costs 5 seconds to delete, a false negative is gone
-- If any found: append raw notes to the accumulation section at the bottom of `HOW-I-WORK-WITH-GENERATIVE-AI.md` (create file with accumulation section if it doesn't exist)
-- Format: `- (YYYY-MM-DD) <raw observation>` — no curation, Brian prunes later
+- If any found: append raw notes to the accumulation section at the bottom of `HOW-I-WORK-WITH-GENERATIVE-AI.md` (create file with preamble + accumulation section if it doesn't exist)
+- Format: `- (YYYY-MM-DD) <raw observation>`
+- Voice: Third person ("Brian prefers...", "Brian has found..."), descriptive not prescriptive. These are observed patterns, not rules. Include context for *why* when available.
+- NEVER use first person. The document is written *about* Brian by AI; first-person would misrepresent authorship.
 
 ### 6. ONBOARDING.md Drift Check
 - `md5 -q ~/auto-sdd/ONBOARDING.md` (or `md5sum` on Linux)
