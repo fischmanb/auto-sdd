@@ -249,3 +249,26 @@ Misleading "DEPRECATED" notice on agent-operations.md caused agent to hesitate �
 - **Related:** L-0046 (related_to)
 
 Checked 8 context files (largest 439 lines), claimed "repo's biggest file is 439 lines" in a decision entry. Actual largest: build-loop-local.sh at 2,299 lines. Generalized from a subset without verifying the claim logically or empirically. Same class as L-0046 (asserting facts without checking provided/available evidence). The fix was a single `find | wc -l | sort` command — trivial to verify, chose not to.
+
+
+---
+
+### L-0048
+- **Type:** process_rule
+- **Status:** active
+- **Confidence:** high
+- **Tags:** artifact-delivery, agent-prompting, separate-contexts
+- **Related:** L-0050 (related_to)
+
+Always reprint full artifacts (prompts, code, config) when updating. Separate contexts (Code tab agents, future sessions) never see the chat conversation. "Same as before but swap X" forces mental merging — error-prone and impossible for agents that lack the prior version.
+
+---
+
+### L-0049
+- **Type:** failure_pattern
+- **Status:** active
+- **Confidence:** medium
+- **Tags:** capture-completeness, session-discipline, checkpoints
+- **Related:** L-0044 (related_to)
+
+Claimed "no new decisions/learnings" when Brian had explicitly stated a new rule in that turn. Conflated "I noted it in memory" with "nothing to capture to the repo." Memory is volatile; repo is system of record. If Brian corrected or stated a rule, there IS something to capture.
