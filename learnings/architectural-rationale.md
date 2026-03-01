@@ -51,3 +51,15 @@ Date: 2026-03-01T20:00:00-05:00
 Related: L-0105 (related_to)
 
 "Do not push" conflicts with ephemeral sandbox. Agent prompts said "Do NOT push" per PROMPT-ENGINEERING-GUIDE local-execution pattern. But Claude Code agents run in ephemeral sandboxes — work is lost if not pushed. CLAUDE.md's default push behavior accidentally saved all 5 branches. Resolution: agent prompts for Claude Code MUST include push as final step. Local-only execution pattern only applies when agents run on the actual local machine.
+
+---
+
+## L-0111
+Type: architectural_rationale
+Tags: build-loop, process, meta
+Confidence: high
+Status: active
+Date: 2026-03-01T20:30:00-05:00
+Related: L-0109 (related_to), L-0107 (related_to), L-0039 (related_to)
+
+Meta-process patterns transferable to build loop. The bash→Python conversion process surfaced 6 patterns the build loop doesn't implement: (1) code-level dependency analysis before execution order — build loop uses spec-declared deps but not actual import-level edges, (2) context budget estimation before agent dispatch — build loop fires without checking if prompt + summary + spec + headroom fits the effective window, (3) conventions doc injection so agents write consistent code — build loop gives codebase summary (what exists) but not conventions (how to write), which is why type redeclarations happen, (4) interface stubs as pre-declared contracts in specs — agents get descriptions not target signatures, (5) mechanical prompt quality gate before dispatch — build loop generates and dispatches immediately with no intermediate check, (6) cross-feature failure pattern feedback mid-campaign — if feature 5 fails the same way feature 3 did, the build loop doesn't notice or adapt. Items 2/3/5 are highest leverage and directly address documented failure modes. Design input for Phase 4 build-loop conversion.

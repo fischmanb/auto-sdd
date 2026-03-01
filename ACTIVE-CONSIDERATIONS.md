@@ -22,9 +22,12 @@ Ordered by efficiency gain per complexity added:
    - Phase 0: `py/auto_sdd/conventions.md` (481 lines), `py/pyproject.toml`, `py/tests/conftest.py`, dependency map + interface stubs.
    - **Phase 1 DONE**: 5 lib modules converted (reliability, eval, codebase-summary, validation, claude-wrapper). 210 pytest assertions, mypy --strict clean. Merged to main at `bed34a4`. Executed sequentially on MacBook Air (not Mac Studio). See L-0105–L-0110.
    - **Phase 2 next**: Build loop (`run.sh` 1,100L) — the orchestrator. Depends on all 5 libs. Single agent, single branch. Not yet planned in detail.
-3. **auto-QA (post-campaign validation pipeline)** — Multi-agent pipeline: boot app, Playwright browse, generate ACs from specs, test, catalog failures, RCA, fix through build gates. Seven phases (0-5, Phase 4 split into 4a+4b). Spec: `WIP/post-campaign-validation.md` (v0.3). *Spec complete, implementation not started. Will be implemented in Python post-conversion.*
-3. **Local model integration** — Replace cloud API with local LM Studio on Mac Studio. Reference: `archive/local-llm-pipeline/`. *Not started.*
-4. **Adaptive routing / parallelism** — Only if data from 1–3 justifies complexity. *Deprioritized.*
+3. **Build loop design improvements for Phase 4 (2026-03-01).**
+   - L-0111: 6 meta-process patterns from the bash→Python conversion that the build loop should implement. Highest leverage: context budget estimation before dispatch, conventions doc injection, mechanical prompt quality gate.
+   - These are design inputs for Phase 4 (build-loop-local conversion), not separate tasks. When Phase 3 decomposes build-loop-local into sub-units, these patterns inform the new architecture.
+4. **auto-QA (post-campaign validation pipeline)** — Multi-agent pipeline: boot app, Playwright browse, generate ACs from specs, test, catalog failures, RCA, fix through build gates. Seven phases (0-5, Phase 4 split into 4a+4b). Spec: `WIP/post-campaign-validation.md` (v0.3). *Spec complete, implementation not started. Will be implemented in Python post-conversion.*
+5. **Local model integration** — Replace cloud API with local LM Studio on Mac Studio. Reference: `archive/local-llm-pipeline/`. *Not started.*
+6. **Adaptive routing / parallelism** — Only if data from 1–3 justifies complexity. *Deprioritized.*
 
 ### Historical build estimator (designed, not yet built)
 
