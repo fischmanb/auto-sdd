@@ -815,3 +815,26 @@ Prompt stash protocol verification: each new prompt replaces the previous stash 
 - **Related:** L-0093 (related_to), L-0096 (related_to), L-0097 (related_to)
 
 Retiring-chat-handoff protocol needed (2026-03-01). When a chat session is approaching end-of-life (context getting long, compactions happening, or Brian signals wrap-up), the session should produce a structured handoff document that a fresh session can consume. This is different from the compaction summary (automatic, lossy) and from ONBOARDING.md (general orientation). The handoff is session-specific: what was worked on, what's incomplete, what decisions are pending, what the fresh session needs to do first. Without this, fresh sessions waste Brian's time re-explaining context that the dying session had fully internalized.
+
+
+---
+
+### L-0101
+- **Type:** process_rule
+- **Status:** active
+- **Confidence:** high
+- **Tags:** handoff, onboarding, scope, fresh-chat
+- **Related:** L-0100 (refines)
+
+Handoff file (.handoff.md) is ONLY read on the very first prompt of a fresh chat session — never by continuing sessions, never during interval checks. It's single-use ephemeral state bridging one session to the next. After the fresh session absorbs it, delete it. This prevents stale handoff context from persisting and avoids wasting context budget on mid-session reads of already-absorbed material. The trigger is "fresh onboard" not "any read of ONBOARDING.md."
+
+---
+
+### L-0102
+- **Type:** empirical_finding
+- **Status:** active
+- **Confidence:** high
+- **Tags:** session-productivity, compound-returns, meta-process
+- **Related:** L-0080 (related_to), L-0096 (related_to)
+
+This session (2026-03-01) produced 61 graph-schema learnings (L-0042–L-0102), a handoff protocol, a retiring-chat protocol, Round 40 documentation, ~10 decisions, ~12 methodology signals, dual-storage strategy, and system audits — all process/meta work with zero feature code. Brian's investment in process infrastructure during a high-lucidity window (L-0096) has created the foundation for every future session. The compound return: every fresh session that reads core.md, checks .handoff.md, follows the checkpoint protocol, and respects approval gates is operating on infrastructure built today. Process sessions like this are rare — Brian usually runs feature work. Maximize when they happen.
