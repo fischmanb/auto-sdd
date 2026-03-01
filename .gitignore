@@ -28,6 +28,12 @@ tests/dry-run-verbose.log
 *.swp
 *.swo
 node_modules/
+
+# Python
+__pycache__/
+*.pyc
+.mypy_cache/
+.pytest_cache/
 tsconfig.tsbuildinfo
 
 # Separate repos (not submodules)
