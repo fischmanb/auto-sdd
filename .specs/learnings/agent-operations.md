@@ -781,3 +781,37 @@ Memory optimization strategy: 15/30 slots, ~1,500 words injected every message. 
 - **Related:** L-0069 (refines), L-0079 (refines), L-0086 (related_to)
 
 Memory and repo learnings are two parts of one larger system, not two separate tools. Memory = constitutional layer (always-injected, every message, cross-session without repo access). Repo = case law (loaded at onboard, queryable, inheritable by agents). They overlap when rules govern both session and agent behavior. They complement when: memory provides triggers that cause the session to consult repo for details. Example: memory says "follow onboarding state protocol" (trigger), repo says exactly how (full protocol steps). This is the correct pattern: memory triggers, repo specifies. Memory should never try to contain what repo specifies, and repo shouldn't duplicate what memory triggers.
+
+
+---
+
+### L-0098
+- **Type:** failure_pattern
+- **Status:** active
+- **Confidence:** high
+- **Tags:** response-scope, truncation, resource-management, self-monitoring
+- **Related:** L-0045 (related_to), L-0076 (related_to)
+
+Response truncated ("Claude's response could not be fully generated") because scope was too ambitious: checkpoint (8 steps) + 6 new learnings + 2 decisions + methodology signals + ACTIVE-CONSIDERATIONS edits + commit + then tried to also begin core.md creation, all in one response. The tool calls and output volume exceeded generation limits. Root cause: not estimating total response cost before committing to scope. Fix: before starting work, mentally estimate total tool calls and output volume. If >15 tool calls or >3 distinct work items, split across responses. Checkpoint alone is ~12 tool calls; adding substantive new work on top invites truncation.
+
+---
+
+### L-0099
+- **Type:** process_rule
+- **Status:** active
+- **Confidence:** high
+- **Tags:** prompt-stash, verification, protocol-integrity
+- **Related:** L-0092 (related_to), L-0093 (related_to)
+
+Prompt stash protocol verification: each new prompt replaces the previous stash (confirmed working 2026-03-01). The stash survived the truncation — even though the response was cut off, the first action (stash) had already completed. This validates the design: stash-first means even catastrophic response failure preserves the input. The stash is a filesystem-level defense, independent of response completion. Memory #15 accurately describes this.
+
+---
+
+### L-0100
+- **Type:** process_rule
+- **Status:** active
+- **Confidence:** high
+- **Tags:** handoff, session-management, continuity, protocol
+- **Related:** L-0093 (related_to), L-0096 (related_to), L-0097 (related_to)
+
+Retiring-chat-handoff protocol needed (2026-03-01). When a chat session is approaching end-of-life (context getting long, compactions happening, or Brian signals wrap-up), the session should produce a structured handoff document that a fresh session can consume. This is different from the compaction summary (automatic, lossy) and from ONBOARDING.md (general orientation). The handoff is session-specific: what was worked on, what's incomplete, what decisions are pending, what the fresh session needs to do first. Without this, fresh sessions waste Brian's time re-explaining context that the dying session had fully internalized.

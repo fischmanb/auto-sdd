@@ -317,3 +317,18 @@
 **Decision:** Root CLAUDE.md needs stripping from 468 to ~100-150 lines. Keep: git discipline, onboarding state protocol, learnings references, implementation rules (including transitive import check). Strip: design system tokens, component stub lifecycle, command reference tables, roadmap system details, drift enforcement details, spec format templates. These are reference material, not operational guardrails — they belong in .specs/ or .claude/commands/ where they're already defined.
 **Why:** L-0087, L-0094. CLAUDE.md is injected into every Claude Code agent session. ~80% is SDD scaffold from initial project setup that hasn't been used in months. 468 lines of context budget consumed before any agent work starts. The stakd/ variants evolved with useful battle-tested patterns while root stayed generic. Stripping and curating makes every agent session more context-efficient.
 **Rejected:** Deleting CLAUDE.md (needed for git discipline and onboarding protocol). Moving to .claude/ (root is correct for Claude Code auto-read). Leaving as-is (wasteful context budget).
+
+---
+
+## 2026-03-01 — Retiring-chat-handoff protocol
+
+**Decision:** Created `.specs/HANDOFF-PROTOCOL.md` — structured protocol for when a chat session is ending. Produces `.handoff.md` at repo root (single-use, deleted by next session after absorption). Fresh onboard sequence updated to check for it between ACTIVE-CONSIDERATIONS.md and core.md reads.
+**Why:** L-0100. Without structured handoff, fresh sessions waste Brian's time re-explaining context. Compaction summaries are automatic but lossy. ONBOARDING.md is general orientation. The handoff bridges the gap: session-specific incomplete work, unpushed commits, and priority ordering that a fresh session needs immediately.
+**Rejected:** Putting handoff content in ACTIVE-CONSIDERATIONS.md (bloats persistent state with ephemeral info). Relying on compaction summaries alone (lossy, unstructured). Not having a protocol (status quo — Brian re-explains).
+
+---
+
+## 2026-03-01 — Response scope discipline
+
+**Decision:** Before starting work in a response, estimate total tool calls and output volume. If >15 tool calls or >3 distinct work items, split across responses. Checkpoint alone is ~12 calls; don't stack substantive new work on top.
+**Why:** L-0098. Response truncated trying to do checkpoint + 6 learnings + decisions + ACTIVE-CONSIDERATIONS + commit + core.md creation in one response. The generation limit is a hard constraint, not a suggestion. Splitting is free (Brian just says "continue"); truncation loses work and context.
