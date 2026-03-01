@@ -121,3 +121,16 @@ Status: active
 Date: 2026-02-28T20:31:00-05:00
 
 Learnings/patterns belong in the main `learnings/` catalog (previously `.specs/learnings/`), not in project-specific directories (e.g., `stakd/.specs/learnings/`). Project-specific dirs only get fixes specific to that build/app.
+
+
+---
+
+### L-0040
+- **Type:** process_rule
+- **Tags:** session-discipline, tool-limits
+- **Confidence:** high
+- **Date:** 2026-02-28T21:30:00-05:00
+- **Source:** Brian correction during Phase 0 checkpoint
+- **Body:** The 10 tool call limit per response protects against context loss if a response exceeds context window limits. Each tool call must be one logical operation. Batching multiple operations into a single shell command (e.g., `mkdir && touch && git add && commit && push`) games the limit and defeats the purpose. The constraint is on logical operations performed, not literal tool invocations counted.
+
+

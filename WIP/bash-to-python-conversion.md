@@ -140,3 +140,59 @@ The conventions doc must cover ALL of the following before any agent starts:
 - Conventions doc before parallel work: prevents integration failures
 - Conventions doc includes interface stubs: prevents Phase 4 interface drift
 - stakd/ is build artifact: not a conversion target
+
+
+## Dependency Map (Phase 0 analysis)
+
+**Source graph — who loads what:**
+
+| Consumer | Sources | External calls |
+|---|---|---|
+| build-loop-local.sh | reliability.sh, codebase-summary.sh | `bash lib/claude-wrapper.sh` |
+| overnight-autonomous.sh | reliability.sh, codebase-summary.sh | `bash lib/claude-wrapper.sh` |
+| eval-sidecar.sh | reliability.sh, eval.sh | `bash lib/claude-wrapper.sh` |
+| generate-mapping.sh | validation.sh | — |
+| nightly-review.sh | — | `bash lib/claude-wrapper.sh` |
+
+**Key finding:** claude-wrapper.sh is never `source`d — always invoked as external command. Python equivalent is a callable function, not an imported module (L-0041).
+
+**Interface stubs — function signatures build-loop-local calls from each lib:**
+
+### reliability.py
+```python
+def acquire_lock(lock_file: Path) -> None: ...
+def release_lock(lock_file: Path) -> None: ...
+def write_state(state_file: Path, feature_index: int, strategy: str, completed_json: str, current_branch: str) -> None: ...
+def read_state(state_file: Path) -> ResumeState | None: ...
+def completed_features_json(built_names: list[str]) -> str: ...
+def clean_state(state_file: Path) -> None: ...
+def run_agent_with_backoff(output_file: Path, cmd: list[str], max_retries: int = 5, backoff_max: int = 60) -> int: ...
+def truncate_for_context(file_path: Path, max_tokens: int = 100_000) -> str: ...
+def check_circular_deps(project_dir: Path) -> None: ...  # raises on cycle
+def emit_topo_order(project_dir: Path) -> list[Feature]: ...
+def get_cpu_count() -> int: ...
+def run_parallel_drift_checks(pairs: list[DriftPair], check_fn: Callable) -> bool: ...
+```
+
+### codebase_summary.py
+```python
+def generate_codebase_summary(project_dir: Path, max_lines: int = 200) -> str: ...
+```
+
+### claude_wrapper.py
+```python
+def run_claude(args: list[str], cost_log_path: Path | None = None, timeout: int = 600) -> ClaudeResult: ...
+```
+
+### eval_lib.py
+```python
+def run_mechanical_eval(project_dir: Path, commit_hash: str) -> dict: ...
+def generate_eval_prompt(project_dir: Path, commit_hash: str) -> str: ...
+def parse_eval_signal(signal_name: str, output: str) -> str: ...
+def write_eval_result(output_dir: Path, feature_name: str, mechanical_json: dict, agent_output: str) -> Path: ...
+```
+
+### validation.py
+```python
+def validate_frontmatter(file_path: Path, validate_only: bool = False) -> bool: ...
+```

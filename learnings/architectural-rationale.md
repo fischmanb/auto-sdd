@@ -28,3 +28,14 @@ Status: active
 Date: 2026-02-28T20:31:00-05:00
 
 Signal protocol uses grep-parseable signals, not JSON. Agents communicate via flat strings (`FEATURE_BUILT: {name}`, `BUILD_FAILED: {reason}`). No JSON parsing, no eval on agent output. Grep is reliable, available everywhere, and fails visibly. JSON parsing introduces fragility — malformed output from an agent silently breaks downstream logic instead of failing at the grep step.
+
+
+---
+
+### L-0041
+- **Type:** architecture_finding
+- **Tags:** bash-to-python, claude-wrapper, invocation-pattern
+- **Confidence:** high
+- **Date:** 2026-02-28T21:30:00-05:00
+- **Source:** Dependency analysis during Phase 0
+- **Body:** claude-wrapper.sh is invoked as an external command (`bash lib/claude-wrapper.sh -p ...`), never `source`d. All four consumers (build-loop-local, overnight-autonomous, eval-sidecar, nightly-review) call it the same way. The Python equivalent should be a callable function (`run_claude(prompt, **kwargs) → ClaudeResult`), not a module whose internals get imported. This distinction matters for the interface stub design — wrapper is a service boundary, not a utility library.
