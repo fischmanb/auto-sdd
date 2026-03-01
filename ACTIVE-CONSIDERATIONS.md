@@ -30,4 +30,4 @@ Correlates t-shirt sizes with actual metrics from `logs/build-summary-*.json`. W
 - **Learnings system — IMPLEMENTED (2026-03-01)**: Complete. 38 entries, 8 in core.md. Remaining: back-references not fully bidirectional.
 - **Knowledge graph for workflow continuity (2026-02-28)**: Personal workflow tool for cross-session context. *Design phase — no implementation started.*
 - **README update — DONE (2026-03-01)**: File map, learnings reference, developer workflow section updated. auto-QA and knowledge graph excluded per policy.
-- **"How Brian works with Chatbots" meta-document (2026-03-01)**: Proposed. Scope TBD.
+- **`HOW-I-WORK-WITH-GENERATIVE-AI.md` (2026-03-01)**: Repo-agnostic methodology document, lives at repo root. Title finalized. Content not yet drafted — benefits from Brian driving the outline.
