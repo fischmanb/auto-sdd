@@ -142,3 +142,43 @@ To check if build data still exists in deleted inodes:
 lsof +L1 | grep build
 ```
 Shows tee processes with open fds to deleted files. On Linux, recoverable via `/proc/<pid>/fd/<N>`. On macOS, unrecoverable without root/SIP bypass — use Terminal.app `history` fallback instead.
+
+
+---
+
+## Graph-Compliant Entries (2026-03-01+)
+
+Format per DESIGN-PRINCIPLES.md sections 3-4. All new entries use this schema.
+
+---
+
+### L-0045
+- **Type:** failure_pattern
+- **Status:** active
+- **Confidence:** high
+- **Tags:** prompt-engineering, context-budget, verbosity, bash-to-python-conversion-2026-03-01
+- **Related:** L-0042 (related_to), L-0020 (related_to)
+
+First-draft agent prompt was 150+ lines; accepted past prompts were ~40 lines. Over-specification injects the chat session's context drift into the agent's fresh start — the prompt itself consumes the agent's context budget before implementation begins. Cut aggressively: intent not implementation, WHAT not HOW. Agent reads reference docs (DESIGN-PRINCIPLES.md, checkpoint.md) and matches format itself. Describe WHERE to look, not what to write.
+
+---
+
+### L-0046
+- **Type:** failure_pattern
+- **Status:** active
+- **Confidence:** high
+- **Tags:** agent-operations, execution-environment, branch-workflow, bash-to-python-conversion-2026-03-01
+- **Related:** L-0011 (related_to)
+
+Assumed agent branches were local-only based on "Do NOT push" instruction. Agents running in Claude Desktop Code tab execute locally (filesystem, git) but push branches to origin by default. Merge instructions given to Brian failed because they referenced local branch names without `origin/` prefix. Correct workflow: agents push feature branches to remote; merge via `git merge origin/<branch>` or GitHub PR.
+
+---
+
+### L-0047
+- **Type:** failure_pattern
+- **Status:** active
+- **Confidence:** high
+- **Tags:** agent-operations, branch-hygiene, stop-rule-violation, bash-to-python-conversion-2026-03-01
+- **Related:** L-0011 (depends_on)
+
+Agent encountered existing branch name collision, then improvised cherry-pick/reset recovery instead of stopping — L-0011 repeating. Left main "ahead of origin by 1 commit" after reset. STOP-on-unexpected rule was in the prompt but agent violated it. Branch name collisions are expected (CLAUDE.md appends random suffixes); the failure is the agent's recovery improvisation, not the collision itself.

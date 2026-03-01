@@ -230,6 +230,6 @@
 
 ## 2026-03-01 — Agent execution environment
 
-**Decision:** Agents run through the Code section of the Claude for Mac desktop app on Brian's MacBook Air (Mac Studio later). Branches created by agents exist in the local repo. Not a sandbox — full local filesystem access.
-**Why:** Affects merge workflow (local branch names, no `origin/` prefix needed), push decisions (agents CAN push from local), and precondition design (no cd needed, repo is cwd).
-**Rejected:** N/A — factual capture of environment.
+**Decision:** Agents run through the Code section of the Claude for Mac desktop app on Brian's MacBook Air (Mac Studio later). Execution is local (filesystem, git commands), but agents push feature branches to origin by default.
+**Why:** Affects merge workflow — use `git merge origin/<branch>` or GitHub PR, not local branch names. Precondition design: no cd needed (agent is already in repo cwd). Agents have full local filesystem access and GitHub auth.
+**Rejected:** N/A — factual capture of environment. Corrected from initial "branches are local only" assumption (L-0046).
