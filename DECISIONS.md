@@ -301,3 +301,19 @@
 
 **Decision:** Agents.md tracks rounds for significant chat sessions, not just Claude Code agent runs. This session (2026-03-01 learnings system buildout) qualifies. Entry format adapts: "chat session" instead of agent branch, session focus instead of feature name.
 **Why:** Brian: "those are normally meant for agents but learn to use them for any worthwhile/significant chat sessions too." The purpose of Agents.md is tracking work rounds; the medium (agent vs chat) is secondary to the significance of the work.
+
+---
+
+## 2026-03-01 — Prompt stashing protocol
+
+**Decision:** First action in every response: write Brian's prompt to `~/auto-sdd/.prompt-stash.json`, replacing previous stash. Stash persists until content sufficiently mined into learnings/memories/actions. Response sequence: (1) stash prompt, (2) read .onboarding-state, (3) increment count, (4) scan for captures, (5) proceed.
+**Why:** Compaction hit during checkpoint protocol — conversational context lost but committed work survived. Prompt stashing creates a second defense layer: even if compaction or context loss occurs mid-processing, the source material (Brian's directive) survives in filesystem. Each stash replaces the last to avoid retaining stale prompts.
+**Rejected:** Stashing all prompts (accumulates stale context). Stashing in .onboarding-state (bloats file read every response). Not stashing (compaction can destroy unprocessed input).
+
+---
+
+## 2026-03-01 — CLAUDE.md root content audit
+
+**Decision:** Root CLAUDE.md needs stripping from 468 to ~100-150 lines. Keep: git discipline, onboarding state protocol, learnings references, implementation rules (including transitive import check). Strip: design system tokens, component stub lifecycle, command reference tables, roadmap system details, drift enforcement details, spec format templates. These are reference material, not operational guardrails — they belong in .specs/ or .claude/commands/ where they're already defined.
+**Why:** L-0087, L-0094. CLAUDE.md is injected into every Claude Code agent session. ~80% is SDD scaffold from initial project setup that hasn't been used in months. 468 lines of context budget consumed before any agent work starts. The stakd/ variants evolved with useful battle-tested patterns while root stayed generic. Stripping and curating makes every agent session more context-efficient.
+**Rejected:** Deleting CLAUDE.md (needed for git discipline and onboarding protocol). Moving to .claude/ (root is correct for Claude Code auto-read). Leaving as-is (wasteful context budget).

@@ -1,6 +1,6 @@
 {
-  "last_check_ts": "2026-03-01T15:25:00Z",
+  "last_check_ts": "2026-03-01T15:45:00Z",
   "last_check_hash": "bb126cdf3056b5381cab2d6cdfc3bb59",
-  "prompt_count": 0,
-  "pending_captures": []
+  "prompt_count": 1,
+  "pending_captures": ["📌 prompt stashing protocol", "📌 compaction during checkpoint integrity", "📌 CLAUDE.md orphaned /stakd version clarification", "📌 L-0089 correction", "📌 lucidity window methodology signal", "📌 memory+repo unified system view"]
 }

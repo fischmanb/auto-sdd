@@ -712,3 +712,72 @@ core.md referenced by ONBOARDING.md fresh-onboard protocol (line 376: "Read lear
 - **Related:** L-0079 (related_to), L-0073 (related_to), L-0085 (related_to)
 
 "Get everything going and keep it that way" — the system requires active maintenance, not just episode compliance. Stale files (ONBOARDING.md references, CLAUDE.md boilerplate, missing core.md, stale index.md, ACTIVE-CONSIDERATIONS.md drift) accumulate silently. Each is small; together they erode the system's reliability. Maintenance is not separate from feature work — it IS the work that makes feature work reliable. Each checkpoint should include a staleness scan beyond just the hash check.
+
+
+---
+
+### L-0092
+- **Type:** process_rule
+- **Status:** active
+- **Confidence:** high
+- **Tags:** prompt-stash, compaction-defense, context-preservation
+- **Related:** L-0074 (related_to), L-0078 (related_to)
+
+New protocol: stash Brian's prompt as first action in every response to ~/auto-sdd/.prompt-stash.json. Replaces previous stash (only latest prompt retained). Purpose: if compaction or context loss occurs mid-processing, the source material survives in the filesystem. Clear stash only after content sufficiently mined into learnings/memories/actions. Order: (1) stash prompt, (2) read .onboarding-state, (3) increment count, (4) scan for captures, (5) proceed with content.
+
+---
+
+### L-0093
+- **Type:** failure_pattern
+- **Status:** active
+- **Confidence:** high
+- **Tags:** compaction, checkpoint, integrity, resilience
+- **Related:** L-0092 (related_to), L-0070 (related_to)
+
+Compaction hit during checkpoint protocol (2026-03-01). Checkpoint had already committed and pushed (3490cf5) before compaction, so all repo state survived. Conversational context was lost. Lesson: the checkpoint protocol IS the compaction defense — committed work survives, uncommitted doesn't. The 8-step protocol should always push as early as possible in the step sequence. Prompt stashing (L-0092) adds a second defense layer for the input side.
+
+---
+
+### L-0094
+- **Type:** empirical_finding
+- **Status:** active
+- **Confidence:** high
+- **Tags:** claude-md, stakd, project-specific, battle-tested
+- **Related:** L-0087 (refines), L-0089 (corrects)
+
+CLAUDE.md audit (2026-03-01): Root CLAUDE.md (468 lines) = SDD scaffold + auto-sdd governance (git discipline, onboarding protocol, learnings paths) + generic implementation rules. stakd/CLAUDE.md (461 lines) = same scaffold minus auto-sdd governance PLUS battle-tested Next.js 15 patterns (server/client boundaries, dynamic imports, params Promise, test compat). stakd-v2 adds transitive import check back. stakd-v3 = stakd. Brian's "wrong place" = orphaned stakd versions with valuable project-specific learnings, not root placement. L-0089 was wrong — corrected here.
+
+Root needs: strip SDD scaffold boilerplate (~300 lines of design tokens, component stubs, roadmap commands not in use), keep governance sections, consider absorbing battle-tested patterns from stakd/ as framework-agnostic principles. stakd versions serve their purpose for project-specific agents.
+
+---
+
+### L-0095
+- **Type:** process_rule
+- **Status:** active
+- **Confidence:** high
+- **Tags:** memory-system, optimization, token-budget, strategy
+- **Related:** L-0086 (refines), L-0083 (related_to)
+
+Memory optimization strategy: 15/30 slots, ~1,500 words injected every message. Slots #1-9 are essential (display rules, approval gates, protocol triggers). Slots #10-14 are situational (~300 tokens for rules applying ~30% of the time). Slot #15 is prompt stash (every response). Optimization candidates: (1) compress #10-14 into fewer slots, (2) move purely situational rules to repo learnings and trust onboarding to load them, (3) merge #1-3 into one compressed entry. Not restructuring now — Brian manages personal entries. Action: when approaching 20+ slots, migrate situational entries to repo. Monitor total token cost.
+
+---
+
+### L-0096
+- **Type:** methodology_signal
+- **Status:** active
+- **Confidence:** high
+- **Tags:** lucidity, urgency, opportunity, brian-context
+- **Related:** L-0075 (related_to), L-0073 (related_to)
+
+"I may not be this lucid tomorrow, so do what you can when you can." Brian recognizes that his ability to articulate system-level directives varies between sessions. When he's in high-lucidity mode (systematic, meta-level, process-focused), the AI should maximize what gets captured, structured, and committed — because the next session may be task-focused or less process-aware. This is an asymmetric opportunity: process insights are harder to generate than feature work. When Brian is thinking systemically, capture everything. The repo and memory persist; Brian's lucidity doesn't.
+
+---
+
+### L-0097
+- **Type:** process_rule
+- **Status:** active
+- **Confidence:** high
+- **Tags:** memory-repo-unified, dual-storage, system-design
+- **Related:** L-0069 (refines), L-0079 (refines), L-0086 (related_to)
+
+Memory and repo learnings are two parts of one larger system, not two separate tools. Memory = constitutional layer (always-injected, every message, cross-session without repo access). Repo = case law (loaded at onboard, queryable, inheritable by agents). They overlap when rules govern both session and agent behavior. They complement when: memory provides triggers that cause the session to consult repo for details. Example: memory says "follow onboarding state protocol" (trigger), repo says exactly how (full protocol steps). This is the correct pattern: memory triggers, repo specifies. Memory should never try to contain what repo specifies, and repo shouldn't duplicate what memory triggers.
