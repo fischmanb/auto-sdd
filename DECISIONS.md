@@ -87,3 +87,10 @@
 
 **Decision:** Remove line counts, entry counts, and other volatile numbers from README.
 **Why:** They go stale immediately. README should describe structure, not snapshot metrics.
+
+---
+
+## 2026-03-01 — Meta-document title: HOW-I-WORK-WITH-GENERATIVE-AI.md
+
+**Decision:** Title the methodology document `HOW-I-WORK-WITH-GENERATIVE-AI.md`. Repo-agnostic content, lives at auto-sdd root.
+**Why:** "Generative AI" scopes correctly without being too casual ("chatbots") or too narrow ("agents"). First-person framing is a feature given repo credibility. Considered `METHODOLOGY.md` (too generic) and `HOW-I-WORK-WITH-AI.md` (slightly less precise).
