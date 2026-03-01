@@ -17,11 +17,11 @@ Ordered by efficiency gain per complexity added:
    - **Build logs**: `stakd-v2/logs/build-*.log` and `stakd-v3/logs/build-*.log`.
    - Round 35 merged to main and pushed to origin.
    - **Data snapshot**: `~/auto-sdd/campaign-results/` — raw/ and reports/ per campaign variant.
-2. **Bash→Python conversion — Phase 0 in progress (2026-02-28).**
+2. **Bash→Python conversion — Phase 0 COMPLETE, Phase 1 ready (2026-03-01).**
    - Plan: `WIP/bash-to-python-conversion.md` (authoritative).
-   - Phase 0 deliverables: (a) conventions doc with full scope (error handling, subprocess, logging, state I/O, signal protocol, pytest patterns, interface stubs), (b) build-loop-local internal structure analysis.
-   - Key decisions this session: claude-wrapper moved to Phase 1 (5th parallel agent), launchd scripts stay bash, bash originals preserved in separate tree (`py/` for Python), conventions doc scope expanded with interface stubs. All logged in DECISIONS.md.
-   - Phase 1 = 5 parallel Claude Code agents (desktop app tabs), one per lib file + claude-wrapper.
+   - Phase 0 deliverables DONE: `py/auto_sdd/conventions.md` (481 lines — error handling, subprocess, logging, state I/O, signal protocol, pytest patterns, interface stubs, type hints, naming conventions, dependency rules, "what not to do"), `py/pyproject.toml`, `py/tests/conftest.py`, dependency map + interface stubs in WIP doc.
+   - Key decisions: claude-wrapper moved to Phase 1 (5th parallel agent), launchd scripts stay bash, bash originals preserved in separate tree (`py/`), conventions doc scope expanded with interface stubs. All logged in DECISIONS.md.
+   - **Phase 1 next**: 5 parallel Claude Code agents (desktop app tabs), one per lib file + claude-wrapper. Each agent gets conventions.md + its bash source + its test file target.
    - Python 3.12+, typed exceptions, mypy --strict, pytest, stdlib-only deps.
 3. **auto-QA (post-campaign validation pipeline)** — Multi-agent pipeline: boot app, Playwright browse, generate ACs from specs, test, catalog failures, RCA, fix through build gates. Seven phases (0-5, Phase 4 split into 4a+4b). Spec: `WIP/post-campaign-validation.md` (v0.3). *Spec complete, implementation not started. Will be implemented in Python post-conversion.*
 3. **Local model integration** — Replace cloud API with local LM Studio on Mac Studio. Reference: `archive/local-llm-pipeline/`. *Not started.*
