@@ -162,3 +162,15 @@ Related: L-0036 (related_to)
 Related: L-0038 (related_to)
 
 Build logs inside PROJECT_DIR will be destroyed. `$PROJECT_DIR/logs/` sits inside the git working tree. Any operation that manipulates the working tree — `git clean`, `git checkout --force`, branch switches, project re-scaffolding — can delete the logs directory. Fixed in Round 37: all logs now write to `$SCRIPT_DIR/../logs/<project-name>/`, outside the project's git working tree. Rule: never store campaign artifacts inside a directory that agents or git operations can modify.
+
+---
+
+## L-0039
+Type: failure_pattern
+Tags: architecture, agent-trust, language-choice, implicit-decisions
+Confidence: high
+Status: active
+Date: 2026-03-01T04:00:00-05:00
+Related: L-0001 (related_to)
+
+Agents make implicit architectural decisions that compound silently. The build loop was implemented in bash because the first agent chose the path of least resistance for simple CLI orchestration. Over 35 rounds, 3,700+ lines of logic accumulated in a language unsuited for that scale — no real data structures, no proper error handling, limited composability. Brian discovered this only when the ceiling became visible. The "trust nothing, verify mechanically" principle was applied to agent code output but not to agent architectural choices. Mitigation: explicitly ask "what language should this be in?" at project inception. Agents will not raise this question themselves.
