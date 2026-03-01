@@ -589,3 +589,59 @@ Actively manage memory alongside repo. When learnings update rules (e.g., L-0066
 - **Related:** L-0073 (related_to), L-0060 (related_to)
 
 This entire session produced zero feature development and 24 learnings (L-0057–L-0080). This IS the work. Building reliable process before running 5 parallel agents pays compound returns: each agent inherits the learnings, each session onboards cleanly, each failure mode is pre-documented. Meta-investment in process is not overhead — it's the thing that makes the feature work reliable when it starts.
+
+
+---
+
+### L-0081
+- **Type:** failure_pattern
+- **Status:** active
+- **Confidence:** high
+- **Tags:** state-protocol, interval-check, autonomy
+- **Related:** L-0070 (related_to), L-0074 (related_to)
+
+Asked Brian "Push? And checkpoint if you want" when prompt_count was at 4. The interval check is automatic — it fires at count >= 4, not on request. Asking turns a mechanical protocol into a social negotiation. Same class as L-0074: treating protocol as optional. When the counter says go, go.
+
+---
+
+### L-0082
+- **Type:** failure_pattern
+- **Status:** active
+- **Confidence:** high
+- **Tags:** instruction-following, browsing, explicit-requests
+- **Related:** L-0062 (related_to), L-0046 (related_to)
+
+Brian explicitly said "you should be managing both well for their unique advantages, dynamically" and "browse for answers or to check if needed and appropriate." Did not browse either system's limitations before responding. Wrote learnings about how to use both systems without checking what they actually contain or how they're constrained. Same root as L-0062/L-0046: not processing explicit input. When Brian says "browse X," browse X.
+
+---
+
+### L-0083
+- **Type:** empirical_finding
+- **Status:** active
+- **Confidence:** high
+- **Tags:** memory-system, limitations, state-audit
+- **Related:** L-0079 (related_to), L-0069 (related_to)
+
+Memory system state (2026-03-01): 14/30 slots used. Max 75000 chars per edit. Flat unstructured list injected into every context window — costs tokens on every message regardless of relevance. No query mechanism, no conditional inclusion. Best for: rules that apply to EVERY response (protocol triggers, approval gates, repo paths). Worst for: situational knowledge, verbose entries, anything also in learnings. Each memory slot competes with response budget. Entries should be maximally compressed, operationally critical, and not duplicating what the onboarding protocol already loads from repo.
+
+---
+
+### L-0084
+- **Type:** empirical_finding
+- **Status:** active
+- **Confidence:** high
+- **Tags:** learnings-system, limitations, state-audit, onboarding
+- **Related:** L-0083 (related_to), L-0060 (related_to)
+
+Repo learnings state (2026-03-01): 39 graph-compliant entries (L-0042–L-0080) ALL in agent-operations.md (591 lines, 35KB). ~47 old-format entries across 7 other files. core.md referenced by ONBOARDING.md fresh-onboard protocol but doesn't exist — fallback reads all of agent-operations.md, consuming 591 lines of context budget at session start. ONBOARDING.md references type-based file structure (failure-patterns.md, process-rules.md, etc.) that was never created; actual structure is topic-based (agent-operations.md, design.md, etc.). index.md stale (last updated Feb 26, references only stakd campaign). The learnings system works for writing but is hostile to reading — no curation layer between raw entries and onboarding consumption.
+
+---
+
+### L-0085
+- **Type:** process_rule
+- **Status:** active
+- **Confidence:** high
+- **Tags:** learnings-system, curation, onboarding, scalability
+- **Related:** L-0084 (fixes), L-0060 (related_to), L-0073 (related_to)
+
+agent-operations.md must be split or curated before it becomes onboarding-hostile. At 591 lines and growing, it violates the efficiency principle that drove splitting ACTIVE-CONSIDERATIONS.md from ONBOARDING.md. Options: (1) create core.md as the curated subset that onboarding actually reads (~20 highest-signal entries), (2) split by type (failure-patterns.md, process-rules.md as ONBOARDING.md already describes), (3) both. The graph schema enables this — Type and Tags fields make mechanical splitting possible. This should happen during or after Prompts 4/5 graph conversion.
