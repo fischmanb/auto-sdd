@@ -1,5 +1,7 @@
 # Agent Operations Learnings
 
+> **⚠️ DEPRECATED (2026-03-01):** All 38 entries migrated to `learnings/`. See `learnings/core.md` for curated onboard read, type-specific files for full catalog. This file is preserved for reference only — do not add new entries here.
+
 Process lessons and failure catalog for running Claude Code agents in auto-sdd.
 Consolidated from Agents.md, ONBOARDING.md, and PROMPT-ENGINEERING-GUIDE.md.
 
