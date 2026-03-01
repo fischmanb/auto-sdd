@@ -283,4 +283,38 @@ Claimed "no new decisions/learnings" when Brian had explicitly stated a new rule
 - **Tags:** system-design, self-correction, learnings-system, validation
 - **Related:** L-0048 (depends_on), L-0049 (depends_on)
 
-Graph schema's Related field created a structural integrity check: L-0050 referenced L-0048, but L-0048 didn't exist in the file. A simple grep for referenced-but-missing IDs surfaced two lost entries mechanically. The system caught its own gap without relying on operator memory. Design principle validated: make failures structurally visible through cross-references, not dependent on anyone noticing.
+Graph schema's Related field created a structural integrity check: L-0050 referenced L-0048, but L-0048 didn't exist in the file. A simple grep for referenced-but-missing IDs surfaced two lost entries mechanically. One instance demonstrating the principle — not yet validated across repeated use. Design direction supported: make failures structurally visible through cross-references, not dependent on anyone noticing.
+
+
+---
+
+### L-0054
+- **Type:** failure_pattern
+- **Status:** active
+- **Confidence:** high
+- **Tags:** capture-completeness, session-discipline, compaction-risk
+- **Related:** L-0049 (related_to), L-0053 (enabled_by)
+
+Learnings L-0048/49 were flagged and approved but never written to the repo file. They survived only as text in the compaction summary — not as durable state. Two sessions later, L-0050 referenced L-0048 in its Related field, creating a dangling reference that the audit caught. Rule: write to repo immediately upon approval. Approval without repo write is volatile — compaction, session end, or context loss can erase it.
+
+---
+
+### L-0055
+- **Type:** failure_pattern
+- **Status:** active
+- **Confidence:** high
+- **Tags:** language-precision, overclaiming, verification
+- **Related:** L-0052 (related_to), L-0053 (triggered_by)
+
+Used "validated" in L-0053 based on a single instance of cross-reference integrity catching a gap. One instance demonstrates a principle; validation requires repeated confirmation. Same error class as L-0052 (generalizing beyond evidence) but at the language level rather than data level. Corrected to "demonstrated." Rule: match confidence language to evidence strength.
+
+---
+
+### L-0056
+- **Type:** process_rule
+- **Status:** active
+- **Confidence:** high
+- **Tags:** operational-rules, precision, IFF-semantics
+- **Related:** L-0042 (related_to)
+
+Operational rules must use precise logical language. "Batching is fine IFF output is token-estimated successfully" means the biconditional — batching is acceptable if and only if the condition holds, not "generally fine" or "usually okay." Arbitrary limits (flat call counts, rigid recursion caps) that proxy for qualitative constraints should be replaced with the actual constraint. Sometimes depth is needed; the diagnostic for spiraling is purposelessness, not depth.
