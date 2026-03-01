@@ -135,8 +135,8 @@
 
 ## 2026-03-01 — Convert small bash utilities to Python too
 
-**Decision:** claude-wrapper, generate-mapping, nightly-review convert to Python alongside the larger files. Only launchd setup/uninstall scripts stay bash (plist manipulation is native bash territory). Bundle small utilities into one agent prompt.
-**Why:** One language, one test framework, one set of conventions. Eliminates split-language maintenance tax. Per-file overhead is tiny.
+**Decision:** All bash converts to Python, including claude-wrapper, generate-mapping, nightly-review, setup-overnight, and uninstall-overnight. No bash remainders. Bundle small utilities into one agent prompt.
+**Why:** One language, one test framework, one set of conventions. Eliminates split-language maintenance tax. launchd plist manipulation works fine via Python's `plistlib` + `subprocess`. Not worth preserving bash for any piece.
 
 ---
 
