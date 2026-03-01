@@ -838,3 +838,15 @@ Handoff file (.handoff.md) is ONLY read on the very first prompt of a fresh chat
 - **Related:** L-0080 (related_to), L-0096 (related_to)
 
 This session (2026-03-01) produced 61 graph-schema learnings (L-0042–L-0102), a handoff protocol, a retiring-chat protocol, Round 40 documentation, ~10 decisions, ~12 methodology signals, dual-storage strategy, and system audits — all process/meta work with zero feature code. Brian's investment in process infrastructure during a high-lucidity window (L-0096) has created the foundation for every future session. The compound return: every fresh session that reads core.md, checks .handoff.md, follows the checkpoint protocol, and respects approval gates is operating on infrastructure built today. Process sessions like this are rare — Brian usually runs feature work. Maximize when they happen.
+
+
+---
+
+### L-0103
+- **Type:** failure_pattern
+- **Status:** active
+- **Confidence:** high
+- **Tags:** truncation, response-scope, repeated-failure, self-monitoring
+- **Related:** L-0098 (pattern_of)
+
+Second truncation in same session despite L-0098 being written ONE response earlier. The pattern: knowing the rule isn't the same as following it. L-0098 said ">15 tool calls or >3 work items = split." The very next response attempted: ONBOARDING edit + learnings write + memory view + memory updates + ACTIVE-CONSIDERATIONS + checkpoint = 6 work items. The rule was fresh in context and still violated. Implication: scope estimation must happen BEFORE the first tool call, not as an afterthought. Concrete practice: count the work items in Brian's prompt, write the count, then decide what fits in ONE response.
