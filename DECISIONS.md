@@ -200,3 +200,36 @@
 **Decision:** build-loop-local decomposition analysis (Phase 3) runs after Phase 1 completes, not in parallel with it.
 **Why:** Phase separations serve double duty: dependency ordering AND context window discipline. Running Phase 3 alongside Phase 1 would mean Brian is managing 5-6 concurrent agent contexts. The calendar time savings are minimal (Phase 3 is one chat session, maybe 30 minutes). The cognitive overhead and parallelization complexity are not worth it.
 **Rejected:** Running Phase 3 in parallel with Phase 1 (no data dependency, but overextends context management and risks bloat).
+
+
+---
+
+## 2026-03-01 — Agent prompt length discipline
+
+**Decision:** Agent prompts target ~40-65 lines max. First drafts are consistently 2x effective length — cut aggressively before delivering. Describe intent not implementation. Agents write code; prompts say WHAT and WHY, not HOW at line level.
+**Why:** Accepted past prompts (Rounds 9, 13, etc.) were ~40 lines. The 150+ line prompt written this session injected chat session context drift into the agent's fresh start — defeating the purpose of fresh agent sessions. Over-specification wastes agent context budget before implementation begins.
+**Rejected:** Verbose prompts with field-by-field dictation, line-level code snippets, implementation steps the agent would figure out from reading the codebase.
+
+---
+
+## 2026-03-01 — Splitting criteria relaxed
+
+**Decision:** No rigid "one independently testable goal" or "3-4 files max" rule. As many goals as safely fit within agent context budget with room for generous exploration. Keep prompt tokens low, maintain structure and essentials. Integration tests when multi-testing after multi-change work.
+**Why:** The constraint is agent context budget, not goal count. Prescriptive file limits are the kind of thing the agent figures out. Brian's framing: "you can test as many as will safely fit, with room for generous exploration."
+**Rejected:** "No more than 3-4 files" rule, "independently testable systems" as splitting criteria.
+
+---
+
+## 2026-03-01 — Preconditions: no cd to repo
+
+**Decision:** Agent prompts do not include `cd ~/auto-sdd`. Agents run locally via Claude desktop app (Mac) Code tab and are already in the repo working directory.
+**Why:** `~/auto-sdd` resolves to `/root/auto-sdd` in sandbox contexts, causing wasted tool calls. Even locally, the agent is already in the project. The cd is wasted tokens.
+**Rejected:** Including cd as defensive precondition (causes failures in sandbox, unnecessary locally).
+
+---
+
+## 2026-03-01 — Agent execution environment
+
+**Decision:** Agents run through the Code section of the Claude for Mac desktop app on Brian's MacBook Air (Mac Studio later). Branches created by agents exist in the local repo. Not a sandbox — full local filesystem access.
+**Why:** Affects merge workflow (local branch names, no `origin/` prefix needed), push decisions (agents CAN push from local), and precondition design (no cd needed, repo is cwd).
+**Rejected:** N/A — factual capture of environment.
