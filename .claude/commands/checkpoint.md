@@ -30,19 +30,25 @@ Single command to ensure all context management files are current. Prevents cont
 - If any failure patterns, process rules, empirical findings, architectural rationale, or domain knowledge surfaced: flag for Brian with proposed entry (type, tags, body)
 - Do NOT auto-write to learnings files — Brian approves entries
 
-### 5. ONBOARDING.md Drift Check
+### 5. Methodology Signals
+- Scan session for operator-level insights: preferences, principles, reasoning patterns, workflow decisions, distinctions Brian drew, corrections that reveal generalizable rules
+- Bias toward capture — a false positive costs 5 seconds to delete, a false negative is gone
+- If any found: append raw notes to the accumulation section at the bottom of `HOW-I-WORK-WITH-GENERATIVE-AI.md` (create file with accumulation section if it doesn't exist)
+- Format: `- (YYYY-MM-DD) <raw observation>` — no curation, Brian prunes later
+
+### 6. ONBOARDING.md Drift Check
 - `md5 -q ~/auto-sdd/ONBOARDING.md` (or `md5sum` on Linux)
 - Compare to `last_check_hash` in `.onboarding-state`
 - If changed: note what changed (another session or Brian edited it)
 - Update hash
 
-### 6. Commit
+### 7. Commit
 - `git add .onboarding-state ACTIVE-CONSIDERATIONS.md DECISIONS.md`
-- Only add other files if they were modified (ONBOARDING.md, INDEX.md)
+- Only add other files if they were modified (ONBOARDING.md, INDEX.md, HOW-I-WORK-WITH-GENERATIVE-AI.md)
 - `git commit -m "checkpoint: <brief summary of what was flushed>"`
 - Ask Brian before pushing
 
-### 7. Update State
+### 8. Update State
 Write `.onboarding-state`:
 ```json
 {
