@@ -1046,6 +1046,48 @@ DRY_RUN_SKIP_AGENT=true ./tests/dry-run.sh
 
 ---
 
+### Round 41B — Convert eval.sh → eval_lib.py with pytest suite (Phase 1) (branch: claude/convert-eval-bash-to-python-fjrN3)
+
+**Date**: Mar 1, 2026
+
+**What was asked**: Convert lib/eval.sh to py/auto_sdd/lib/eval_lib.py with a comprehensive pytest test suite. Phase 1 of bash-to-Python conversion — one library file. Bash original stays untouched.
+
+**What actually happened**:
+- Created `py/auto_sdd/lib/eval_lib.py` (280 lines) converting all 4 public functions from `lib/eval.sh`:
+  - `run_mechanical_eval()` — deterministic commit analysis via git subprocess calls
+  - `generate_eval_prompt()` — eval agent prompt generation with CLAUDE.md/learnings injection
+  - `parse_eval_signal()` — signal extraction from multiline agent output
+  - `write_eval_result()` — atomic JSON write merging mechanical + agent eval data
+- Defined inline exception classes (`AutoSddError`, `EvalError`) since `errors.py` doesn't exist yet
+- Used `MechanicalEvalResult` dataclass matching conventions.md interface contract exactly
+- Atomic file writes via temp-then-rename for `write_eval_result`
+- Full type annotations, `mypy --strict` clean
+- Created `py/tests/test_eval_lib.py` (68 tests, all passing) — exceeds the 53 bash assertion target
+- Tests use real git repos in tmp_path (no mocks), mirroring the bash fixture approach
+
+**Design decisions**:
+- Python raises `EvalError` instead of returning exit code 1 with error JSON (more Pythonic)
+- Merge commits return `MechanicalEvalResult` with `skipped=True` in diff_stats (preserves bash JSON shape)
+- `diff_stats` dict uses `dict[str, int | str | bool | list[str]]` union type to match bash JSON fields
+- Feature name sanitization uses regex instead of bash tr/sed chain (same output)
+- Signal parsing uses simple string prefix matching (no awk needed)
+- Note: Python is 3.11.14 on this system (not 3.12+), but `from __future__ import annotations` handles all typing needs
+
+**What was NOT changed**: Bash originals (lib/eval.sh, tests/test-eval.sh), all files outside the allowed list (py/auto_sdd/lib/eval_lib.py, py/tests/test_eval_lib.py, Agents.md).
+
+**Verification**:
+- `mypy --strict py/auto_sdd/lib/eval_lib.py` → Success: no issues found in 1 source file
+- `pytest py/tests/test_eval_lib.py -v` → 68 passed in 9.50s
+- `git diff --stat` → Only eval_lib.py, test_eval_lib.py, and Agents.md
+
+**Notable observations**:
+- Bash `run_mechanical_eval` uses `python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()))'` for JSON-safe feature name encoding — not needed in Python
+- Empty tree hash (`4b825dc...`) is obtained via `git hash-object -t tree /dev/null` in both bash and Python
+- The bash test for `type_redeclarations` uses `git grep` against the parent commit, searching `.ts/.tsx` files — faithfully replicated
+- `parse_eval_signal` returns the *last* matching signal value (awk `END { print last }` pattern), which the Python version preserves
+
+---
+
 ## Known Gaps
 
 - No live integration testing — all validation is `bash -n` + unit tests + structural dry-run
