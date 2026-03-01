@@ -489,3 +489,103 @@ Checkpoints reset the interval counter because the counter measures distance-fro
 - **Related:** L-0059 (related_to)
 
 Dropping vowels in Brian's messages likely costs slightly more tokens on input (BPE tokenizers split unfamiliar character sequences into more subword tokens than common English words). But Brian's input is tiny relative to model output, so the token cost is negligible. The real test is whether abbreviations cause wasted output tokens via misinterpretation or clarification. They haven't. Brian saves typing time, Claude parses correctly, net positive. Not worth changing.
+
+
+---
+
+### L-0072
+- **Type:** empirical_finding
+- **Status:** active
+- **Confidence:** high
+- **Tags:** communication-style, evidence, accountability, images
+- **Related:** L-0062 (related_to), L-0046 (related_to), L-0065 (related_to)
+
+Brian attaches images as evidence and accountability artifacts, not decoration. Screenshot of unauthorized push (L-0066 evidence), screenshot of agent output (Prompt 6 verification). Pattern across multiple instances. When Brian attaches an image, it has evidentiary purpose — examine it for what it proves or disproves, not just what it shows.
+
+---
+
+### L-0073
+- **Type:** process_rule
+- **Status:** active
+- **Confidence:** high
+- **Tags:** collaboration, system-design, philosophy
+- **Related:** L-0068 (related_to), L-0060 (related_to)
+
+"Work with me/the system. We want to be 1." The system (state files, protocol, learnings graph, memory) is the collaboration medium, not overhead to manage alongside the real work. Using the system IS working with Brian; bypassing it is working alone. When protocol feels like friction, the response is to improve the protocol, not skip it.
+
+---
+
+### L-0074
+- **Type:** failure_pattern
+- **Status:** active
+- **Confidence:** high
+- **Tags:** state-protocol, cognitive-load, protocol-discipline
+- **Related:** L-0068 (refines), L-0044 (related_to)
+
+Protocol steps that feel "administrative" (increment counter, buffer captures, check hashes) get skipped under cognitive load — exactly when they matter most. prompt_count wasn't incrementing, pending_captures wasn't being used, interval checks weren't firing, all while the session was producing 15+ learnings. If a protocol is skippable when you're busy, it's not a protocol, it's an aspiration. The fix is mechanical: do the admin step FIRST in each response, before the interesting work.
+
+---
+
+### L-0075
+- **Type:** empirical_finding
+- **Status:** active
+- **Confidence:** high
+- **Tags:** communication-style, interaction-modes, response-strategy
+- **Related:** L-0063 (related_to), L-0064 (related_to)
+
+Brian has at least two distinct interaction modes requiring different responses. Testing mode: "do what your lessons instruct" — the answer exists in the system, Brian is checking whether Claude consults it. Response: look it up, don't theorize. Genuine uncertainty mode: "genuinely I do not know," "maybe ok, maybe both are useful to use for now?" — Brian is thinking out loud collaboratively. Response: be precise and collaborative, not defensive or preemptively self-critical. Distinguishing the mode prevents mismatched responses.
+
+---
+
+### L-0076
+- **Type:** process_rule
+- **Status:** active
+- **Confidence:** medium
+- **Tags:** learnings-system, response-budgeting, per-response-limits
+- **Related:** L-0061 (related_to), L-0067 (related_to)
+
+Per-response learnings budget: capture all that are warranted by the interaction's density, but budget tokens so that checkpoint mechanics can still fit in the same response. If the learnings batch is too large for checkpoint to follow, stage commits locally and flag that Brian needs to prompt once more. No hard numeric cap — density varies. The constraint is functional (leave room for protocol), not arbitrary. When in doubt, write more learnings and defer checkpoint rather than under-capture.
+
+---
+
+### L-0077
+- **Type:** empirical_finding
+- **Status:** active
+- **Confidence:** medium
+- **Tags:** tokenization, efficiency, asymmetry
+- **Related:** L-0071 (refines), L-0059 (related_to)
+
+Token budget is asymmetric: Brian's abbreviated input is negligible cost, model output dominates. Optimization should focus on output compression (compact display per L-0067, targeted reads per L-0059, purposeful tool calls per memory #10) not input expansion. Brian already optimizes his side. Each short Brian message that triggers a long response amplifies the asymmetry — reason to keep responses tight.
+
+---
+
+### L-0078
+- **Type:** process_rule
+- **Status:** active
+- **Confidence:** high
+- **Tags:** state-protocol, pending-captures, prescriptive-fix
+- **Related:** L-0068 (fixes), L-0074 (related_to)
+
+Prescriptive fix for L-0068 (bypassed pending_captures buffer): at the START of each response, before any substantive work: (1) read .onboarding-state, (2) increment prompt_count, (3) scan current message for capturable moments, (4) append any to pending_captures with 📌. Write state file immediately. THEN proceed with response content. Doing admin first prevents cognitive load from crowding it out. The buffer exists for the interval check to have something to check — an empty buffer should mean "nothing to capture," not "forgot to buffer."
+
+---
+
+### L-0079
+- **Type:** process_rule
+- **Status:** active
+- **Confidence:** high
+- **Tags:** memory-management, dual-storage, coherence
+- **Related:** L-0069 (refines), L-0067 (related_to)
+
+Actively manage memory alongside repo. When learnings update rules (e.g., L-0066 tightening the checkpoint auto-push exception), check if corresponding memory entries need updating. Memory bootstraps sessions without repo access; repo persists for agents and onboards. The two must stay coherent — stale memory that contradicts repo learnings causes the same class of failures as stale ONBOARDING.md. Treat memory audits as part of checkpoint hygiene.
+
+---
+
+### L-0080
+- **Type:** empirical_finding
+- **Status:** active
+- **Confidence:** high
+- **Tags:** meta-process, investment, compound-returns
+- **Related:** L-0073 (related_to), L-0060 (related_to)
+
+This entire session produced zero feature development and 24 learnings (L-0057–L-0080). This IS the work. Building reliable process before running 5 parallel agents pays compound returns: each agent inherits the learnings, each session onboards cleanly, each failure mode is pre-documented. Meta-investment in process is not overhead — it's the thing that makes the feature work reliable when it starts.
