@@ -63,3 +63,39 @@ Date: 2026-03-01T20:00:00-05:00
 Related: L-0107 (related_to)
 
 Sequential execution sufficient for Phase 1 on MacBook Air. Mac Studio was deemed necessary for 5 parallel agents. In practice, sequential execution on MacBook Air M3/16GB completed all 5 conversions in one session. Each agent ~5-10 min. The bottleneck was prompt engineering and review, not compute. Parallelism optimization was premature for this workload size.
+
+---
+
+## L-0121
+Type: empirical_finding
+Tags: agents, prompts, first-dispatch, validation
+Confidence: medium
+Status: active
+Date: 2026-03-02T03:00:00-05:00
+Related: L-0109 (validates), L-0045 (validates)
+
+Phase 2 agent (eval-sidecar conversion) succeeded on first dispatch: 31 tests, 77 assertions, mypy --strict clean, exactly 3 files modified (hard constraint). This is the first agent run using both the prompt engineering guide (L-0109) and dependency signatures instead of full source (L-0045) together. Single data point — not yet validated per Brian's demonstrated/validated distinction — but directionally supports the approach. Phase 1 also succeeded on first dispatch for all 5 agents. Combined: 6/6 first-dispatch successes since adopting the guide.
+
+---
+
+## L-0122
+Type: empirical_finding
+Tags: agents, hard-constraints, boundary-enforcement
+Confidence: high
+Status: active
+Date: 2026-03-02T03:00:00-05:00
+Related: L-0001 (related_to), L-0016 (related_to), L-0121 (related_to)
+
+Hard constraints boundary enforcement worked under pressure. The Phase 2 agent noticed .gitignore needed Python cache entries but correctly stayed within its 3-file boundary (eval_sidecar.py, test_eval_sidecar.py, Agents.md). The agent wanted to do more and flagged it in its summary instead of acting. This validates the hard constraints pattern from a different angle than L-0001/L-0016 — those are about agents exceeding scope silently; this shows an agent recognizing a legitimate need and correctly deferring it.
+
+---
+
+## L-0123
+Type: empirical_finding
+Tags: agents, preconditions, resilience
+Confidence: medium
+Status: active
+Date: 2026-03-02T03:00:00-05:00
+Related: L-0112 (related_to)
+
+Agent precondition check (HEAD hash) was invalidated by L-0112 coordination failure, but the agent produced correct output anyway. The precondition advanced from 6be9b74 to a67c60c (a learnings/ACTIVE-CONSIDERATIONS commit — no code changes). Either the agent didn't enforce the precondition strictly, or it adapted. The outcome was fine because the commit didn't touch any dependency, but this is a near-miss: if the intervening commit had modified a file the agent depended on, the output could have been silently wrong. Precondition checks exist for the bad case, not the good case.

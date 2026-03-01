@@ -170,3 +170,63 @@ Date: 2026-03-02T02:30:00-05:00
 Related: L-0109 (related_to), L-0016 (related_to)
 
 Checkpoint step 4 (learnings) must use active scan, not passive recall. The original wording "if any surfaced: flag" produced under-capture — a short session was declared "none new" without reviewing agent outcomes, corrections, or near-misses. Step 5 (methodology signals) already had active scan language ("scan session for...") and produced rich output. Step 4 needed the same structure. Active scan categories: agent completions (validate/contradict existing learnings?), Brian's corrections (each is a candidate), new rules or patterns, empirical findings, failures or near-misses. Under-capture is a failure mode equal to over-capture. Match capture density to session density.
+
+---
+
+## L-0114
+Type: process_rule
+Tags: documentation, propagation, protocol
+Confidence: high
+Status: active
+Date: 2026-03-02T03:00:00-05:00
+Related: L-0113 (depends_on)
+
+Protocol changes must propagate to all consumption points. A rule has (at minimum) a definition point (e.g. checkpoint.md), a summary point (e.g. ONBOARDING.md), and a delivery point (e.g. core.md that fresh sessions read). Changing one without the others creates silent drift — the protocol says one thing, the onboarding path teaches another. Discovered when L-0113 was written to checkpoint.md and ONBOARDING.md but not core.md until Brian corrected. Checklist for any protocol change: (1) definition file, (2) ONBOARDING.md summary, (3) core.md if it's a constitutional learning, (4) any ACTIVE-CONSIDERATIONS references.
+
+---
+
+## L-0115
+Type: process_rule
+Tags: documentation, counts, staleness, maintenance
+Confidence: high
+Status: active
+Date: 2026-03-02T03:00:00-05:00
+Related: L-0114 (related_to)
+
+Numeric references in documentation rot silently. ONBOARDING.md said "38 entries" when actual was 57. ACTIVE-CONSIDERATIONS said "63 graph-compliant" and "~47 old-format" — both wrong. Nobody noticed because prose ages gracefully but numbers go stale on every commit. No mechanical check exists for count drift. Mitigation: checkpoint staleness scan should include numeric claims about learnings counts, or replace absolute counts with "see learnings/ for current catalog" to avoid the problem entirely.
+
+---
+
+## L-0116
+Type: process_rule
+Tags: checkpoint, learnings, defaults
+Confidence: high
+Status: active
+Date: 2026-03-02T03:00:00-05:00
+Related: L-0113 (depends_on)
+
+"Nothing to capture" must never be the default assumption. The default should be "something to capture" and the scan must find reasons to skip, not reasons to include. The checkpoint immediately after L-0113 was committed demonstrated the failure: the AI performed the new active scan categories but still concluded "no new learnings" — because the default was still passive. The bias must flip: assume every session produces learnings unless the scan proves otherwise.
+
+---
+
+## L-0117
+Type: process_rule
+Tags: protocol, adoption, latency
+Confidence: high
+Status: active
+Date: 2026-03-02T03:00:00-05:00
+Related: L-0113 (depends_on), L-0116 (related_to)
+
+New protocol rules have a one-response adoption latency. L-0113 codified active scan. The very next checkpoint executed step 4 with the new categories but still under-captured — the behavioral pattern hadn't changed despite the written rule changing. A fresh session reading L-0113 cold would likely apply it more faithfully than the session that just wrote it, because the session that wrote it still carries the old behavioral inertia. Implication: after writing a new process rule, explicitly test it in the same session by re-running the step it modifies.
+
+---
+
+## L-0118
+Type: process_rule
+Tags: core-learnings, onboarding, delivery
+Confidence: high
+Status: active
+Date: 2026-03-02T03:00:00-05:00
+Related: L-0114 (depends_on)
+
+core.md is the actual delivery mechanism for learnings to fresh sessions. If a learning isn't in core.md, fresh sessions won't know it exists unless they happen to read the type-specific file. The onboarding protocol reads core.md — it does not read all type files. Therefore any learning that would cause a consequential mistake if missed must be in core.md. The selection criterion: "if a fresh session doesn't know this, will it make a mistake that matters?" If yes, it's core.

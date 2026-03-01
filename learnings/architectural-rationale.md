@@ -63,3 +63,15 @@ Date: 2026-03-01T20:30:00-05:00
 Related: L-0109 (related_to), L-0107 (related_to), L-0039 (related_to)
 
 Meta-process patterns transferable to build loop. The bash→Python conversion process surfaced 6 patterns the build loop doesn't implement: (1) code-level dependency analysis before execution order — build loop uses spec-declared deps but not actual import-level edges, (2) context budget estimation before agent dispatch — build loop fires without checking if prompt + summary + spec + headroom fits the effective window, (3) conventions doc injection so agents write consistent code — build loop gives codebase summary (what exists) but not conventions (how to write), which is why type redeclarations happen, (4) interface stubs as pre-declared contracts in specs — agents get descriptions not target signatures, (5) mechanical prompt quality gate before dispatch — build loop generates and dispatches immediately with no intermediate check, (6) cross-feature failure pattern feedback mid-campaign — if feature 5 fails the same way feature 3 did, the build loop doesn't notice or adapt. Items 2/3/5 are highest leverage and directly address documented failure modes. Design input for Phase 4 build-loop conversion.
+
+---
+
+## L-0124
+Type: architectural_rationale
+Tags: methodology-signals, learnings, feedback-loop, meta
+Confidence: high
+Status: active
+Date: 2026-03-02T03:00:00-05:00
+Related: L-0113 (related_to), L-0119 (related_to)
+
+HOW-I-WORK-WITH-GENERATIVE-AI.md methodology signals are leading indicators of protocol gaps. The evidence that checkpoint step 4 was broken sat in methodology signals for an indeterminate number of responses: "under-capture is a failure mode," "checkpoint should be thorough not mechanical," "Brian expects capture density to match session density." These were captured as raw observations (step 5) but never fed back into protocol review (step 4) or learnings. The methodology signals file is a pre-learnings staging area — observations accumulate there before they're synthesized into actionable rules. A periodic review of methodology signals for patterns that should become learnings or protocol changes would close this feedback loop.
