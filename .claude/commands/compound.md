@@ -4,40 +4,51 @@ description: Extract and persist learnings from the current coding session
 
 Extract learnings from this session and persist them.
 
-## Instructions
+## IMPORTANT: Use New Learnings System
 
-1. **Reflect** on what was accomplished this session
-2. **Identify** patterns, gotchas, decisions, and bug fixes
-3. **Categorize** each learning:
-   - Feature-specific → add to that spec's `## Learnings` section
-   - Cross-cutting → add to `.specs/learnings/{category}.md`:
-     - Testing patterns → `testing.md`
-     - Performance → `performance.md`
-     - Security → `security.md`
-     - API & Data → `api.md`
-     - Design System → `design.md`
-     - General → `general.md`
-   - Also add brief entry to `.specs/learnings/index.md` under "Recent Learnings"
-4. **Update** the `updated:` date in any modified spec frontmatter
-5. **Commit** changes with message `compound: learnings from [brief description]`
-6. **Summarize** what was captured and where
+**Do NOT write to `.specs/learnings/`.** That is the legacy location.
 
-## Learning Format
+All new learnings go in `learnings/` using graph-schema format. See `learnings/core.md` for the format reference.
+
+For chat sessions (claude.ai with Desktop Commander): use the checkpoint protocol (`.claude/commands/checkpoint.md` step 4) instead of this command. The checkpoint protocol has active scan categories, default-flip, self-test, and propagation checks.
+
+For Claude Code agents: this command can still be used, but output must follow the graph-schema format below.
+
+## Graph-Schema Learning Format
 
 ```markdown
-### YYYY-MM-DD
-- **Pattern**: [What worked well]
-- **Gotcha**: [Edge case or pitfall]
-- **Decision**: [Choice made and rationale]
+## L-XXXX
+Type: process_rule | failure_pattern | empirical_finding | architectural_rationale | domain_knowledge
+Tags: tag1, tag2, tag3
+Confidence: high | medium | low
+Status: active | superseded | deprecated
+Date: YYYY-MM-DDTHH:MM:SS-05:00
+Related: L-YYYY (depends_on | related_to | supersedes | validates)
+
+[Body text describing the learning — what happened, why it matters, what to do differently.]
 ```
 
-## Category Routing
+## Process
+
+1. **Reflect** on what was accomplished this session
+2. **Identify** patterns, gotchas, decisions, and bug fixes using active scan categories:
+   - Agent completions (validate/contradict existing learnings?)
+   - Corrections (each is a candidate)
+   - New rules or patterns
+   - Empirical findings
+   - Failures or near-misses
+3. **Get next L-number**: `grep -h "^## L-" learnings/*.md | sort -t'-' -k2 -n | tail -1`
+4. **Categorize** each learning by type → write to corresponding `learnings/{type}.md`
+5. **Check core.md**: Does this learning belong in the curated set? (L-0118)
+6. **Run** `/verify-learnings-counts` to catch count drift (L-0115)
+7. **Commit** changes with message `compound: L-XXXX–L-YYYY from [brief description]`
+
+## Category Routing (New System)
 
 | Type | Where |
 |------|-------|
-| Mocking, assertions, test structure | `testing.md` |
-| Lazy loading, caching, bundle size | `performance.md` |
-| Auth, cookies, validation, secrets | `security.md` |
-| Endpoints, error handling, data shapes | `api.md` |
-| Tokens, components, a11y, responsive | `design.md` |
-| Everything else | `general.md` |
+| Process rules, session discipline | `learnings/process-rules.md` |
+| Things that went wrong | `learnings/failure-patterns.md` |
+| Measured outcomes, data points | `learnings/empirical-findings.md` |
+| Design decisions, transferable patterns | `learnings/architectural-rationale.md` |
+| Project-specific technical knowledge | `learnings/domain-knowledge.md` |

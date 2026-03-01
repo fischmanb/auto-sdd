@@ -85,3 +85,9 @@ Checkpoint step 4 must actively scan: agent completions (validate/contradict exi
 **Why core:** L-0113 added scan categories but the very next checkpoint still under-captured because the default assumption didn't flip. Without this, a session can walk through all five categories and still conclude "none new" because it's looking for reasons to include rather than reasons to skip. This is the behavioral root that makes L-0113 work or fail.
 
 "Nothing to capture" must never be the default assumption. The default is "something to capture" — the scan must find reasons to skip, not reasons to include. A scan that reviews every category and finds zero candidates in a session with agent completions, corrections, and system improvements is evidence of the scan failing, not evidence of nothing to capture.
+
+---
+
+## L-0125 — Scan existing project assets before building new process infrastructure
+**Source:** `architectural-rationale.md`
+**Why core:** The checkpoint/learnings system was built without checking what slash commands and conventions files already existed. Four commands already had reusable patterns (`/catch-drift`, `/check-coverage`, `/update-test-docs`, `/verify-test-counts`). CLAUDE.md — the file every Claude Code agent reads — pointed to the old learnings location (`.specs/learnings/`) while the new system lived in `learnings/`. `/compound` wrote to the wrong place. Any process change must audit: (1) existing commands for reusable patterns, (2) CLAUDE.md and other conventions files for references the change invalidates, (3) existing tooling that can be wired in mechanically instead of rebuilt.

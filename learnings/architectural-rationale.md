@@ -75,3 +75,27 @@ Date: 2026-03-02T03:00:00-05:00
 Related: L-0113 (related_to), L-0119 (related_to)
 
 HOW-I-WORK-WITH-GENERATIVE-AI.md methodology signals are leading indicators of protocol gaps. The evidence that checkpoint step 4 was broken sat in methodology signals for an indeterminate number of responses: "under-capture is a failure mode," "checkpoint should be thorough not mechanical," "Brian expects capture density to match session density." These were captured as raw observations (step 5) but never fed back into protocol review (step 4) or learnings. The methodology signals file is a pre-learnings staging area — observations accumulate there before they're synthesized into actionable rules. A periodic review of methodology signals for patterns that should become learnings or protocol changes would close this feedback loop.
+
+---
+
+## L-0125
+Type: architectural_rationale
+Tags: meta-process, infrastructure-reuse, slash-commands, convention-drift
+Confidence: high
+Status: active
+Date: 2026-03-02T03:30:00-05:00
+Related: L-0115 (depends_on), L-0114 (related_to), L-0119 (related_to)
+
+New meta-process infrastructure must scan existing project assets for reusable patterns before building from scratch. The checkpoint/learnings system was built in isolation from the slash command library. Four commands already embodied patterns the system needed: `/catch-drift` (source-of-truth vs claims comparison), `/check-coverage` (gap analysis), `/update-test-docs` (sync docs with reality), `/verify-test-counts` (mechanical count reconciliation). Only the last one was connected — and only after Brian pointed it out. Meanwhile, CLAUDE.md (the conventions file all agents read) still pointed to `.specs/learnings/` (old system) while the new system lives in `learnings/`. `/compound` still writes to the old location. Any agent following CLAUDE.md would write learnings to the wrong place. The pattern: when building process infrastructure, first audit existing commands and conventions files for (1) reusable patterns, (2) stale references the new system invalidates, (3) existing tooling that can be wired in mechanically.
+
+---
+
+## L-0129
+Type: architectural_rationale
+Tags: build-system, repo-agnostic, separation-of-concerns
+Confidence: high
+Status: active
+Date: 2026-03-02T03:45:00-05:00
+Related: L-0125 (related_to)
+
+Auto-sdd's build system must remain repo-agnostic. Checkpoint tooling, learnings management, and meta-process commands (like `/verify-learnings-counts`) are auto-sdd's own development infrastructure — they exist to help develop auto-sdd itself. The build loop that auto-sdd runs to build other projects must not depend on or assume these files exist in the target repo. Mechanical integrations into the checkpoint protocol are safe (they run in auto-sdd's context). Mechanical integrations into the build loop are not (they would impose auto-sdd's structure on target repos).

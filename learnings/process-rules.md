@@ -230,3 +230,27 @@ Date: 2026-03-02T03:00:00-05:00
 Related: L-0114 (depends_on)
 
 core.md is the actual delivery mechanism for learnings to fresh sessions. If a learning isn't in core.md, fresh sessions won't know it exists unless they happen to read the type-specific file. The onboarding protocol reads core.md — it does not read all type files. Therefore any learning that would cause a consequential mistake if missed must be in core.md. The selection criterion: "if a fresh session doesn't know this, will it make a mistake that matters?" If yes, it's core.
+
+---
+
+## L-0127
+Type: process_rule
+Tags: response-scope, work-items, planning
+Confidence: high
+Status: active
+Date: 2026-03-02T03:45:00-05:00
+Related: L-0113 (related_to)
+
+Count work items BEFORE the first tool call, every response. The instruction exists in memory ("Count work items BEFORE first tool call. >3 distinct work items or >15 tool calls = split across responses") but was not followed in the response that failed — it attempted learnings capture, three file integrations, and system wiring all at once. The count must be explicit and visible, not implicit. State "N work items this response, splitting M for next" before starting work. A failed response wastes more time than two successful ones.
+
+---
+
+## L-0128
+Type: process_rule
+Tags: learnings, enforcement, mechanical-vs-prose
+Confidence: high
+Status: active
+Date: 2026-03-02T03:45:00-05:00
+Related: L-0113 (depends_on), L-0115 (validates), L-0116 (validates)
+
+Learnings that remain prose get ignored; learnings that become mechanical checks get followed. L-0113 (active scan) was prose — the very next checkpoint under-captured. `/verify-learnings-counts` (L-0115) is mechanical — it runs grep, compares numbers, reports discrepancies. The pattern: when a learning identifies a recurring failure mode, the fix is not a better-worded rule but a tool or command that enforces the rule without requiring the AI to remember it. Prose rules require behavioral compliance. Mechanical checks require only invocation.
