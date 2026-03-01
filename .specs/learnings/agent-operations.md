@@ -645,3 +645,70 @@ Repo learnings state (2026-03-01): 39 graph-compliant entries (L-0042–L-0080) 
 - **Related:** L-0084 (fixes), L-0060 (related_to), L-0073 (related_to)
 
 agent-operations.md must be split or curated before it becomes onboarding-hostile. At 591 lines and growing, it violates the efficiency principle that drove splitting ACTIVE-CONSIDERATIONS.md from ONBOARDING.md. Options: (1) create core.md as the curated subset that onboarding actually reads (~20 highest-signal entries), (2) split by type (failure-patterns.md, process-rules.md as ONBOARDING.md already describes), (3) both. The graph schema enables this — Type and Tags fields make mechanical splitting possible. This should happen during or after Prompts 4/5 graph conversion.
+
+
+---
+
+### L-0086
+- **Type:** empirical_finding
+- **Status:** active
+- **Confidence:** high
+- **Tags:** memory-management, strategy, dual-storage, token-budget
+- **Related:** L-0083 (refines), L-0084 (refines), L-0079 (related_to)
+
+Memory/repo management strategy (derived from browsing both systems): Memory (14/30 slots, always injected) should contain ONLY rules that must apply to every single response — approval gates, repo paths, protocol triggers, display preferences. Each slot costs tokens on every message. Repo learnings (queryable via grep, loaded at onboard) should contain everything else — failure patterns, empirical findings, process rules, architectural rationale. The two overlap IFF a rule governs both session behavior and agent behavior (L-0069). Memory is the constitutional layer; repo is the case law. When in doubt, repo — it's loaded on demand, memory is loaded always.
+
+---
+
+### L-0087
+- **Type:** empirical_finding
+- **Status:** active
+- **Confidence:** high
+- **Tags:** claude-md, context-budget, staleness, agent-onboarding
+- **Related:** L-0084 (related_to), L-0042 (related_to)
+
+CLAUDE.md is 468 lines, injected into every Claude Code agent session. ~80% is stale SDD scaffold (design system tokens, component stubs, roadmap commands not in current use). Operationally relevant content: git discipline section, transitive import boundary check, onboarding state protocol, learnings reference. This is the same class of problem as L-0084 (learnings hostile to reading) — context budget consumed by stale content displaces useful context. Needs audit: strip to operationally relevant content, move reference material elsewhere.
+
+---
+
+### L-0088
+- **Type:** process_rule
+- **Status:** active
+- **Confidence:** high
+- **Tags:** agents-md, work-tracking, scope-expansion
+- **Related:** L-0080 (related_to)
+
+Agents.md tracks all significant work rounds, not just Claude Code agent runs. Chat sessions that produce substantial deliverables (this session: 32 learnings, protocol fixes, system audits) qualify as rounds. Entry format adapts to medium — "chat session" vs agent branch, session focus vs feature name. The purpose is tracking work rounds; the medium is secondary.
+
+---
+
+### L-0089
+- **Type:** empirical_finding
+- **Status:** active
+- **Confidence:** high
+- **Tags:** claude-md, file-placement, convention
+- **Related:** L-0087 (related_to)
+
+CLAUDE.md at repo root is the correct location for Claude Code auto-read. `.claude/` directory contains commands/ and settings.local.json. Brian flagged "claude.md is in the wrong place" — may mean content needs restructuring (strip stale boilerplate) rather than file relocation. Or may mean something else. Flagged for clarification. The issue is real regardless: 468 lines of mostly stale content is expensive context for every agent session.
+
+---
+
+### L-0090
+- **Type:** empirical_finding
+- **Status:** active
+- **Confidence:** high
+- **Tags:** core-learnings, onboarding, missing-file
+- **Related:** L-0084 (related_to), L-0085 (related_to)
+
+core.md referenced by ONBOARDING.md fresh-onboard protocol (line 376: "Read learnings/core.md") but file doesn't exist. Fallback reads agent-operations.md (now 648+ lines). core.md's purpose: curated constitutional subset (~15-20 entries) that every session MUST internalize. Without it, fresh sessions either read nothing or read everything. Creating core.md is prerequisite to the learnings system functioning as designed. Must contain the highest-signal process rules and failure patterns — the ones that repeat when not internalized. Candidates: L-0063 (enumerate before acting), L-0074 (admin first), L-0078 (prescriptive state protocol fix), L-0066 (rule gaming), L-0046/62/82 (evidence processing cluster).
+
+---
+
+### L-0091
+- **Type:** process_rule
+- **Status:** active
+- **Confidence:** high
+- **Tags:** system-coherence, ongoing-maintenance, self-management
+- **Related:** L-0079 (related_to), L-0073 (related_to), L-0085 (related_to)
+
+"Get everything going and keep it that way" — the system requires active maintenance, not just episode compliance. Stale files (ONBOARDING.md references, CLAUDE.md boilerplate, missing core.md, stale index.md, ACTIVE-CONSIDERATIONS.md drift) accumulate silently. Each is small; together they erode the system's reliability. Maintenance is not separate from feature work — it IS the work that makes feature work reliable. Each checkpoint should include a staleness scan beyond just the hash check.

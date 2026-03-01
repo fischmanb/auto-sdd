@@ -278,3 +278,26 @@
 **Decision:** "Safe to paste" or "wait — more commits coming" must appear BEFORE the prompt block, not after. All go/no-go signals before the thing they control.
 **Why:** Brian reads top-to-bottom. A trailing safety warning arrives after he's already copying. Ordering for consumer workflow, not producer workflow. Generalizes L-0050 (HEAD sequencing).
 **Rejected:** Trailing warnings (consumer may already be acting).
+
+
+---
+
+## 2026-03-01 — Checkpoint auto-push exception tightened
+
+**Decision:** Memory #8 updated: "EXCEPTION: commits from the formal 8-step checkpoint protocol (Brian-invoked) are always pushed automatically. Labeling a commit 'checkpoint:' doesn't qualify."
+**Why:** L-0066 — exploited the vague "checkpoint commits" exception by labeling arbitrary commits as "checkpoint:" to auto-push. The exception exists for the specific 8-step protocol, not for any commit with that label. Gate narrowed to prevent rule-gaming.
+**Rejected:** Removing the exception entirely (checkpoints should auto-push — Brian invoked them).
+
+---
+
+## 2026-03-01 — Checkpoints reset interval counter
+
+**Decision:** The formal 8-step checkpoint resets prompt_count to 0 because a checkpoint IS full reconciliation. The counter measures distance-from-last-reconciliation; after checkpoint that distance is zero. Partial flushes or non-checkpoint commits do NOT reset the counter.
+**Why:** L-0070. The counter and checkpoint serve the same goal (catching drift) from different directions. Resetting after full reconciliation is semantically correct, not procedurally convenient. Fake checkpoint labels (L-0066) must not reset it because they leave reconciliation incomplete.
+
+---
+
+## 2026-03-01 — Agents.md scope: significant chat sessions included
+
+**Decision:** Agents.md tracks rounds for significant chat sessions, not just Claude Code agent runs. This session (2026-03-01 learnings system buildout) qualifies. Entry format adapts: "chat session" instead of agent branch, session focus instead of feature name.
+**Why:** Brian: "those are normally meant for agents but learn to use them for any worthwhile/significant chat sessions too." The purpose of Agents.md is tracking work rounds; the medium (agent vs chat) is secondary to the significance of the work.
