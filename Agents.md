@@ -1044,6 +1044,37 @@ DRY_RUN_SKIP_AGENT=true ./tests/dry-run.sh
 - index.md stale
 - CLAUDE.md placement: RESOLVED — root is correct, stakd/ versions are orphaned with battle-tested Next.js patterns (L-0094)
 
+### Round 41E — Convert claude-wrapper.sh to Python (branch: claude/bash-to-python-wrapper-KHlhP)
+
+**Date**: Mar 1, 2026
+**Medium**: Claude Code agent (Phase 1 bash-to-Python conversion)
+
+**What was asked**: Convert `lib/claude-wrapper.sh` to `py/auto_sdd/lib/claude_wrapper.py` with a comprehensive pytest test suite. Phase 1 of the bash-to-Python conversion — single library file, Python coexists in the `py/` tree.
+
+**What actually happened**:
+- Created `py/auto_sdd/lib/claude_wrapper.py` (~195 lines) implementing the `ClaudeResult` dataclass and `run_claude()` function per the interface contract in `conventions.md`.
+- Created `py/tests/test_claude_wrapper.py` (~380 lines) with 35 tests covering: `_dominant_model` helper (6 tests), `_build_cost_record` (4 tests), `ClaudeResult` dataclass (2 tests), `run_claude` success path (5 tests), cost logging (5 tests), error paths (7 tests), edge cases (6 tests).
+- Design decisions:
+  - Added `ClaudeOutputError` exception (not in bash) for when claude exits 0 but returns invalid JSON or JSON without `.result`. Bash just wrote to stderr and exited with the original code; Python raises explicitly so callers can catch it.
+  - Cost log write failures are caught and logged as warnings rather than crashing — the function still returns successfully. This matches bash behavior where `>> "$COST_LOG" 2>/dev/null` silently drops write failures.
+  - `_dominant_model()` and `_build_cost_record()` are module-private helpers (prefixed with `_`) but tested directly for coverage.
+  - Inline exception classes (`AutoSddError`, `AgentTimeoutError`, `ClaudeOutputError`) since `errors.py` doesn't exist yet.
+  - Used `isinstance` type narrowing throughout instead of `type: ignore` to satisfy mypy --strict with `dict[str, object]` values.
+  - JSONL cost log format exactly matches bash output: all 12 fields preserved (timestamp, cost_usd, input_tokens, output_tokens, cache_creation_tokens, cache_read_tokens, duration_ms, duration_api_ms, num_turns, model, session_id, stop_reason).
+
+**What was NOT changed**: Bash originals (`lib/claude-wrapper.sh`), all files outside the allowed list. No shared module files (`errors.py`, `signals.py`, `state.py`) were created.
+
+**Verification**:
+- `mypy --strict py/auto_sdd/lib/claude_wrapper.py` → Success: no issues found in 1 source file
+- `pytest py/tests/test_claude_wrapper.py -v` → 35 passed in 0.20s
+- `git diff --stat` → Only `Agents.md`, `py/auto_sdd/lib/claude_wrapper.py`, `py/tests/test_claude_wrapper.py`
+
+**Notable observations**:
+- The bash script is 62 lines but packs dense jq logic for model extraction (`modelUsage | to_entries[] | max_by(.total)`). The Python equivalent is clearer but longer.
+- Bash uses `set -uo pipefail` but intentionally omits `-e` — this is documented in the script itself. The Python conversion eliminates this concern entirely since subprocess failures are handled explicitly.
+- The bash `COST_LOG` defaults to `./cost-log.jsonl` via env var; the Python version makes it an explicit parameter (no env var fallback), which is cleaner for library code.
+- Python 3.11 was available on the system (not 3.12+), but all code is compatible. The `from __future__ import annotations` import handles `X | Y` union syntax.
+
 ---
 
 ## Known Gaps
