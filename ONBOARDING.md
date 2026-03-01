@@ -2,7 +2,7 @@
 
 > **Read this file first.** It gives a fresh Claude instance everything needed to pick up work on `auto-sdd` with Brian.
 >
-> Last updated: 2026-02-28
+> Last updated: 2026-03-01
 
 > **⚠️ Per-response protocol**: Read and update `.onboarding-state` on every project-related response. See "Keeping This File Current" for full rules.
 
@@ -59,32 +59,9 @@ Chat sessions (claude.ai with Desktop Commander or any equivalent tool or capabi
 3. **Local model integration** — replace cloud API with local LM Studio on Mac Studio
 4. **Adaptive routing / parallelism** — only if data from 1-3 shows remaining sequential bottleneck justifies the complexity
 
-### Remediation status (Rounds 21-30)
+### Remediation status
 
-Build loop remediation from `build-loop-failure-investigation.md` (37 findings). **All remediation rounds complete (21-26).** Eval system (27-29) and mechanical validation (30) added on top.
-
-- ~~Resume state lost on crash~~ — ✅ Fixed Round 21 (findings #17, #28, #34)
-- ~~Nested Claude Code session hang~~ — ✅ Fixed Round 21 (finding #8)
-- ~~No retry delay / orphan branches on retry~~ — ✅ Fixed Round 22 (findings #2, #18, #35)
-- ~~Overnight script missing retry mechanism~~ — ✅ Fixed Round 22 (bonus: credit exhaustion also ported)
-- ~~No build log for runs 2-3~~ — ✅ Fixed Round 23 (finding #20)
-- ~~Model not logged per feature~~ — ✅ Fixed Round 23 (findings #14, #37)
-- ~~Orphan branches never cleaned~~ — ✅ Fixed Round 23 (finding #19)
-- ~~NODE_ENV=production breaks dev builds~~ — ✅ Fixed Round 23 (finding #5)
-- ~~stakd CLAUDE.md + learnings~~ — ✅ Fixed Round 24 (findings #3, #12, #22, #25, #26, #27, #33). stakd CLAUDE.md has Next.js 15 rules. Primary learnings catalog populated.
-- ~~Learnings consolidation~~ — ✅ Done (2026-02-26). All learnings in `.specs/learnings/`. Agent process lessons consolidated in `agent-operations.md`. Duplicates removed from Agents.md, ONBOARDING.md, PROMPT-ENGINEERING-GUIDE.md.
-- **Codebase summary generation function + tests** — ✅ Done Round 25 (findings #11, #21, #23). `lib/codebase-summary.sh` provides `generate_codebase_summary()`. 23-assertion test suite in `tests/test-codebase-summary.sh`.
-- **Codebase summary wiring into build loop** — ✅ Done Round 26 (same findings, completes integration). Sourced in both scripts. Injected into `build_feature_prompt()` and `build_feature_prompt_overnight()` via `${codebase_summary:+...}` pattern.
-- **Eval function library + tests** — ✅ Done Round 27. `lib/eval.sh` — mechanical eval, prompt generation, signal parsing, result writing. 53-assertion test suite.
-- **Eval sidecar script + integration** — ✅ Done Rounds 28-28b. `scripts/eval-sidecar.sh` — standalone sidecar. Auto-launches from both build scripts. `EVAL_AGENT=true` by default.
-- **Eval sidecar cooperative drain** — ✅ Done Round 29. Sentinel file triggers graceful queue drain. Both build scripts manage sidecar lifecycle.
-- **Mechanical validation gates** — ✅ Done Round 30. Three non-blocking gates: test count regression, dead export detection, static analysis/lint. Default `POST_BUILD_STEPS=test,dead-code,lint`.
-- **Retry resilience** — ✅ Done Round 31. Three bugs from failed stakd-v2 campaign: (1) `git clean -fd` exclusions for node_modules et al. (2) Signal fallback detection when retry agent omits `FEATURE_BUILT:`. (3) Cascade failure (Bug 3 = consequence of Bug 1).
-- **Retry prompt signal hardening** — ✅ Done Round 31.1. Parameterized retry prompt with actual feature name, added emphatic CRITICAL signal block as final prompt content.
-- **Shell portability + path resolution** — ✅ Done Rounds 32-33. Round 32: all 17 scripts converted from `#!/bin/bash` to `#!/usr/bin/env bash`. Round 33: `PROJECT_DIR` resolved to absolute path via `realpath`/fallback.
-- **claude-wrapper.sh rewrite + MAIN_BRANCH hardening** — ✅ Done Round 34. Removed `set -e` from wrapper, stderr redirected to file instead of `/dev/null`, unset `CLAUDECODE` env var. `MAIN_BRANCH` detection rejects `auto/*` branches. Fixed `SCRIPT_DIR` path for wrapper invocation.
-- **Sidecar bug fixes + model log fix** — ✅ Done Round 35. Sidecar died from `source` inline execution + dual launch race. Fixed: sidecar runs in subshell, dedup via PID check, health monitoring. Model log cosmetic fix (jq `keys[0]`). **154 assertions passing.** Merged to main as `dbf2997`.
-- **Sidecar feedback loop** — ✅ Done Round 37. Three functions in `build-loop-local.sh`: `read_latest_eval_feedback()`, `update_repeated_mistakes()`, `get_cumulative_mistakes()`. Injected into `build_feature_prompt()`. All 4 `BUILT_FEATURE_NAMES+=` sites track mistakes. Advisory only. **154 assertions passing.** Merged to main as `cecf7bb`.
+All remediation rounds (21-37) complete. **154 assertions passing.** See Agents.md for per-round details and git history for individual commits. This section is frozen — new work items go into Active Considerations while active and get pruned when done.
 
 ### Known gaps
 
@@ -133,20 +110,7 @@ After at least one full campaign, a function will correlate t-shirt sizes from r
 
 ### Other active items
 
-- **Build loop remediation (2026-02-26)**: All remediation rounds complete (21-26). Eval system rounds complete (27-29). Mechanical validation gates added (30). Rounds 21-23: resume persist, CLAUDECODE guard, retry hardening with branch reuse, overnight retry+credit detection, build log rotation, model logging, branch cleanup, NODE_ENV guard. Round 24: stakd CLAUDE.md Next.js 15 rules + learnings populated. Learnings consolidated into `.specs/learnings/` with `agent-operations.md` as single source of truth for process lessons. Round 25: codebase summary generation function + 23-assertion test suite. Round 26: wired summary into both build prompt functions. Process lessons from this batch: (1) keep agent prompts concise — describe intent, not implementation code; (2) push main to origin before running agent prompts, otherwise agents fork from stale `origin/main` and require merge cleanup after each round; (3) all learnings go in primary repos, not project-specific dirs.
-- **Onboarding state protocol**: Implemented 2026-02-25. Mechanical enforcement via `~/auto-sdd/.onboarding-state` file — tracks prompt count, buffers pending captures, triggers interval checks. Memory instruction points all future chats to the protocol. See "Keeping This File Current" section.
-- **Agent git discipline**: Updated 2026-02-26. CLAUDE.md now has "Git Discipline" section (no merge, no push, always include Agents.md entry, origin divergence check). PROMPT-ENGINEERING-GUIDE.md clarified: allowlist always includes Agents.md for implementation prompts, Section 5 renamed "Commit (no merge)", merge prompts are Brian-initiated only.
-- **Eval sidecar system (2026-02-26)**: Round 27: `lib/eval.sh` — four functions (mechanical eval, eval prompt generation, signal parsing, result writing). 53-assertion test suite. Round 28: `scripts/eval-sidecar.sh` — standalone sidecar that polls for new commits, runs mechanical evals (and optionally agent evals), writes per-feature JSON, aggregates campaign summary on exit. Round 28b: auto-launches sidecar from both build scripts as background process, `EVAL_AGENT=true` by default. Round 29: cooperative drain shutdown — sentinel file triggers graceful queue drain before campaign summary instead of hard SIGTERM. Both build scripts manage sidecar lifecycle (`start_eval_sidecar()` / `stop_eval_sidecar()`). Observational only — never blocks builds, never modifies files.
-- **claude-wrapper.sh path fix (2026-02-26)**: Relative path to `lib/claude-wrapper.sh` broke when `PROJECT_DIR` != repo root. Fixed in both `build-loop-local.sh` and `overnight-autonomous.sh` to use `$SCRIPT_DIR/../lib/` instead.
-- **Mechanical validation gates (2026-02-26)**: Round 30: Three non-blocking post-build gates added to both build scripts. (1) Test count regression — tracks high-water mark of passing tests across features, warns on drop. (2) Dead export detection — scans for exported symbols with zero import sites. (3) Static analysis — auto-detects linter config (ESLint, Biome, flake8, ruff, Clippy, golangci-lint) and runs if present. Default `POST_BUILD_STEPS` is now `test,dead-code,lint`. All gates warn only, never fail the build.
-- **Retry resilience + signal hardening + shell fixes (2026-02-27)**: Round 31: git clean exclusions, signal fallback, cascade failure fix. Round 31.1: Parameterized retry prompt. Rounds 32-34: Shell portability (`#!/usr/bin/env bash` on 17 scripts), PROJECT_DIR absolute resolution, claude-wrapper.sh rewrite (no `set -e`, stderr to file, unset CLAUDECODE), MAIN_BRANCH rejects `auto/*`. Round 35: Sidecar source/dedup/health fixes, model log jq fix. All merged to main (`dbf2997`). **154 assertions passing.**
-- **PROMPT-ENGINEERING-GUIDE.md (2026-02-27)**: Verification section updated to require all 5 test suites (test-reliability, test-eval, test-validation, test-codebase-summary, dry-run).
-- **Agent push discipline (2026-02-27)**: Agents ignore "do NOT push" instructions 100% of the time (Rounds 32-34). Documented as expected behavior — prompt wording makes no difference. Not a bug to fix.
-- **Sidecar feedback loop (2026-02-28)**: ✅ Done Round 37. Three functions added to `build-loop-local.sh`: `read_latest_eval_feedback()`, `update_repeated_mistakes()`, `get_cumulative_mistakes()`. Feedback injected into `build_feature_prompt()`. Mistake tracking at all 4 success paths. Advisory only. Merged `cecf7bb`.
-- **Prompt self-containment requirement (2026-02-28)**: Agent prompts must be fully self-contained for fresh context execution. No file references ("read the spec first") — agent in a fresh context has no access to prior files. All necessary context must be inline in the prompt itself. This applies to all prompts delivered in chat.
-- **Transitive import boundary failure catalog (2026-02-28)**: Root cause of stakd-v1 and stakd-v2 post-campaign build failures documented across three locations: (1) `.specs/learnings/agent-operations.md` failure catalog entry, (2) `.specs/learnings/general.md` debugging pattern, (3) `CLAUDE.md` prevention rule (both auto-sdd and stakd-v2). Commits: `e981489` (auto-sdd), `803728ae` (stakd-v2). Rule: every client component implementation must trace imports recursively and verify no server-only module (db drivers, Node builtins) is reachable. Production build required — dev mode won't catch it.
-- **Post-campaign validation pipeline (2026-02-28)**: Spec complete at `WIP/post-campaign-validation.md` (v0.3). Seven-phase pipeline: Phase 0 (Runtime Bootstrap + auth bootstrap, shell), Phase 1 (Discovery Agent, Playwright, uses QA credentials if available), Phase 2a (Spec-Based AC with discrepancy classification: FOUND/MISSING/PARTIAL/DRIFTED), Phase 2b (Gap Detection for UNEXPECTED elements), Phase 3/3b (Playwright Validation), Phase 4a (Failure Catalog — objective, no analysis), Phase 4b (Root Cause Analysis — groups failures, identifies files, prioritizes), Phase 5 (Fix Agents through existing gates). Key design decisions: Playwright over MCP browser tools; Phase 4 split into Catalog + RCA for verifiability; discrepancy classification drives different AC and fix strategies; document versioning system with auto/manual flush modes; project-agnostic (not stakd-specific); QA test account as build-phase deliverable (`scripts/qa-seed.ts`) — build agent produces seed script for auth-gated projects, random credentials per run, graceful degradation if missing. Build order: Runtime Bootstrap first (everything depends on it), Fix Agents last.
-- **Knowledge graph for workflow continuity (2026-02-28)**: Proposed as solution to cross-session context loss exposed by transcript isolation. Scope: personal workflow tool first (track entities/relationships across sessions), productize later. Simpler than AlphaNeuro or auto-sdd. Real constraint is scope discipline. *Design phase — no implementation started.*
+- **Knowledge graph for workflow continuity (2026-02-28)**: Proposed as solution to cross-session context loss exposed by transcript isolation. Scope: personal workflow tool first (track entities/relationships across sessions), productize later. Real constraint is scope discipline. *Design phase — no implementation started.*
 
 ---
 
@@ -355,7 +319,7 @@ auto-sdd/
 ├── Brians-Notes/
 │   └── PROMPT-ENGINEERING-GUIDE.md  # Prompt methodology + failure catalog
 ├── WIP/                             # Work-in-progress specs and designs
-│   └── post-campaign-validation.md  # Post-campaign validation pipeline spec (v0.2)
+│   └── post-campaign-validation.md  # Post-campaign validation pipeline spec (v0.3)
 ├── ONBOARDING.md                  # ← YOU ARE HERE
 ├── CLAUDE.md                      # Agent instructions (read by Claude Code automatically)
 ├── Agents.md                      # Agent work log + architecture + verification checklist
@@ -406,8 +370,14 @@ A JSON state file at `~/auto-sdd/.onboarding-state` tracks update status:
 **Fresh onboard (state file missing or `last_check_ts` > 24h stale)**:
 - Full read of ONBOARDING.md. This is the only case where the whole file gets read.
 - Read `.specs/learnings/agent-operations.md` — the consolidated failure catalog and process lessons. These hard-won failure modes repeat if not internalized at session start.
-- **Flush stale captures**: If `pending_captures` is non-empty, reconcile them into the **Active Considerations** section immediately during onboard. This is exempt from the read-only-first-response rule — the state protocol's own writes are always permitted. Without this, short sessions (< 4 prompts) can die before the interval trigger fires, and captures survive indefinitely across session boundaries without ever landing in ONBOARDING.md.
-- **The first response of any new session must be read-only.** Read ONBOARDING.md, read the failure catalog, read the state file, flush stale captures if present, report status. No other file writes, no commits, no edits.
+- **Flush stale captures**: If `pending_captures` is non-empty, reconcile them into the **Active Considerations** section immediately.
+- **Staleness sweep**: Check each item in Active Considerations and Other active items. If an item is clearly done (has ✅, "merged", "complete", "done", or describes work that's already in the priority stack), remove it. This catches items that were marked done but never pruned by the session that completed them.
+- Report status. No other file writes, no commits, no edits beyond protocol housekeeping (flushes, pruning).
+
+**Continuing session (state file < 24h, recognizably the same work context)**:
+- Read/write `.onboarding-state` per the per-response protocol. That's it.
+- Do NOT re-read the full ONBOARDING.md. The session already has context.
+- If the interval check fires and `pending_captures` is non-empty, read only the **Active Considerations** section header boundaries (~15 lines) to reconcile. Don't read the whole file.
 
 **Cost profile**: 95% of responses = read/write a 5-line file (negligible). Every ~4th response = one md5 + maybe 15 lines (minimal). New chat after a break = full read (appropriate).
 
@@ -426,6 +396,20 @@ This includes:
 ### What to capture
 
 Not just outcomes. The **Active Considerations** section exists specifically for in-progress thinking. A fresh chat that knows what was being discussed is 10x more useful than one that only knows what was decided.
+
+### Maintenance rules (preventing staleness)
+
+These are as important as the capture rules. Capturing without pruning is how the file got bloated in the first place.
+
+**1. Completion pruning (same-session):** When a session marks something ✅ done, it removes the full item from Active Considerations in that same session. Replace it with a one-liner summary that stays for exactly one cycle (so the next fresh chat sees what just finished), then the next fresh onboard's staleness sweep removes the one-liner.
+
+**2. No duplication across sections:** If something is in the priority stack, it does not also get a bullet in "Other active items." One canonical location per item. The priority stack is for sequenced execution items. "Other active items" is for things that don't have a clear sequence position (ongoing processes, design explorations, unresolved questions).
+
+**3. Remediation section is frozen:** The remediation checklist is historical and compressed. New work goes into Active Considerations while active, gets pruned per rule 1 when done. Nothing gets appended to the remediation section.
+
+**4. Fresh onboard staleness sweep:** Every fresh onboard (full read) includes checking Active Considerations for completed items. Anything with ✅, "merged," "complete," "done," or that describes work already captured in the priority stack gets removed. This is the safety net for items that slipped through same-session pruning.
+
+**5. Priority stack hygiene:** When a priority stack item is fully complete (not just "in progress"), move it out of the numbered list. Add a one-line "Recently completed" entry below the stack if the next session needs to know. The stack should only contain actionable next steps.
 
 ### How to update
 
