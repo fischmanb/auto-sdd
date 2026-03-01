@@ -186,3 +186,15 @@ Date: 2026-03-01T20:00:00-05:00
 Related: L-0106 (related_to)
 
 Sandbox branch locality trap. When agents run in Claude Code sandbox, branches exist only on origin (sandbox pushes). They are NOT on the local machine. `git branch` shows nothing — must `git fetch` first. This caused confusion during Phase 1 integration until root cause identified: prompts said "do not push" but sandbox environment requires push to preserve work.
+
+---
+
+## L-0112
+Type: failure_pattern
+Tags: git, agents, prompts, coordination
+Confidence: high
+Status: active
+Date: 2026-03-01T21:00:00-05:00
+Related: L-0109 (related_to), L-0105 (related_to)
+
+Do not commit to main while an agent prompt referencing HEAD is in flight. After delivering Phase 2 agent prompt with precondition `HEAD: 6be9b74`, committed L-0111 to main and pushed — advancing HEAD to `a67c60c`. This invalidated the agent's precondition check. The commit (a learning + ACTIVE-CONSIDERATIONS update) was not time-sensitive and could have waited. Rule: once an agent prompt is delivered, main is frozen until the agent forks its branch or Brian confirms the prompt wasn't used yet. Housekeeping commits are never urgent enough to justify breaking an in-flight prompt.
