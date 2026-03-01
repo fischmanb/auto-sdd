@@ -242,3 +242,12 @@
 **Decision:** When updating prompts, code, or any artifact that will be used in a separate context, always reprint the full updated version. Never say "just swap X" or "same as before but change Y."
 **Why:** Brian runs agent prompts in Claude Desktop Code tab — a separate context that never sees the chat conversation. "Same but change the hash" is useless to the agent. Every artifact must be self-contained when delivered. Same principle applies to code snippets, config blocks, etc.
 **Rejected:** Incremental diff-style updates (require reader to mentally merge, error-prone across contexts).
+
+
+---
+
+## 2026-03-01 — HEAD-sequencing for agent prompts
+
+**Decision:** When outputting agent prompts, if subsequent actions in the same response will move HEAD (commits, pushes), either output the prompt AFTER those actions with the final HEAD hash, or explicitly warn Brian to wait before pasting. The prompt's precondition must always reflect the HEAD that will exist when he pastes it.
+**Why:** Brian pasted a prompt expecting HEAD `c7ffb4f`, but 3 more commits had moved HEAD to `dd5cdb4` by the time the response finished. Agent precondition check would have failed. Responsibility for sequencing is on Claude, not Brian — "no YOU need to tell me to wait."
+**Rejected:** Relying on user to notice HEAD drift mid-response (invisible to them until agent fails).
