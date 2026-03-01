@@ -133,19 +133,37 @@ The project's core principle — fresh contexts per stage to avoid context rot �
 
 **Context budget rule**: Every prompt must be scoped so the agent's total context consumption — prompt text + files read + code written + tool output + verification — stays within the safely effective context window (no degradation or rot). Estimate this before delivering the prompt. If the estimated total scope would exceed ~75% of the effective window, split into multiple rounds. For example: if a task estimates at ~1.5x the safe window, split into two rounds each targeting ~0.75x, not one round that pushes the boundary. Agents that run hot against the context ceiling produce the "wait, actually..." pattern — repeated self-corrections, lost constraints, and unreliable output. The cost of a second round is near zero; the cost of context rot is a wasted run.
 
-**Rule of thumb**: A single implementation prompt should target one cohesive unit of work that modifies no more than 3-4 files with interrelated changes. When a task exceeds this, split it into sequential prompts where each round commits its work and the next round builds on a verified foundation.
+**Rule of thumb**: A single implementation prompt should target one cohesive unit of work — as many goals as safely fit within context budget with room left for agent exploration. Keep prompt tokens low so the agent has headroom for reading, reasoning, and course-correcting. When estimated total context consumption makes that infeasible, split into sequential prompts where each round commits its work and the next round builds on a verified foundation.
 
 **Splitting criteria** (any one of these warrants a split):
 - Estimated total agent context consumption exceeds ~75% of the safe effective window
 - More than ~4 files being modified with non-trivial changes in each
 - Changes to core orchestration logic AND a new algorithm/function AND test additions AND prompt template rewrites in the same prompt
 - The prompt itself exceeds ~200 lines (the prompt is consuming the agent's context budget before implementation starts)
-- Changes span two independently testable systems (e.g., build-loop-local.sh and overnight-autonomous.sh)
+- Multi-system changes where you'd want integration tests after both sides land — split so each side gets its own round and verification, then add a follow-up round for cross-system integration testing if needed
 - You find yourself writing "also do X" after the main implementation is already fully specified
 
 **How to split**: Each sub-prompt is a full Round with its own branch, Hard Constraints, Implementation, Verification, and Agents.md entry. The second prompt's Preconditions include verifying that the first round's commit exists and tests pass. This is strictly better than one large prompt because each round gets verified independently — a failure in round N doesn't contaminate round N+1's context.
 
 **Anti-pattern**: "Let's just add one more thing to the prompt since the agent is already in there." This is how Round 1-class failures happen. The marginal cost of a fresh agent session is near zero. The marginal risk of scope creep in a bloated prompt is high.
+
+---
+
+## Agent Autonomy Loop
+
+Not every decision point needs to be prescribed in the prompt. When an implementation prompt intentionally leaves a design question open — because the answer depends on what the agent finds in the codebase — the agent should follow this loop:
+
+1. **Test**: Try the approach that seems most natural given what you've read so far.
+2. **Investigate/Learn**: If it doesn't work or feels wrong, read the relevant code to understand why. State what you're reading and why.
+3. **Evaluate**: Weigh the options based on what you actually found, not on assumptions.
+4. **Verify**: Confirm your choice works — run the tests, check the output, grep for side effects.
+5. **Report**: Document what you decided and why in your Agents.md round entry.
+
+This connects directly to the context budget rule above. Prescribing what the agent would figure out on its own wastes prompt tokens — tokens that the agent needs for exploration, reading, and course-correction. A prompt that spells out every implementation detail leaves no room for the agent to adapt when reality doesn't match the prompt author's assumptions.
+
+**When to prescribe vs. leave open**: Prescribe constraints (file allowlists, verification gates, scope boundaries) and intent (what the change should accomplish). Leave open the implementation path (which helper to call, how to structure the code, which pattern to follow). The agent has the codebase in front of it; the prompt author is working from memory.
+
+**When to stop**: The autonomy loop does NOT override the hard constraint to stop on unexpected findings. If the agent's investigation reveals something structurally wrong — files that don't match descriptions, missing dependencies, architectural conflicts — it stops and reports. The autonomy loop is for navigating expected implementation decisions, not for working around problems.
 
 ---
 

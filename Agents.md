@@ -972,6 +972,24 @@ DRY_RUN_SKIP_AGENT=true ./tests/dry-run.sh
 
 ---
 
+### Round 38 — Agent autonomy loop + relax splitting criteria in prompt guide (branch: claude/update-docs-NKN9u)
+
+**Date**: Mar 1, 2026
+
+**What was asked**: Two changes to `Brians-Notes/PROMPT-ENGINEERING-GUIDE.md`: (1) Add an "Agent Autonomy Loop" section after "Prompt Sizing and Splitting", documenting the pattern for when agents hit decision points the prompt intentionally left open: test → investigate/learn → evaluate → verify → report. Connect to existing context budget rule. (2) Revise the splitting criteria — remove the prescriptive "no more than 3-4 files" rule of thumb and the rigid "independently testable systems" bullet. The real constraint is agent context budget, not goal count.
+
+**What actually happened**:
+- Removed "no more than 3-4 files" from the Rule of thumb paragraph. Replaced with guidance about fitting as many goals as safely fit within context budget with room for agent exploration, keeping prompt tokens low.
+- Replaced the "independently testable systems" splitting bullet with guidance about multi-system changes needing per-side verification rounds plus optional cross-system integration testing.
+- Added new "Agent Autonomy Loop" section between "Prompt Sizing and Splitting" and "Merge Prompts". Documents the five-step loop (test, investigate/learn, evaluate, verify, report), explains how it connects to context budget (prescribing what the agent would figure out wastes tokens), and clarifies when to prescribe vs. leave open. Includes explicit note that the autonomy loop does NOT override hard constraint stop rules.
+- This Agents.md entry.
+
+**What was NOT changed**: No scripts, no lib/, no tests, no .specs/, no CLAUDE.md, no ONBOARDING.md. Only `Brians-Notes/PROMPT-ENGINEERING-GUIDE.md` and `Agents.md`.
+
+**Verification**: `grep "Agent Autonomy Loop"` confirms section exists. `grep -c "independently testable"` returns 0 (removed). `git diff --stat` shows only 2 files.
+
+---
+
 ## Known Gaps
 
 - No live integration testing — all validation is `bash -n` + unit tests + structural dry-run
