@@ -261,3 +261,20 @@
 **Why:** A flat count of 10 was binding on checkpoints (10 lightweight calls, ~200 lines total output) while permitting 5 full-file reads that would consume far more context. The constraint was a blunt proxy for "don't spiral," but spiraling is a behavior problem, not a counting problem. The real constraint is context consumed and purposefulness, not call count. Brian: "how many lines does a single full file have?" — forcing measurement over theory.
 **Rejected:** Flat 10-call limit (penalized lightweight ops, didn't penalize expensive ones). Blanket no-batching rule (sometimes batching is the right call if output is predictable). Arbitrary recursion limits (some tasks require depth).
 **Correction:** Initial version of this decision claimed "repo's largest file is 439 lines" — only checked 8 context files, not the repo. Actual largest: build-loop-local.sh at 2,299 lines. Weak assumption from unverified generalization (see L-0052).
+
+
+---
+
+## 2026-03-01 — Agent summary reporting: observations yes, /learnings writes no
+
+**Decision:** Agent prompts should include a summary footer requesting notable observations (unexpected behaviors, judgment calls, workarounds). Agents never write to /learnings directly. The chat session triages observations into L-IDs and flags at checkpoint per step 4 (Brian approves).
+**Why:** Agent autonomy structure (L-0042) ends with "report." L-0043 requires changelogs. But current prompts don't ask agents to surface learnable moments. Without this, agent discoveries are lost unless the chat session infers them from merge diffs. The approval gate stays with Brian; agents just surface raw material.
+**Rejected:** Agents writing directly to /learnings (bypasses approval). Silent agent summaries (loses observations).
+
+---
+
+## 2026-03-01 — Safety gates before artifacts
+
+**Decision:** "Safe to paste" or "wait — more commits coming" must appear BEFORE the prompt block, not after. All go/no-go signals before the thing they control.
+**Why:** Brian reads top-to-bottom. A trailing safety warning arrives after he's already copying. Ordering for consumer workflow, not producer workflow. Generalizes L-0050 (HEAD sequencing).
+**Rejected:** Trailing warnings (consumer may already be acting).

@@ -318,3 +318,26 @@ Used "validated" in L-0053 based on a single instance of cross-reference integri
 - **Related:** L-0042 (related_to)
 
 Operational rules must use precise logical language. "Batching is fine IFF output is token-estimated successfully" means the biconditional — batching is acceptable if and only if the condition holds, not "generally fine" or "usually okay." Arbitrary limits (flat call counts, rigid recursion caps) that proxy for qualitative constraints should be replaced with the actual constraint. Sometimes depth is needed; the diagnostic for spiraling is purposelessness, not depth.
+
+
+---
+
+### L-0057
+- **Type:** process_rule
+- **Status:** active
+- **Confidence:** high
+- **Tags:** artifact-delivery, agent-prompting, consumer-ordering
+- **Related:** L-0050 (refines), L-0048 (related_to)
+
+Safety gates (safe to paste / wait) must appear BEFORE the artifact they gate, not after. Brian reads top-to-bottom and may already be copying before reaching a trailing warning. Information must be ordered for the consumer's workflow, not the producer's. Same principle as L-0050 (HEAD sequencing) generalized: all go/no-go signals before the thing they control.
+
+---
+
+### L-0058
+- **Type:** process_rule
+- **Status:** active
+- **Confidence:** high
+- **Tags:** agent-prompting, learnings-system, report-structure
+- **Related:** L-0042 (depends_on), L-0043 (related_to)
+
+Agents should surface observations and judgment calls in their summaries but never write to /learnings directly. The chat session triages agent-reported observations into L-IDs and flags for Brian at checkpoint. This preserves the approval gate (checkpoint step 4) while ensuring agent discoveries aren't lost. Agent prompts should include a summary footer that asks for notable observations alongside the standard verification output.
