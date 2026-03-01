@@ -29,3 +29,8 @@ tests/dry-run-verbose.log
 *.swo
 node_modules/
 tsconfig.tsbuildinfo
+
+# Separate repos (not submodules)
+stakd/
+stakd-v2/
+stakd-v3/

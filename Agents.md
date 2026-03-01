@@ -1024,15 +1024,25 @@ DRY_RUN_SKIP_AGENT=true ./tests/dry-run.sh
 
 **What was NOT changed**: No scripts, no lib/, no tests, no Python code, no agent prompts executed. Pure process/meta work.
 
-**Commits**: 788f8a8, a167773, b79e578, cfe018a, ab59d3e, 896dd23, 71754fb, e998abd, plus this checkpoint commit.
+**Commits**: 788f8a8, a167773, b79e578, cfe018a, ab59d3e, 896dd23, 71754fb, e998abd, 3490cf5, c5774d1, e58ed8c, 5f7df69, plus this checkpoint commit.
+
+**Session continued (post-compaction)**:
+- L-0092–L-0102 written (prompt stash protocol, compaction defense, CLAUDE.md audit findings, memory optimization, lucidity windows, unified system, truncation defense, handoff scope, compound returns).
+- Retiring-chat handoff protocol created (.specs/HANDOFF-PROTOCOL.md). This session's .handoff.md written.
+- ONBOARDING.md updated: fresh-onboard checks for .handoff.md (first prompt only, L-0101).
+- Response truncated mid-core.md creation (L-0098) — confirmed scope management failure.
+- Memory #15 added (prompt stash). 15/30 slots, all verified accurate.
+- 2 additional decisions, 1 additional methodology signal.
+
+**Final counts**: 61 learnings (L-0042–L-0102), ~12 decisions, ~12 methodology signals.
 
 **Open items from this session**:
-- core.md needs creation (curated ~15-20 entries for onboarding)
-- CLAUDE.md needs audit/strip (~80% stale)
+- core.md needs creation (curated ~15-20 entries for onboarding) — HIGHEST PRIORITY
+- CLAUDE.md needs strip (~468→100-150 lines, ~80% stale)
 - Old-format learnings conversion (Prompts 4/5, ~47 entries)
-- ONBOARDING.md references wrong file structure (failure-patterns.md etc. don't exist)
+- ONBOARDING.md stale references (failure-patterns.md etc. don't exist)
 - index.md stale
-- Brian flagged "claude.md is in the wrong place" — needs clarification
+- CLAUDE.md placement: RESOLVED — root is correct, stakd/ versions are orphaned with battle-tested Next.js patterns (L-0094)
 
 ---
 

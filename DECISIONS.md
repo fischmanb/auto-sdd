@@ -332,3 +332,16 @@
 
 **Decision:** Before starting work in a response, estimate total tool calls and output volume. If >15 tool calls or >3 distinct work items, split across responses. Checkpoint alone is ~12 calls; don't stack substantive new work on top.
 **Why:** L-0098. Response truncated trying to do checkpoint + 6 learnings + decisions + ACTIVE-CONSIDERATIONS + commit + core.md creation in one response. The generation limit is a hard constraint, not a suggestion. Splitting is free (Brian just says "continue"); truncation loses work and context.
+
+---
+
+## 2026-03-01 — Handoff.md scope: fresh-chat first prompt only
+
+**Decision:** `.handoff.md` is ONLY read on the very first prompt of a fresh chat session. Continuing sessions ignore it. After absorption, the fresh session deletes it.
+**Why:** L-0101. Handoff is ephemeral session-bridging state. Reading it mid-session wastes context budget on already-absorbed material. Stale handoff context persisting across multiple sessions would cause confusion. Single-use, single-consumer design.
+**Rejected:** Reading on every onboard check (wasteful). Keeping handoff files around (stale risk).
+
+## 2026-03-01 — No new memory slots for handoff/scope protocols
+
+**Decision:** Handoff protocol and response scope discipline documented in repo only (HANDOFF-PROTOCOL.md, L-0098), not as memory slots. Existing 15/30 slots are correct.
+**Why:** L-0097 — memory triggers (always-injected), repo specifies (on-demand). Handoff triggers on session retirement (rare), not every response. Response scope is covered by memory #10 (purposefulness). Adding memory slots for rare triggers wastes always-injected budget.
