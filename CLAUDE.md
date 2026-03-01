@@ -31,8 +31,8 @@ This project uses a spec-driven development workflow. Follow these rules in all 
 │   ├── tokens.md          # Colors, spacing, typography
 │   └── components/        # Component pattern docs
 │       └── {component}.md
-├── learnings/             # Cross-cutting patterns by category
-│   ├── index.md           # Summary
+├── learnings/             # LEGACY — migrating to top-level learnings/
+│   ├── index.md           # Summary (legacy)
 │   ├── testing.md
 │   ├── performance.md
 │   ├── security.md
@@ -196,7 +196,7 @@ When new components are created:
 | `/document-code` | Generate specs from existing code |
 | `/prototype` | Rapid prototyping without specs |
 | `/formalize` | Convert prototype to production with specs |
-| `/compound` | Extract and persist learnings from session |
+| `/compound` | Extract learnings (graph-schema format → `learnings/`) |
 
 ### Roadmap Commands
 | Command | Purpose |
@@ -226,6 +226,8 @@ When new components are created:
 | `/update-test-docs` | Sync test docs with actual tests |
 | `/catch-drift` | Detect spec ↔ code drift |
 | `/verify-test-counts` | Reconcile test counts |
+| `/verify-learnings-counts` | Reconcile learnings counts vs documentation |
+| `/checkpoint` | Update all context management files (session boundary) |
 
 ### Git Workflow
 | Command | Purpose |
@@ -269,7 +271,8 @@ When working with specs, always tell the user:
 | Design tokens | `.specs/design-system/tokens.md` |
 | Component docs | `.specs/design-system/components/{name}.md` |
 | Mapping | `.specs/mapping.md` (auto-generated) |
-| Cross-cutting learnings | `.specs/learnings/` (by category) |
+| Cross-cutting learnings | `learnings/` (graph-schema, L-numbered) |
+| Legacy learnings (migrating) | `.specs/learnings/` (old format, do not write) |
 
 ---
 
@@ -305,25 +308,22 @@ updated: YYYY-MM-DD
 
 ## Learnings
 
-Cross-cutting learnings are stored in `.specs/learnings/` by category:
+Cross-cutting learnings are stored in `learnings/` using graph-schema format (L-numbered entries with type, tags, confidence, status, date, and related fields):
 
-| Category | File |
-|----------|------|
-| Testing | `.specs/learnings/testing.md` |
-| Performance | `.specs/learnings/performance.md` |
-| Security | `.specs/learnings/security.md` |
-| API & Data | `.specs/learnings/api.md` |
-| Design System | `.specs/learnings/design.md` |
-| General | `.specs/learnings/general.md` |
-| Agent Operations | `.specs/learnings/agent-operations.md` |
+| Type File | Contents |
+|-----------|----------|
+| `learnings/core.md` | **Read first** — curated constitutional learnings |
+| `learnings/process-rules.md` | Session discipline, checkpoint protocol, documentation rules |
+| `learnings/failure-patterns.md` | Things that went wrong and why |
+| `learnings/empirical-findings.md` | Measured outcomes, data points, validated patterns |
+| `learnings/architectural-rationale.md` | Design decisions and transferable patterns |
+| `learnings/domain-knowledge.md` | Project-specific technical knowledge |
 
-Read `.specs/learnings/index.md` for a summary and recent learnings.
+**Legacy location**: `.specs/learnings/` contains old-format entries from the original SDD system. These are being migrated. Do NOT write new learnings there.
 
-Feature-specific learnings are in each spec's `## Learnings` section.
+Feature-specific learnings remain in each spec's `## Learnings` section.
 
-Run `/compound` at the end of implementation sessions to extract and persist learnings.
-
-**Important**: All learnings go in `auto-sdd/.specs/learnings/`, NOT in project-specific directories (e.g., `stakd/.specs/learnings/`). Project-specific dirs only get fixes specific to that build/app. Agent process lessons and failure modes go in `agent-operations.md`.
+Learnings are captured during checkpoint protocol (see `.claude/commands/checkpoint.md` step 4), not via `/compound`.
 
 ---
 
