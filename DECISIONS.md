@@ -415,3 +415,11 @@
 **Decision:** HOW-I-WORK entries get the same field set as learnings (Type, Tags, Confidence, Status, Date, Related, body) for schema consistency. Type values for methodology: `observation`, `preference`, `principle`, `workflow_fact`. Confidence and Status use the same enums from DESIGN-PRINCIPLES.md §4.
 **Why:** Schema consistency enables uniform graph queries across L- and M- entries. Including all fields even when some feel less natural for observations (e.g., Confidence) is cheaper than maintaining two schemas. Type values match the nature of the content: Brian observes (observation), states what he prefers (preference), articulates rules he applies (principle), or states facts about his environment (workflow_fact). Accumulation section preserved at bottom for checkpoint step 5 raw captures.
 **Rejected:** Omitting Confidence/Status (creates schema inconsistency, complicates graph import), using learnings type values (process_rule etc. don't fit methodology observations), converting Accumulation to a separate file (breaks existing checkpoint protocol).
+
+---
+
+## 2026-03-02 — OvernightRunner: composition over subclass
+
+**Decision:** overnight_autonomous.py uses OvernightRunner as a standalone class that imports shared modules (build_gates, drift, branch_manager, etc.) directly, rather than subclassing BuildLoop.
+**Why:** The behavioral differences are too substantial for clean inheritance. Overnight pushes branches + creates PRs (BuildLoop doesn't), treats drift/test failures as non-blocking (BuildLoop blocks), has no signal fallback inference (BuildLoop has 3 success paths), and expects to commit on behalf of the agent (BuildLoop expects agent commits). A subclass would need to override nearly every method, defeating the purpose. Composition gives clean separation: shared modules handle mechanics, each orchestrator owns its own control flow.
+**Rejected:** Subclassing BuildLoop (too many method overrides, brittle coupling), extracting a shared BaseOrchestrator ABC (premature abstraction — only two consumers, divergent behavior), merging both into one configurable class (config explosion, flag-driven control flow).

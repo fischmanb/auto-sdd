@@ -23,10 +23,11 @@ Ordered by efficiency gain per complexity added:
    - **Phase 1 DONE**: 5 lib modules converted. 210 pytest assertions, mypy --strict clean. Merged at `bed34a4`.
    - **Phase 2 DONE**: eval-sidecar converted. 31 tests, 77 assertions, mypy --strict clean. Merged to main.
    - **Phase 3 DONE**: build-loop-local decomposition analysis. 10 logical sections, 2-agent sequential split (4a: support modules, 4b: core orchestration). Key finding: 3+1 duplicated success-recording blocks → single `_record_build_result()`. Full analysis in `WIP/bash-to-python-conversion.md`.
-   - **Phase 4 next**: Write agent prompts for 4a (build_gates, drift, branch_manager, prompt_builder) then 4b (BuildLoop class).
-3. **Build loop design improvements — folded into Phase 4 (2026-03-01).**
-   - L-00111: 6 meta-process patterns. Highest leverage: context budget estimation, conventions doc injection, mechanical prompt quality gate.
-   - Now design inputs for Phase 4 agent prompts, not separate tasks.
+   - **Phase 4a DONE**: 4 support modules (build_gates, drift, branch_manager, prompt_builder). 1,714 lines, 103 tests. Merged at `b534d22`.
+   - **Phase 4b DONE**: BuildLoop class (core orchestration, 3+1 dedup, json.dumps summary). 1,521 lines, 40 tests. Merged at `6dc6497`. 384 tests total, zero regressions.
+   - **Phase 5 READY**: overnight-autonomous.sh → OvernightRunner (composition, not subclass). ~80% reuse from existing modules. Prompt delivered, pending execution.
+   - **Remaining after Phase 5**: nightly_review.sh (170 lines), generate_mapping.sh (318 lines), general_estimates.sh (278 lines) — one agent prompt for all three. Then: integration test against real project, retire bash test suites.
+3. ~~**Build loop design improvements — folded into Phase 4 (2026-03-01).**~~ ✅ DONE — L-00111 patterns wired into Phase 4 prompts.
 4. **Eval sidecar gap: quality gate → learning system (post-migration).**
    - Current: per-commit scoring (compliance, scope, integration) + `repeated_mistakes` feedback into next build prompt. Campaign summary is aggregate tallies only.
    - Gap: no learnings extraction, no cross-feature pattern analysis, no decision evaluation, no "what worked and why" synthesis. EVAL_NOTES is a one-line string, not structured.

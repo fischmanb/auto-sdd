@@ -961,3 +961,5 @@ Process rules emerge from failures in the same session they're needed. L-00143 (
 ## Accumulation
 
 Raw captures from checkpoint scans. New entries land here as `- (YYYY-MM-DD) text` during checkpoint step 5, then get converted to graph-schema entries above during periodic curation passes.
+
+- (2026-03-02) Brian stress-tests Claude's characterizations of system capabilities before sharing externally. When Claude described the eval sidecar as a "learning system," Brian asked "does it actually do that?" — forcing a code audit that revealed the description was aspirational, not factual. The correction ("it's a quality gate with a narrow feedback loop, not a learning system") became both a tracked gap and an honest answer to his boss. Pattern: external-facing claims get verified against source code, not accepted at face value.
