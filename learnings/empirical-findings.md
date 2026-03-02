@@ -181,3 +181,15 @@ Cache tokens dominate cumulative session totals but are irrelevant to scope esti
 - **Related:** L-00150, M-00076
 
 `.claude/commands/` (slash commands) and `.claude/skills/` (agent skills) only work in Claude Code (terminal). They do NOT work in claude.ai Chat tab or Claude Desktop Chat, despite docs suggesting skills work "outside of Claude Code." For cross-interface workflows (extract-learnings, checkpoint), the working path is: Claude's memory recognizes the trigger phrase + Desktop Commander provides filesystem access + natural language drives execution. No infrastructure file needed — just say the words.
+
+---
+
+## L-00153
+- **Type:** empirical-finding
+- **Tags:** [self-assessment, compaction, recency-bias, session-scope]
+- **Confidence:** high — direct observation, Brian corrected
+- **Status:** active
+- **Date:** 2026-03-02
+- **Related:** L-00001, L-00116, L-00130
+
+After context compaction, Claude assessed a 9-hour, 15+ commit session as "relatively short in terms of new things." The compaction summary was compact, so the session *felt* compact — but the summary is lossy by design (L-00130). This is L-00001 (agent self-assessments unreliable) manifesting at session scope: Claude's subjective sense of "how much happened" tracks context window density, not actual elapsed work. Mechanical countermeasure: before assessing session scope, run `git log --oneline --since="[session start]"` and count commits, files changed, learnings captured. Never trust the vibes.
