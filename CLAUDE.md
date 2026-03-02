@@ -18,7 +18,8 @@ This project uses a spec-driven development workflow. Follow these rules in all 
 
 **L-00020:** Implementation work (scripts/lib/tests) → hardened agent prompt. Planning/analysis/docs → chat session. If modifying code, write a prompt.
 
-**L-00026:** Token speed ≠ build speed. Fixed-cost steps (npm, tsc, tests) dominate. Parallelize across features, not faster models.
+**L-00162:** Estimation without computation is decoration. A number without shown arithmetic is a guess in costume — state the math or label it a guess.
+**L-00163:** Learnings must be self-contained, system-legible, actionable. No jargon, no external context required, concrete countermeasures not observations.
 
 **L-00028:** Signal protocol uses grep-parseable flat strings (`FEATURE_BUILT: {name}`), not JSON. No eval on agent output.
 
@@ -30,13 +31,13 @@ This project uses a spec-driven development workflow. Follow these rules in all 
 
 **L-00130:** Design for context loss. Only file state survives. Self-test: "If context dies now, can next session resume from files alone?"
 
-**L-00143:** Scope sizing ritual before every prompt/response/dispatch. Count items, estimate tokens, check verification isolation, split or proceed.
+**L-00143:** Scope sizing ritual before every prompt, response, or agent run. Count items, estimate tokens, check verification isolation, split or proceed.
 
 ---
 
 ## Response & Prompt Scope Discipline (L-00143)
 
-Before every prompt, response, or dispatch: count work items, estimate tokens (show your work), check verification isolation. Different verification methods = different work units. Run `source lib/general-estimates.sh && query_estimate_actuals "[type]"` for calibrated estimates before falling back to heuristics.
+Before every prompt, response, or agent run: count work items, estimate tokens (show your work), check verification isolation. Different verification methods = different work units. Run `source lib/general-estimates.sh && query_estimate_actuals "[type]"` for calibrated estimates before falling back to heuristics.
 
 ---
 

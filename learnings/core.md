@@ -65,14 +65,6 @@ Implementation work (scripts, lib/, tests) → fresh Claude Code agent session w
 
 ---
 
-## L-00026 — Token speed ≠ build speed
-**Source:** `empirical-findings.md`
-**Why core:** Counterintuitive finding that shapes model selection and parallelism decisions.
-
-Token speed does NOT translate to build speed. Haiku 2x faster tokens but only marginally faster builds (~16-18 min/feature both models) because npm install, TypeScript compile, tests, drift checks are fixed-cost CPU/disk-bound steps. Model speed only affects agent thinking fraction. Parallelism across features matters more than per-feature model speed.
-
----
-
 ## L-00028 — Signal protocol uses grep not JSON
 **Source:** `architectural-rationale.md`
 **Why core:** Architectural cornerstone. A session that doesn't know this might propose JSON signals and break the protocol.
@@ -110,6 +102,18 @@ Checkpoint step 4 must actively scan: agent completions (validate/contradict exi
 
 ---
 
-## L-00143 — Scope sizing ritual before every prompt/response/dispatch
+## L-00143 — Scope sizing ritual before every prompt/response/agent run
 **Source:** `process-rules.md`
-**Why core:** Repeated scope failures (L-00127, L-00131, L-00142) prove that unbounded work units hit context limits, mix verification methods, and create debugging surface area. Without this, a fresh session will bundle independent changes into one dispatch, exceed token budgets, or attempt verification that spans multiple unrelated concerns. The scope sizing ritual — count items, estimate tokens, check verification isolation, split or proceed — is the operational discipline that prevents these failures. Token budget estimation and continuous calibration from actuals apply project-wide.
+**Why core:** Repeated scope failures (L-00127, L-00131, L-00142) prove that unbounded work units hit context limits, mix verification methods, and create debugging surface area. Without this, a fresh session will bundle independent changes into one agent prompt, exceed token budgets, or attempt verification that spans multiple unrelated concerns. The scope sizing ritual — count items, estimate tokens, check verification isolation, split or proceed — is the operational discipline that prevents these failures. Token budget estimation and continuous calibration from actuals apply project-wide.
+
+---
+
+## L-00162 — Estimation without computation is decoration
+**Source:** `failure-patterns.md`
+**Why core:** Complements L-00143. L-00143 says do the ritual; L-00162 says a number without arithmetic isn't a ritual — it's theater. Three estimates in one session ("8.5%", "~12k", "well within bounds") were stated, accepted, and all wrong. Each looked computed — formatted with units, placed in an Estimate section — but none showed the math. Without this, a session follows L-00143's form (has a Scope Estimate section) but not its substance (the section contains a guess, not a calculation).
+
+---
+
+## L-00163 — Learnings must be self-contained, system-legible, and actionable
+**Source:** `process-rules.md`
+**Why core:** Quality gate for the entire knowledge base. Every entry is read by future instances with no session context. Jargon, missing context, or vague observations make entries dead weight. Three requirements: (1) define or avoid jargon — use plain descriptions; (2) include enough context to be understood without reading other entries; (3) state a concrete countermeasure, not just an observation. Without this, the learnings corpus grows but its utility per entry decays.
