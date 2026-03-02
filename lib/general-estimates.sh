@@ -20,11 +20,18 @@
 #   echo "estimated_tokens_pre: [N]"
 #   ACTUAL_TOKENS=$(get_session_actual_tokens)
 #   echo "actual_tokens_data: $ACTUAL_TOKENS"
-#   TOTAL=$(echo "$ACTUAL_TOKENS" | jq '.total_tokens // 0')
-#   echo "actual_total_tokens: $TOTAL"
-#   echo "estimation_error_pct: $(echo "scale=1; (([EST] - $TOTAL) / $TOTAL) * 100" | bc)"
+#   ACTIVE=$(echo "$ACTUAL_TOKENS" | jq '.active_tokens // 0')
+#   CUMULATIVE=$(echo "$ACTUAL_TOKENS" | jq '.cumulative_tokens // 0')
+#   echo "active_tokens (input+output): $ACTIVE"
+#   echo "cumulative_tokens (incl cache): $CUMULATIVE"
+#   echo "estimation_error_pct: $(echo "scale=1; (([EST] - $ACTIVE) / $ACTIVE) * 100" | bc)"
 #   echo "source: $(echo "$ACTUAL_TOKENS" | jq -r '.source')"
 #   echo "=== END REPORT ==="
+#
+# CALIBRATION NOTE: Compare estimates against active_tokens, not cumulative_tokens.
+# Cache reads are re-sent context (CLAUDE.md, tool defs, history) — they scale with
+# conversation length and API call count, not with the work unit being estimated.
+# active_tokens = input + output = new computation per session.
 
 # Guard against double-sourcing
 if [ "${_GENERAL_ESTIMATES_SH_LOADED:-}" = "true" ]; then
@@ -111,6 +118,8 @@ result = {
     'output_tokens': output_total,
     'cache_creation_tokens': cache_creation_total,
     'cache_read_tokens': cache_read_total,
+    'active_tokens': input_total + output_total,
+    'cumulative_tokens': input_total + output_total + cache_creation_total + cache_read_total,
     'total_tokens': input_total + output_total + cache_creation_total + cache_read_total,
     'api_calls': api_calls,
     'source': 'jsonl_direct'
