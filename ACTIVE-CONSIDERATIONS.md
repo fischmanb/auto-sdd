@@ -36,17 +36,18 @@ Correlates t-shirt sizes with actual metrics from `logs/build-summary-*.json`. W
 
 ### Other active items
 
-- **Learnings system — IMPLEMENTED (2026-03-02)**: 78 graph-compliant entries (L-00001–L-00145, non-contiguous), 13 curated in `core.md`. Schema standardization complete (5-digit IDs). Fresh onboard path works. Remaining: old-format conversion (Prompts 4/5), index.md stale.
-- **Replace token estimation proxy formula with actual Claude Code API token counts (Dispatch 4)** — L-00145 exposed that lines_read × 4 + lines_written × 4 + 5000 is a broken proxy. Produces confidently wrong data that would miscalibrate general-estimates.jsonl. Need real API token counts from Claude Code session metadata.
-- **Wire L-00143 into active infrastructure** — agent-prompt-engrain-L00143.md ready. Scope sizing ritual needs mechanical enforcement, not just prose rule.
+- **Learnings system — IMPLEMENTED (2026-03-02)**: 80 graph-compliant entries (L-00001–L-00147, non-contiguous), 13 curated in `core.md`. Schema standardization complete (5-digit IDs). Fresh onboard path works. Remaining: old-format conversion (Prompts 4/5), index.md stale.
+- **Dispatch 4: actual token reporting — ✅ COMPLETE.** get_session_actual_tokens() created in lib/general-estimates.sh. Reads Claude Code JSONL session logs directly. First real data: ~1.9M tokens on test session. Proxy formula confirmed off by ~300x (L-00145 validated). **Debt**: implementation is bash; Python migration needed (consistent with Phase 3+ plan).
+- **Wire L-00143 into active infrastructure** — agent-prompt-engrain-L00143.md ready. Scope sizing ritual needs mechanical enforcement, not just prose rule. L-00147 adds context-accounting refinement to the formula.
 - **Dispatch 2: core learnings mechanical wiring** — dispatch-2-core-wiring.md ready. Wire core.md entries into agent prompt templates.
 - **Dispatch 3: wire estimate_general_tokens into scope sizing ritual read path** — Connect the estimator to the ritual that needs it.
 - **Merge and review: core learnings inline into CLAUDE.md** — agent-prompt-core-inline.md ready. Evaluate whether core learnings should be injected into CLAUDE.md for every agent session.
+- **general-estimates.sh is bash — Python migration debt** — Dispatch 4 agent wrote get_session_actual_tokens in bash. Consistent with lib/ convention but contradicts Python-forward direction. Convert during Phase 3+ or as standalone dispatch.
 - **HOW-I-WORK corpus curation (2026-03-02)**: 74 entries converted to graph schema (M-00001–M-00074). Full corpus read identified 4+ coherent clusters ready for formalization. Action: curate entries into named sections, promote mature patterns to learnings.
 - **Knowledge graph for workflow continuity (2026-02-28)**: Personal workflow tool for cross-session context. *Design phase — no implementation started.*
 - **State format migration (2026-03-01)**: Post-Python-conversion project. Current file-based state preserved during bash→Python conversion. Not started, intentionally deferred — one variable at a time.
 - **Learnings graph-schema conversion (2026-03-02)**: Schema standardization complete. Some old-format entries may remain in `.specs/learnings/` files. Two agent prompts ready (Prompts 4 & 5) for converting those.
-- **Response scope discipline (2026-03-02)**: Formalized as L-00143 scope sizing ritual. Supersedes ad-hoc ">3 items = split" rule with systematic verification-isolation-based sizing.
+- **Response scope discipline (2026-03-02)**: Formalized as L-00143 scope sizing ritual + L-00147 context-accounting correction. Supersedes ad-hoc ">3 items = split" rule.
 - **CLAUDE.md audit (2026-03-01)**: Root CLAUDE.md 468 lines, ~80% stale SDD scaffold (L-00087, L-00094). stakd/CLAUDE.md has battle-tested Next.js 15 patterns not in root. Tasks: (1) strip root to ~100-150 lines of operational content, (2) evaluate whether stakd-specific patterns should be in learnings or stay project-local.
 - **Memory slot optimization (2026-03-01)**: 15/30 slots, ~1,500 words always-injected. Not urgent now but monitor. (L-00095)
 - **ONBOARDING.md overhaul for efficient context (2026-03-01)**: Checkpoint expansion DONE. Remaining: broader audit after graph conversion lands.

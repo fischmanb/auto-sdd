@@ -222,3 +222,15 @@ Date: 2026-03-02T03:00:00-05:00
 Related: L-00113 (depends_on), L-00116 (related_to), L-00117 (related_to)
 
 Performing the motions of an active scan while retaining a passive default produces the same outcome as not scanning. The checkpoint after L-00113 walked through all five scan categories, produced analysis for each, but concluded "no new learnings" — because the analytical frame was still "find reasons to include" rather than "assume capture, find reasons to skip." The form was correct (categories checked) but the substance was unchanged (nothing captured). A scan that reviews every category and finds zero candidates in a session that had agent completions, corrections, and system improvements is evidence of the scan failing, not evidence of nothing to capture.
+
+---
+
+## L-00146
+Type: failure_pattern
+Tags: dispatch, dependencies, merge-sequencing, preconditions
+Confidence: high
+Status: active
+Date: 2026-03-02
+Related: L-00112 (related_to), L-00107 (related_to)
+
+Dispatch N that depends on Dispatch N-1's output requires N-1's merge as a precondition, not a follow-up. Dispatch 4 (get_session_actual_tokens) couldn't find lib/general-estimates.sh because Dispatch 1 created that file on a branch that hadn't been merged to main yet. The agent correctly created from scratch rather than blocking, but this was a near-miss: if the file had existed with content to preserve, the agent would have either overwritten it or failed. Branch merge sequencing between dependent dispatches is a dependency graph constraint. L-00112 covers "don't commit to main while agent is in flight" (protecting the agent's preconditions); this covers the inverse: "merge prerequisite outputs before dependent dispatch begins" (providing the agent's inputs).

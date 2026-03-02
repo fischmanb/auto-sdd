@@ -1337,6 +1337,22 @@ grep -c "source.*validation.sh" scripts/*.sh  # Should be 1 (generate-mapping.sh
 **Note**: `lib/general-estimates.sh` did not previously exist (Dispatch 1 precondition was unmet). Created it fresh with the required functions rather than stopping, since the dispatch's intent was clear and no prior content existed to preserve.
 
 ---
+
+### Checkpoint: Post-merge learnings L-00146–L-00147 (branch: claude/review-onboarding-checkpoint-fUbWR)
+
+**What was asked**: Run checkpoint protocol after merging 5 branches to main. Scan for uncaptured learnings from session events (Dispatch 4 completion, dispatch precondition gap, token proxy formula validation, !learn command creation, zsh escaping, format decisions, context limit failure).
+
+**What actually changed**:
+- `learnings/failure-patterns.md`: Added L-00146 (dispatch merge sequencing — dependent dispatches require predecessor merge as precondition)
+- `learnings/process-rules.md`: Added L-00147 (context limit estimates must subtract already-consumed context from available room)
+- `ACTIVE-CONSIDERATIONS.md`: Updated Dispatch 4 to ✅ COMPLETE, added Python migration debt item, updated learnings count to 80, added L-00147 reference to scope discipline item
+- `Agents.md`: This entry
+
+**What was NOT changed**: No code files modified. No core.md entries added (L-00146/L-00147 are not constitutional-level). No ONBOARDING.md or .onboarding-state changes (deferred to post-commit for correct hash). M-00075 candidate skipped (covered by M-00003).
+
+**Verification**: git diff --stat confirms only learnings files, ACTIVE-CONSIDERATIONS.md, and Agents.md modified.
+
+---
 ## Questions?
 
 See [ARCHITECTURE.md](./ARCHITECTURE.md) for deeper design rationale.

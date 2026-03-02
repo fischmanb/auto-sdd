@@ -398,3 +398,15 @@ Budget allocation: 5% for build loop agents, 8–10% for general system activiti
 5. State the plan: "N items, verification per item, estimated [X of Y] tokens at N%."
 
 Diagnostic: if verification requires more than one method, or estimated tokens exceed available room, the scope contains more than one work unit.
+
+---
+
+## L-00147
+Type: process_rule
+Tags: scope-sizing, token-budget, context-accounting, calibration
+Confidence: high
+Status: active
+Date: 2026-03-02
+Related: L-00143 (extends), L-00131 (related_to)
+
+Token budget estimates must subtract already-consumed context, not just calculate against the full window. L-00143's degradation ceiling formula (`max_context × quality_factor`) produces the absolute ceiling for a fresh context. Mid-conversation, the available room is `max_context - current_context_used`, not `max_context`. A scope estimate showed 8.5% utilization (9,380 of ~120k ceiling) but the session had already consumed substantial context from prior conversation — the response hit the context limit and failed to complete. Corrected formula for mid-session estimates: `available_room = (max_context - current_context_consumed) × quality_factor`. When current_context_consumed is unknown, assume worst case (50%+ consumed) rather than best case (fresh context). The 8.5% number was precisely wrong — it gave false confidence that the response would fit easily.
