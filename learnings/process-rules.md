@@ -398,3 +398,13 @@ Budget allocation: 5% for build loop agents, 8–10% for general system activiti
 5. State the plan: "N items, verification per item, estimated [X of Y] tokens at N%."
 
 Diagnostic: if verification requires more than one method, or estimated tokens exceed available room, the scope contains more than one work unit.
+
+## L-00146
+- **Type:** process-rule
+- **Tags:** [dispatch-sequencing, dependencies, merge-order, preconditions]
+- **Confidence:** high — Dispatch 4 agent couldn't find Dispatch 1's output
+- **Status:** active
+- **Date:** 2026-03-02
+- **Related:** L-00142, L-00143, L-00131
+
+When dispatch N depends on dispatch N-1's output files, the merge of N-1 to the working branch is a precondition of N, not a follow-up. Dispatch 4 (replace token proxy) couldn't find `lib/general-estimates.sh` because the checkpoint branch carrying Dispatch 1's output hadn't been merged to main. The agent created the file from scratch — correct decision in this case (no prior content to preserve), but a larger file with existing logic would have been silently overwritten. Dispatch dependency = merge dependency. State this explicitly in the dispatch prompt's Preconditions section: "Requires [branch] merged to [target]. Verify with: `git log --oneline [target] | grep [commit-msg-fragment]`".

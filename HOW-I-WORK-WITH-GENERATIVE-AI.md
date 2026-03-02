@@ -854,6 +854,18 @@ Token estimation proxy formula produced data that would miscalibrate the estimat
 
 ---
 
+## M-00075
+Type: preference
+Tags: operational-friction, documentation, shell-escaping
+Confidence: high
+Status: active
+Date: 2026-03-02
+Related: M-00073
+
+Brian treats small operational friction (zsh `!` escaping in filenames/commit messages) as worth documenting and fixing immediately rather than working around silently. Pattern: if a sharp edge cuts once, file it down before it cuts again. Consistent with L-00128 — prose workarounds get forgotten, mechanical fixes persist.
+
+---
+
 ## Accumulation
 
 Raw captures from checkpoint scans. New entries land here as `- (YYYY-MM-DD) text` during checkpoint step 5, then get converted to graph-schema entries above during periodic curation passes.

@@ -135,3 +135,27 @@ Schema standardization agent succeeded despite overscoped prompt (L-00142 violat
 - **Related:** L-00143, lib/general-estimates.sh
 
 Token estimation formula (lines_read × 4 + lines_written × 4 + 5000) produced 5860 "actual" tokens for a run with 37 tool calls. The formula only measures file I/O — it cannot see prompt injection, CLAUDE.md/repo context auto-loaded by the agent, tool call overhead (~200 tokens per invocation), inter-call reasoning, or verification output. True consumption was likely 20-30k. The 5000 "reasoning overhead" constant masks a variable that scales with tool call count and conversation complexity. Feeding this proxy data into general-estimates.jsonl would miscalibrate the estimator — the system would learn from wrong numbers. Proxy measurement that produces confidently wrong data is worse than no measurement. Replace with actual API token counts from Claude Code session metadata.
+
+---
+
+## L-00147
+- **Type:** empirical-finding
+- **Tags:** [context-limits, scope-sizing, token-estimation, degradation-ceiling]
+- **Confidence:** high — agent estimated 8.5% then hit context limit
+- **Status:** active
+- **Date:** 2026-03-02
+- **Related:** L-00143, L-00145
+
+Context limit estimates must account for already-consumed context, not just the planned response. An agent estimated 8.5% utilization against the full 200k context window, stated "Proceeding," then failed to complete. The degradation ceiling formula calculates available room as `max_context × quality_factor`, but this assumes an empty context window. Correct formula: `available_room = (max_context × quality_factor) - current_context_used`. Without subtracting current context (conversation history, CLAUDE.md injection, tool definitions, system prompt), the estimate is meaningless. A fresh session and a 50-message session have radically different available room despite the same ceiling calculation.
+
+---
+
+## L-00148
+- **Type:** empirical-finding
+- **Tags:** [token-estimation, proxy-metrics, calibration, magnitude-error]
+- **Confidence:** high — direct comparison: proxy said 5,860, actual JSONL showed 1.9M
+- **Status:** active
+- **Date:** 2026-03-02
+- **Related:** L-00145, L-00143
+
+First real token measurement via `get_session_actual_tokens` showed the proxy formula was off by ~300x, not the 2x the formula's self-computed error claimed. The formula's error calculation was also wrong because it divided proxy-by-proxy. The 104.8% "overestimate" error was itself a proxy artifact — the denominator (5,860 "actual") was as wrong as the numerator (12,000 "estimated"). Real comparison: 12,000 estimated vs ~1.9M actual = 99.4% underestimate. Lesson: a broken measurement system cannot self-diagnose. Requires external ground truth (in this case, Claude Code's JSONL session logs).
