@@ -159,3 +159,13 @@ Context limit estimates must account for already-consumed context, not just the 
 - **Related:** L-00145, L-00143
 
 First real token measurement via `get_session_actual_tokens` showed the proxy formula was off by ~300x, not the 2x the formula's self-computed error claimed. The formula's error calculation was also wrong because it divided proxy-by-proxy. The 104.8% "overestimate" error was itself a proxy artifact — the denominator (5,860 "actual") was as wrong as the numerator (12,000 "estimated"). Real comparison: 12,000 estimated vs ~1.9M actual = 99.4% underestimate. Lesson: a broken measurement system cannot self-diagnose. Requires external ground truth (in this case, Claude Code's JSONL session logs).
+
+## L-00149
+- **Type:** empirical-finding
+- **Tags:** [token-estimation, cache-tokens, calibration, active-vs-cumulative]
+- **Confidence:** high — direct observation from checkpoint token report
+- **Status:** active
+- **Date:** 2026-03-02
+- **Related:** L-00145, L-00148, L-00143
+
+Cache tokens dominate cumulative session totals but are irrelevant to scope estimation. A checkpoint session reported 3.17M "actual" tokens — 87.6% was cache reads (re-sent context: CLAUDE.md, tool definitions, conversation history). Active computation was ~31.5k (input + output). Comparing scope estimates against cumulative tokens produces meaningless calibration data — the number scales with API call count and session length, not with the work unit being estimated. The estimator must compare against active_tokens (input + output) only. This is distinct from L-00145 (proxy formula wrong) and L-00148 (magnitude error) — those identified the proxy was broken. This identifies that even real token data needs decomposition before it's useful for calibration.

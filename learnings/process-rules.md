@@ -408,3 +408,23 @@ Diagnostic: if verification requires more than one method, or estimated tokens e
 - **Related:** L-00142, L-00143, L-00131
 
 When dispatch N depends on dispatch N-1's output files, the merge of N-1 to the working branch is a precondition of N, not a follow-up. Dispatch 4 (replace token proxy) couldn't find `lib/general-estimates.sh` because the checkpoint branch carrying Dispatch 1's output hadn't been merged to main. The agent created the file from scratch — correct decision in this case (no prior content to preserve), but a larger file with existing logic would have been silently overwritten. Dispatch dependency = merge dependency. State this explicitly in the dispatch prompt's Preconditions section: "Requires [branch] merged to [target]. Verify with: `git log --oneline [target] | grep [commit-msg-fragment]`".
+
+## L-00150
+- **Type:** process-rule
+- **Tags:** [execution-routing, prompt-indirection, desktop-commander, context-limits]
+- **Confidence:** high — three checkpoint prompts failed before direct execution succeeded
+- **Status:** active
+- **Date:** 2026-03-02
+- **Related:** L-00147, L-00143, M-00073
+
+When the execution environment is available, execute directly instead of writing prompts. Three checkpoint prompts were written, downloaded, and failed when pasted into Code tab sessions with existing context. The work could have been done directly via Desktop Commander from claude.ai. Writing a prompt to hand off to another Claude instance adds indirection, context overhead, and a failure mode (the prompt itself consuming tokens in an already-loaded session). Direct execution is faster and eliminates the handoff failure class. Exception: agent dispatches that create branches need Claude Code's git permissions and branch isolation.
+
+## L-00151
+- **Type:** process-rule
+- **Tags:** [dispatch-verification, pre-dispatch, redundant-work, scope-sizing]
+- **Confidence:** high — Dispatch 2 was fully complete before the prompt was written
+- **Status:** active
+- **Date:** 2026-03-02
+- **Related:** L-00142, L-00143
+
+Check whether dispatch work items are already done before writing the dispatch. Dispatch 2 (5 work items: core injection, scope format, token reporting, behavioral compliance, core maintenance) was fully complete — the L-00143 engrain agent and checkpoint agent had covered all items across separate sessions. The prompt was written, scoped, and ready to run for work that didn't exist. A 30-second grep for each expected output in the target file would have caught it. Pre-dispatch verification: for each work item, grep the target file for the expected string before writing the prompt.
