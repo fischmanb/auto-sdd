@@ -36,8 +36,8 @@ Correlates t-shirt sizes with actual metrics from `logs/build-summary-*.json`. W
 
 ### Other active items
 
-- **Learnings system — IMPLEMENTED (2026-03-02)**: 78 graph-compliant entries (L-00001–L-00145, non-contiguous), 13 curated in `core.md`. Schema standardization complete (5-digit IDs). Fresh onboard path works. Remaining: old-format conversion (Prompts 4/5), index.md stale.
-- **Replace token estimation proxy formula with actual Claude Code API token counts (Dispatch 4)** — L-00145 exposed that lines_read × 4 + lines_written × 4 + 5000 is a broken proxy. Produces confidently wrong data that would miscalibrate general-estimates.jsonl. Need real API token counts from Claude Code session metadata.
+- **Learnings system — IMPLEMENTED (2026-03-02)**: 80 graph-compliant entries (L-00001–L-00148, non-contiguous), 13 curated in `core.md`. Schema standardization complete (5-digit IDs). Fresh onboard path works. Remaining: old-format conversion (Prompts 4/5), index.md stale.
+- **Replace token estimation proxy — DONE (Dispatch 4, 2026-03-02)**: `get_session_actual_tokens` reads Claude Code JSONL session logs. First real data: 1.9M tokens on a session the proxy claimed was 5,860. Merged to main at `bff81dd`.
 - **Wire L-00143 into active infrastructure** — agent-prompt-engrain-L00143.md ready. Scope sizing ritual needs mechanical enforcement, not just prose rule.
 - **Dispatch 2: core learnings mechanical wiring** — dispatch-2-core-wiring.md ready. Wire core.md entries into agent prompt templates.
 - **Dispatch 3: wire estimate_general_tokens into scope sizing ritual read path** — Connect the estimator to the ritual that needs it.
