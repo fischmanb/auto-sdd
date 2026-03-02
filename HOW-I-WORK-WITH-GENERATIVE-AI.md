@@ -958,8 +958,45 @@ Process rules emerge from failures in the same session they're needed. L-00143 (
 
 ---
 
+---
+
+**M-00085**
+- **Type:** observation
+- **Tags:** verification, escalation, source-grounding
+- **Confidence:** high
+- **Status:** active
+- **Date:** 2026-03-02
+- **Related:** L-00167 (related_to), L-00171 (related_to)
+
+Brian tests capability claims with escalating precision. Pattern observed: lets initial description sit, then probes with domain knowledge ("it's meant to do more than that, does it not evaluate the build process/decisions and find learnings?"), then delivers the grounding test ("does it actually do that?"). Responses that survive this sequence are source-grounded (traceable to specific functions/data structures), not documentation-grounded (derived from comments or aspirational design docs). The escalation gives Claude opportunity to self-correct before the direct challenge.
+
+---
+
+**M-00086**
+- **Type:** preference
+- **Tags:** communication, external-stakeholder, concision
+- **Confidence:** high
+- **Status:** active
+- **Date:** 2026-03-02
+- **Related:** M-00085 (related_to), L-00169 (related_to)
+
+External-facing answers need text-message concision. When Brian asked for a response to his boss about the eval sidecar, the first attempt was too detailed (multiple paragraphs, implementation specifics). Boss questions want what-it-does and why-it-matters, not how-it-works. One paragraph max. The audience determines the compression ratio — technical collaborators get architecture; executives get function and value.
+
+---
+
+**M-00087**
+- **Type:** principle
+- **Tags:** checkpoint, context-management, value-preservation
+- **Confidence:** high
+- **Status:** active
+- **Date:** 2026-03-02
+- **Related:** L-00168 (depends_on), L-00070 (related_to)
+
+The checkpoint protocol is the primary value-preservation mechanism across session boundaries, not administrative overhead. Brian flagged both the missed 8-step execution AND the learnings deficit ("there should always be far more learnings proposed"). The checkpoint isn't bookkeeping — it's how session value (observations, patterns, corrections, calibration data) survives context loss. Skipping steps means that value is destroyed. A session that produces good work but shortcuts the checkpoint is strictly worse than a session that does less work but preserves it fully.
+
+---
+
 ## Accumulation
 
 Raw captures from checkpoint scans. New entries land here as `- (YYYY-MM-DD) text` during checkpoint step 5, then get converted to graph-schema entries above during periodic curation passes.
 
-- (2026-03-02) Brian stress-tests Claude's characterizations of system capabilities before sharing externally. When Claude described the eval sidecar as a "learning system," Brian asked "does it actually do that?" — forcing a code audit that revealed the description was aspirational, not factual. The correction ("it's a quality gate with a narrow feedback loop, not a learning system") became both a tracked gap and an honest answer to his boss. Pattern: external-facing claims get verified against source code, not accepted at face value.

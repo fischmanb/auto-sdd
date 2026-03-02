@@ -117,3 +117,9 @@ Checkpoint step 4 must actively scan: agent completions (validate/contradict exi
 ## L-00163 — Learnings must be self-contained, system-legible, and actionable
 **Source:** `process-rules.md`
 **Why core:** Quality gate for the entire knowledge base. Every entry is read by future instances with no session context. Jargon, missing context, or vague observations make entries dead weight. Three requirements: (1) define or avoid jargon — use plain descriptions; (2) include enough context to be understood without reading other entries; (3) state a concrete countermeasure, not just an observation. Without this, the learnings corpus grows but its utility per entry decays.
+
+---
+
+## M-00087 — Checkpoint is the primary value-preservation mechanism
+**Source:** `HOW-I-WORK-WITH-GENERATIVE-AI.md`
+**Why core:** A session that treats checkpoint as administrative overhead will shortcut it — skipping learnings, methodology signals, and state flushes. This was observed directly: steps 2-6 skipped, 7 L-candidates and 3 M-candidates missed. The checkpoint isn't bookkeeping. It's how observations, patterns, corrections, and calibration data survive context boundaries. A session that produces good work but shortcuts the checkpoint is strictly worse than one that does less work but preserves it fully. Brian flagged both the missed steps AND the learnings deficit as equal-severity failures.

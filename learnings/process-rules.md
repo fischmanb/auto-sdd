@@ -477,3 +477,87 @@ Every learning entry must be self-contained, use system-legible language, and be
 - **Related:** L-00143 (related_to), L-00162 (depends_on), L-00155 (related_to)
 
 Token estimation must be wired into both chat-session scope rituals and agent prompt structure. Phase 4a agent prompt omitted the Token Usage Report section entirely; the chat session wrote a prose scope estimate ("~15,000 tokens") without calling `estimate_general_tokens` or showing arithmetic. Both are violations of L-00143 (scope sizing ritual) and L-00162 (estimation without computation is decoration) that survived because neither was mechanically enforced at prompt-writing time. The calibration loop in `general-estimates.jsonl` received no data from the session until Brian manually ran the report. Countermeasure: (1) memory slot 18 enforces chat-side — call `estimate_general_tokens` or compute manually before writing agent prompts; (2) Token Usage Report is now a required section in both `PROMPT-ENGINEERING-GUIDE.md` (section 5) and `conventions.md`, making omission a visible structural gap in any prompt review; (3) every agent prompt template must include the `source lib/general-estimates.sh` + `get_session_actual_tokens` + `append_general_estimate` block as a verification step equal in status to `git diff --stat`.
+
+---
+
+**L-00165**
+- **Type:** empirical_finding
+- **Tags:** token-estimation, calibration, orchestration
+- **Confidence:** high
+- **Status:** active
+- **Date:** 2026-03-02
+- **Related:** L-00162 (depends_on), L-00164 (related_to)
+
+Token estimation calibration from Phase 4 reveals a consistent pattern: mechanical conversion (Phase 4a, support modules) ran -16.7% over estimate (15k est → 18k actual); orchestration+dedup conversion (Phase 4b, BuildLoop) ran -30% over estimate (18k est → 28k actual). Orchestration code with deduplication mandates runs significantly hotter than mechanical translation because the agent must reason about control flow refactoring, not just syntax conversion. Calibration rule: apply 1.3x multiplier to estimates for orchestration-heavy agent prompts. Phase 5 (overnight-autonomous.sh) estimated at 20k using this multiplier.
+
+---
+
+**L-00166**
+- **Type:** process_rule
+- **Tags:** conversion, scope-estimation, deduplication
+- **Confidence:** high
+- **Status:** active
+- **Date:** 2026-03-02
+- **Related:** L-00111 (related_to), L-00165 (related_to)
+
+When converting variant scripts that share a codebase, diff function lists between the source bash and existing Python modules before scoping the conversion. overnight-autonomous.sh was 1,310 lines but ~80% was copy-pasted from build-loop-local.sh — functions already converted as Python modules in Phases 1-4. Actual new code: ~300 lines. Without this check, the conversion would have been scoped as a 1,310-line job instead of a 300-line composition task. The check is mechanical: extract function names from both scripts, compare, and subtract already-converted functions.
+
+---
+
+**L-00167**
+- **Type:** failure_pattern
+- **Tags:** external-communication, verification, honesty
+- **Confidence:** high
+- **Status:** active
+- **Date:** 2026-03-02
+- **Related:** L-00171 (related_to)
+
+Described the eval sidecar as "a learning system that makes each successive build smarter" for external stakeholder communication. When challenged ("does it actually do that?"), source code review revealed: EVAL_NOTES is a one-line string field, there is no learnings extraction, no cross-feature pattern analysis, and the campaign summary produces tallies not insights. Aspiration was stated as implemented fact. Countermeasure: read the implementation (specific functions, data structures, output formats) before summarizing capabilities for external audiences. The test: can you point to the function that does this?
+
+---
+
+**L-00168**
+- **Type:** failure_pattern
+- **Tags:** checkpoint, protocol-compliance, context-management
+- **Confidence:** high
+- **Status:** active
+- **Date:** 2026-03-02
+- **Related:** L-00070 (related_to), M-00087 (related_to)
+
+When Brian said "checkpoint," executed steps 1 (read state), 7 (commit), and a partial step 8 (update state), skipping steps 2-6 entirely (flush captures, decisions, learnings, methodology signals, ONBOARDING.md drift check). This is the exact failure mode checkpoints exist to prevent — context drift across session boundaries when learnings and state aren't flushed. The 8 steps are a deterministic checklist precisely because the temptation to shortcut under time pressure is predictable. Execute sequentially without optimization.
+
+---
+
+**L-00169**
+- **Type:** empirical_finding
+- **Tags:** communication, documentation, stakeholder
+- **Confidence:** medium
+- **Status:** active
+- **Date:** 2026-03-02
+- **Related:** L-00167 (related_to)
+
+ASCII flow diagram of the build loop system was immediately useful for external stakeholder communication. Brian's boss reviewed it and asked clarifying questions within the same session. Worth creating for any system with >3 interacting components, especially when the system will be explained to people outside the immediate development context. HTML export with explicit dark text styling needed for readability in downloaded artifacts (markdown rendered pale grey).
+
+---
+
+**L-00170**
+- **Type:** architecture_gap
+- **Tags:** eval-sidecar, learning-system, quality-gate
+- **Confidence:** high
+- **Status:** active
+- **Date:** 2026-03-02
+- **Related:** L-00167 (related_to)
+
+The eval sidecar has a documented gap between its current implementation (quality gate) and its intended purpose (learning system). Current: per-commit mechanical scoring (diff stats, type redeclarations) + agent eval scoring (framework compliance, scope assessment, integration quality) + repeated_mistakes string fed back into next build prompt + campaign-end aggregate tallies. Missing: structured learnings extraction from build outcomes, cross-feature pattern analysis, decision quality evaluation, "what worked and why" synthesis. EVAL_NOTES is a one-line string, not structured data. Campaign summary counts pass/warn/fail but doesn't produce actionable findings. Gap tracked in ACTIVE-CONSIDERATIONS #4, blocked on migration completion + real Python campaign data.
+
+---
+
+**L-00171**
+- **Type:** process_rule
+- **Tags:** verification, honesty, grounding
+- **Confidence:** high
+- **Status:** active
+- **Date:** 2026-03-02
+- **Related:** L-00167 (depends_on)
+
+The implementation-grounding test: when describing what a system does, the claim is valid only if you can point to the specific function, data structure, or output format that implements it. If you cannot, the capability is aspirational and must be stated as such. This applies to both external communication (stakeholder descriptions) and internal planning (agent prompt design). Derived from the eval sidecar incident where "extracts learnings and analyzes patterns" was stated as implemented when the actual implementation is a one-line EVAL_NOTES string field.
