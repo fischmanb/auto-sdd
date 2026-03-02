@@ -111,3 +111,15 @@ Date: 2026-03-02T05:00:00-05:00
 Related: L-0130 (validates)
 
 L-0130 (design for context loss) was validated by real compaction event in the same session that wrote it. File-based architecture survived: .onboarding-state, learnings files, ACTIVE-CONSIDERATIONS.md, and transcript provided enough state for replacement context to resume work without asking "where were we?" Per L-0123's language distinction between "demonstrated" and "validated": the original writing was demonstration; this compaction event is confirming validation.
+
+---
+
+## L-00144
+- **Type:** empirical-finding
+- **Tags:** [near-miss, agent-prompts, scope-sizing, schema-migration]
+- **Confidence:** high — direct observation
+- **Status:** active
+- **Date:** 2026-03-02
+- **Related:** L-00142, L-00143, L-00123
+
+Schema standardization agent succeeded despite overscoped prompt (L-00142 violation). 23 files, +1275/-501 lines, zero orphaned IDs, all verification checks passed. This is a near-miss per L-00123 language: correct outcome does not validate the process. The agent could have hit context limits on a larger repo or with more complex entries. Verification passing confirms the output was correct, not that the scope was safe. Near-misses that succeed are harder to learn from than failures — they create false confidence that bundling works.

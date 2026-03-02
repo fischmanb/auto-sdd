@@ -98,3 +98,9 @@ Checkpoint step 4 must actively scan: agent completions (validate/contradict exi
 ## L-0130 — Design for context loss as the default
 **Source:** `architectural-rationale.md`
 **Why core:** Context windows compact, sessions end, responses fail mid-stream. The only state that survives is file state. A fresh session that doesn't know this will keep plans, progress, and work-in-progress in context only — then lose it. Self-test (checkpoint step 9): "If context dies now, can the next session resume from files alone?" Check: `.onboarding-state` current? `ACTIVE-CONSIDERATIONS.md` accurate? Work committed? Multi-response plans externalized? If no — fix before responding.
+
+---
+
+## L-00143 — Scope sizing ritual: budget and verification before execution
+**Source:** `process-rules.md`
+**Why core:** Every prompt, response, agent dispatch, and commit must pass a scope sizing check before execution. Without this, agents and sessions bundle orthogonal work into single dispatches, creating debugging surface proportional to the product of scopes, not their sum. The scope of any work unit must be set by its verification method and its token budget, not its task list. Two changes that require different verification strategies are different work units. Scope sizing ritual: (1) count and classify work items with verification method per item, (2) estimate token budget via degradation ceiling, (3) check verification isolation — different methods = different dispatches, (4) split or proceed, stashing per L-00131, (5) state the plan. Diagnostic: if verification requires more than one method, or estimated tokens exceed available room, the scope contains more than one work unit.
