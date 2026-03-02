@@ -18,7 +18,7 @@ _Regenerate with: `./scripts/generate-mapping.sh`_
 
 | Domain | Feature | Source | Tests | Components | Status |
 |--------|---------|--------|-------|------------|--------|
-| _No features yet_ | | | | | |
+| auth-dashboard | [Auth and dashboard shell](.specs/features/auth-dashboard/auth-dashboard-shell.feature.md) | `py/auto_sdd/lib/config.py, py/auto_sdd/scripts/dashboard.py` | see spec | see spec | implemented |
 
 ---
 
@@ -29,8 +29,8 @@ _Regenerate with: `./scripts/generate-mapping.sh`_
 | stub | 0 |
 | specced | 0 |
 | tested | 0 |
-| implemented | 0 |
-| **Total** | **0** |
+| implemented | 1 |
+| **Total** | **1** |
 
 ---
 
@@ -50,7 +50,7 @@ _None_
 
 ### Implemented
 
-_None_
+- [Auth and dashboard shell](.specs/features/auth-dashboard/auth-dashboard-shell.feature.md)
 
 ---
 

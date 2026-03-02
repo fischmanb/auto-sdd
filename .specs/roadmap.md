@@ -23,12 +23,12 @@
 
 | Status | Count |
 |--------|-------|
-| ✅ Completed | 0 |
+| ✅ Completed | 1 |
 | 🔄 In Progress | 0 |
 | ⬜ Pending | 0 |
 | ⏸️ Blocked | 0 |
 
-**Last updated**: <!-- timestamp -->
+**Last updated**: 2026-03-02
 
 ---
 
@@ -38,7 +38,7 @@
 
 | # | Feature | Source | Jira | Complexity | Deps | Status |
 |---|---------|--------|------|------------|------|--------|
-| <!-- 1 --> | <!-- Auth: User signup --> | <!-- clone-app --> | <!-- PROJ-101 --> | <!-- M --> | <!-- - --> | <!-- ⬜ --> |
+| 1 | Auth and dashboard shell | build-next | - | M | - | ✅ |
 
 ---
 
