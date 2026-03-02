@@ -23,12 +23,12 @@
 
 | Status | Count |
 |--------|-------|
-| ✅ Completed | 2 |
+| ✅ Completed | 3 |
 | 🔄 In Progress | 0 |
 | ⬜ Pending | 0 |
 | ⏸️ Blocked | 0 |
 
-**Last updated**: 2026-03-02
+**Last updated**: 2026-03-02 (completed feature #3: Comp detail view and export)
 
 ---
 
@@ -40,6 +40,7 @@
 |---|---------|--------|------|------------|------|--------|
 | 1 | Auth and dashboard shell | build-next | - | M | - | ✅ |
 | 2 | Lease comp search and filtering | build-next | - | M | 1 | ✅ |
+| 3 | Comp detail view and export | build-next | - | M | 2 | ✅ |
 
 ---
 

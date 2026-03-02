@@ -19,6 +19,7 @@ _Regenerate with: `./scripts/generate-mapping.sh`_
 | Domain | Feature | Source | Tests | Components | Status |
 |--------|---------|--------|-------|------------|--------|
 | auth-dashboard | [Auth and dashboard shell](.specs/features/auth-dashboard/auth-dashboard-shell.feature.md) | `py/auto_sdd/lib/config.py, py/auto_sdd/scripts/dashboard.py` | see spec | see spec | implemented |
+| comp-detail | [Comp detail view and export](.specs/features/comp-detail/comp-detail-view-export.feature.md) | `py/auto_sdd/lib/comp_detail.py, py/auto_sdd/scripts/comp_detail.py` | see spec | see spec | implemented |
 | lease-comp-search | [Lease comp search and filtering](.specs/features/lease-comp-search/lease-comp-search-filtering.feature.md) | `py/auto_sdd/lib/lease_comp_search.py, py/auto_sdd/scripts/lease_comp_search.py` | see spec | see spec | implemented |
 
 ---
@@ -30,8 +31,8 @@ _Regenerate with: `./scripts/generate-mapping.sh`_
 | stub | 0 |
 | specced | 0 |
 | tested | 0 |
-| implemented | 2 |
-| **Total** | **2** |
+| implemented | 3 |
+| **Total** | **3** |
 
 ---
 
@@ -52,6 +53,7 @@ _None_
 ### Implemented
 
 - [Auth and dashboard shell](.specs/features/auth-dashboard/auth-dashboard-shell.feature.md)
+- [Comp detail view and export](.specs/features/comp-detail/comp-detail-view-export.feature.md)
 - [Lease comp search and filtering](.specs/features/lease-comp-search/lease-comp-search-filtering.feature.md)
 
 ---

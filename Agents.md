@@ -1349,6 +1349,28 @@ grep -c "source.*validation.sh" scripts/*.sh  # Should be 1 (generate-mapping.sh
 
 **Verification**: All 5 checks pass — Core Learnings block present (1), all 13 L-numbers found, Scope Discipline present (1), block size 256 words (< 450), core.md unchanged (0 diff lines).
 
+### Round 47: Feature #3 — Comp detail view and export (2026-03-02)
+
+**What was asked**: Build feature #3 "Comp detail view and export" per roadmap. Update roadmap, create spec, implement, test, regenerate mapping, commit.
+
+**What changed**:
+- `.specs/features/comp-detail/comp-detail-view-export.feature.md` — Gherkin spec with 20 scenarios (detail view, serialization, CSV export, JSON export, CLI show, CLI export)
+- `.specs/roadmap.md` — added feature #3, marked ✅ completed (progress: 3 completed)
+- `.specs/mapping.md` — regenerated (3 implemented features)
+- `py/auto_sdd/lib/comp_detail.py` — new module: format_comp_detail, comp_to_dict, export_comps_to_csv, export_comps_to_json
+- `py/auto_sdd/scripts/comp_detail.py` — new CLI: show (detail by ID) and export (to CSV/JSON with filter support)
+- `py/tests/test_comp_detail.py` — 63 tests covering all feature scenarios (CD-001–CD-065)
+
+**What was NOT changed**:
+- No existing library modules modified
+- Pre-existing test_eval_sidecar failure untouched
+
+**Verification**:
+- 63 new tests: 63 passed, 0 failed
+- Full suite: 718 passed, 1 pre-existing failure (test_eval_sidecar, unrelated)
+- Syntax check: python3.11 -m py_compile passed
+- generate-mapping.sh: 3 features mapped
+
 ---
 ## Questions?
 
