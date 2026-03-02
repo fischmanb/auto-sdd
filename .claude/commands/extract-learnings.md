@@ -1,6 +1,10 @@
+---
+description: Scan current session for uncaptured learnings and output in graph schema format
+---
+
 # Extract Learnings from Current Session
 
-You are running the `!learn` command. Scan this session for uncaptured learnings and output them in graph schema format.
+Scan this session for uncaptured learnings and output them in graph schema format.
 
 ## Process
 
