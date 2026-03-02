@@ -166,7 +166,7 @@ Type: process_rule
 Tags: checkpoint, learnings, capture, meta
 Confidence: high
 Status: active
-Date: 2026-03-02T02:30:00-05:00
+Date: 2026-03-01
 Related: L-00109 (related_to), L-00016 (related_to)
 
 Checkpoint step 4 (learnings) must use active scan, not passive recall. The original wording "if any surfaced: flag" produced under-capture — a short session was declared "none new" without reviewing agent outcomes, corrections, or near-misses. Step 5 (methodology signals) already had active scan language ("scan session for...") and produced rich output. Step 4 needed the same structure. Active scan categories: agent completions (validate/contradict existing learnings?), Brian's corrections (each is a candidate), new rules or patterns, empirical findings, failures or near-misses. Under-capture is a failure mode equal to over-capture. Match capture density to session density.
@@ -178,7 +178,7 @@ Type: process_rule
 Tags: documentation, propagation, protocol
 Confidence: high
 Status: active
-Date: 2026-03-02T03:00:00-05:00
+Date: 2026-03-01
 Related: L-00113 (depends_on)
 
 Protocol changes must propagate to all consumption points. A rule has (at minimum) a definition point (e.g. checkpoint.md), a summary point (e.g. ONBOARDING.md), and a delivery point (e.g. core.md that fresh sessions read). Changing one without the others creates silent drift — the protocol says one thing, the onboarding path teaches another. Discovered when L-00113 was written to checkpoint.md and ONBOARDING.md but not core.md until Brian corrected. Checklist for any protocol change: (1) definition file, (2) ONBOARDING.md summary, (3) core.md if it's a constitutional learning, (4) any ACTIVE-CONSIDERATIONS references.
@@ -190,7 +190,7 @@ Type: process_rule
 Tags: documentation, counts, staleness, maintenance
 Confidence: high
 Status: active
-Date: 2026-03-02T03:00:00-05:00
+Date: 2026-03-01
 Related: L-00114 (related_to)
 
 Numeric references in documentation rot silently. ONBOARDING.md said "38 entries" when actual was 57. ACTIVE-CONSIDERATIONS said "63 graph-compliant" and "~47 old-format" — both wrong. Nobody noticed because prose ages gracefully but numbers go stale on every commit. Mitigation: `/verify-learnings-counts` slash command performs mechanical count and compares against documentation claims. Wired into checkpoint step 4 propagation check.
@@ -202,7 +202,7 @@ Type: process_rule
 Tags: checkpoint, learnings, defaults
 Confidence: high
 Status: active
-Date: 2026-03-02T03:00:00-05:00
+Date: 2026-03-01
 Related: L-00113 (depends_on)
 
 "Nothing to capture" must never be the default assumption. The default should be "something to capture" and the scan must find reasons to skip, not reasons to include. The checkpoint immediately after L-00113 was committed demonstrated the failure: the AI performed the new active scan categories but still concluded "no new learnings" — because the default was still passive. The bias must flip: assume every session produces learnings unless the scan proves otherwise.
@@ -214,7 +214,7 @@ Type: process_rule
 Tags: protocol, adoption, latency
 Confidence: high
 Status: active
-Date: 2026-03-02T03:00:00-05:00
+Date: 2026-03-01
 Related: L-00113 (depends_on), L-00116 (related_to)
 
 New protocol rules have a one-response adoption latency. L-00113 codified active scan. The very next checkpoint executed step 4 with the new categories but still under-captured — the behavioral pattern hadn't changed despite the written rule changing. A fresh session reading L-00113 cold would likely apply it more faithfully than the session that just wrote it, because the session that wrote it still carries the old behavioral inertia. Implication: after writing a new process rule, explicitly test it in the same session by re-running the step it modifies. Mechanical enforcement: `/verify-propagation` step 5 flags self-test requirement when process-rules.md has new entries.
@@ -226,7 +226,7 @@ Type: process_rule
 Tags: core-learnings, onboarding, delivery
 Confidence: high
 Status: active
-Date: 2026-03-02T03:00:00-05:00
+Date: 2026-03-01
 Related: L-00114 (depends_on)
 
 core.md is the actual delivery mechanism for learnings to fresh sessions. If a learning isn't in core.md, fresh sessions won't know it exists unless they happen to read the type-specific file. The onboarding protocol reads core.md — it does not read all type files. Therefore any learning that would cause a consequential mistake if missed must be in core.md. The selection criterion: "if a fresh session doesn't know this, will it make a mistake that matters?" If yes, it's core.
@@ -238,7 +238,7 @@ Type: process_rule
 Tags: response-scope, work-items, planning
 Confidence: high
 Status: active
-Date: 2026-03-02T03:45:00-05:00
+Date: 2026-03-01
 Related: L-00113 (related_to)
 
 Count work items BEFORE the first tool call, every response. The instruction exists in memory ("Count work items BEFORE first tool call. >3 distinct work items or >15 tool calls = split across responses") but was not followed in the response that failed — it attempted learnings capture, three file integrations, and system wiring all at once. The count must be explicit and visible, not implicit. State "N work items this response, splitting M for next" before starting work. A failed response wastes more time than two successful ones.
@@ -250,7 +250,7 @@ Type: process_rule
 Tags: learnings, enforcement, mechanical-vs-prose
 Confidence: high
 Status: active
-Date: 2026-03-02T03:45:00-05:00
+Date: 2026-03-01
 Related: L-00113 (depends_on), L-00115 (validates), L-00116 (validates)
 
 Learnings that remain prose get ignored; learnings that become mechanical checks get followed. L-00113 (active scan) was prose — the very next checkpoint under-captured. `/verify-learnings-counts` (L-00115) is mechanical — it runs grep, compares numbers, reports discrepancies. The pattern: when a learning identifies a recurring failure mode, the fix is not a better-worded rule but a tool or command that enforces the rule without requiring the AI to remember it. Prose rules require behavioral compliance. Mechanical checks require only invocation.
@@ -262,7 +262,7 @@ Type: process_rule
 Tags: checkpoint, context-loss, multi-response
 Confidence: high
 Status: active
-Date: 2026-03-02T05:00:00-05:00
+Date: 2026-03-01
 Related: L-00130 (depends_on), L-00127 (related_to)
 
 Multi-response checkpoints must stash progress incrementally. Checkpoints spanning multiple responses are vulnerable to the same context loss L-00130 addresses. Each completed step must be written to files before proceeding to the next. Pattern: write learnings to stash file → commit or update .onboarding-state → proceed to methodology signals → stash again. If context dies mid-checkpoint, the completed steps survive. Instruction origin: Brian's "stash as you go to prevent lost progress."
@@ -274,7 +274,7 @@ Type: process_rule
 Tags: methodology, review, corpus-analysis
 Confidence: high
 Status: active
-Date: 2026-03-02T05:00:00-05:00
+Date: 2026-03-01
 Related: L-00124 (extends), L-00128 (related_to)
 
 Corpus-level review is a distinct operation from keyword-based signal scanning. `/review-signals` greps HOW-I-WORK for keywords matching existing learnings. Reading the full corpus end-to-end revealed structure that keyword matching cannot: emergent clusters (prompt engineering, agent autonomy, session types, capture philosophy), a philosophical foundation ("we want to be 1"), and accumulation-without-curation debt. Periodic full-read review — not just keyword scan — surfaces patterns that exist between entries, not within them.
@@ -286,7 +286,7 @@ Type: process_rule
 Tags: prompts, agents, compression
 Confidence: high
 Status: active
-Date: 2026-03-02T05:30:00-05:00
+Date: 2026-03-01
 Related: L-00016 (extends), L-00020 (related_to)
 
 "Half the length and do not solve the thing the agent will be able to solve. Show them where to look if you must for success." Calibrate spec prescriptiveness by agent capability — only lock down decisions an agent would high-percentage get wrong. Token cost and agent behavior efficiency are the quality metrics, not just output correctness. Distinguish boilerplate (load-bearing rules proven by failure) from verbosity (excess words expressing those rules). Cut verbosity, keep the rules.
@@ -298,7 +298,7 @@ Type: process_rule
 Tags: capture, sessions, meta-work
 Confidence: high
 Status: active
-Date: 2026-03-02T05:30:00-05:00
+Date: 2026-03-01
 Related: L-00116 (extends), L-00113 (related_to)
 
 High-lucidity sessions — systematic, meta-level, philosophical about the system — are rare and perishable. "I may not be this lucid tomorrow, so do what you can when you can." The AI should recognize these windows and maximize capture density because the next session may be purely task-focused. The learnings system exists to encode lucid-state decisions so they persist into less-lucid states. Corollary: zero features built with 24 learnings produced is a productive session when the lucidity is there.
@@ -310,7 +310,7 @@ Type: process_rule
 Tags: prompts, agents, quality
 Confidence: high
 Status: active
-Date: 2026-03-02T05:30:00-05:00
+Date: 2026-03-01
 Related: L-00016 (depends_on), L-00001 (related_to)
 
 Prompt review catches errors dramatically cheaper than output rework. Brian reviewed 5 agent prompts line-by-line before execution, catching 5 violations that would have caused full re-runs. Quality-gating at the prompt layer (input) is the highest-leverage checkpoint in agent-based workflows. Post-execution QA is necessary but is the expensive fallback, not the primary defense.
@@ -322,7 +322,7 @@ Type: process_rule
 Tags: rules, design, precision
 Confidence: high
 Status: active
-Date: 2026-03-02T05:30:00-05:00
+Date: 2026-03-01
 Related: L-00128 (related_to)
 
 When a rule feels wrong, replace it with the actual constraint it was proxying for — don't tweak the number. Flat 10-call limit → "be purposeful, stop at natural decision boundaries." Arbitrary recursion depth → diagnose spiraling by purposelessness, not depth. The diagnostic for constraint quality: does the rule penalize correct behavior? If yes, it's a proxy — find the real constraint. Brian demands logical precision: "IFF" means the biconditional. "Generally fine" is not a rule.
@@ -334,7 +334,7 @@ Type: process_rule
 Tags: review, methodology, corpus-analysis
 Confidence: high
 Status: active
-Date: 2026-03-02T05:30:00-05:00
+Date: 2026-03-01
 Related: L-00133 (extends), L-00124 (related_to)
 
 "Read each line closely, tell me your impressions" is not a summary request — it's a structural audit. Identify emergent clusters across entries, find the philosophical foundation, surface gaps between what the document promises (curated sections) and what exists (raw accumulation only), assess maturity signals, and report inter-entry relationships no single entry reveals. Close read differs from keyword scan (L-00133's /review-signals) by operating on structure and meaning, not pattern matching. The output is cluster identification + gap analysis + maturity assessment, not a précis.
@@ -346,7 +346,7 @@ Type: process_rule
 Tags: methodology, capture, curation
 Confidence: high
 Status: active
-Date: 2026-03-02T05:30:00-05:00
+Date: 2026-03-01
 Related: L-00140 (depends_on), L-00133 (related_to)
 
 In HOW-I-WORK corpus, Brian's direct quotes ("we want to be 1", "half the length", "I may not be this lucid tomorrow") carry more signal per token than the third-person observations wrapping them. When curating accumulation entries into sections, quotes should survive verbatim — the surrounding gloss can be compressed or restructured. Curation heuristic inferred from the close-read process itself: the entries that anchored cluster identification were quotes, not observations.
@@ -358,7 +358,7 @@ In HOW-I-WORK corpus, Brian's direct quotes ("we want to be 1", "half the length
 - **Tags:** [agent-prompts, scope-sizing, verification, blast-radius]
 - **Confidence:** high — demonstrated by schema-standardization agent overscope
 - **Status:** active
-- **Date:** 2026-03-02
+- **Date:** 2026-03-01
 - **Related:** L-00143, L-00127, L-00131
 
 Agent prompts that bundle independent migrations into one dispatch create debugging surface area proportional to the product, not the sum, of their scopes. Schema standardization prompt combined two orthogonal operations: mechanical rename (L-NNNN → L-NNNNN, 414 references) and judgment-heavy conversion (70 HOW-I-WORK entries needing Type/Tags/Confidence classification). If the rename breaks, the diff contains both changes. If a classification is wrong, you're reviewing it inside a 414-line rename diff. One agent prompt per independent migration. Verification is only as good as the isolation of what you're verifying.
@@ -370,7 +370,7 @@ Agent prompts that bundle independent migrations into one dispatch create debugg
 - **Tags:** [scope-sizing, active-scan, verification, context-limits, agent-prompts, response-discipline, token-budget, calibration]
 - **Confidence:** high — synthesized from L-00127, L-00131, L-00142 and repeated scope failures
 - **Status:** active
-- **Date:** 2026-03-02
+- **Date:** 2026-03-01
 - **Related:** L-00127, L-00131, L-00142, lib/decision-log.sh
 
 **Active Scan: before every prompt is written for an agent, or response is executed against a user prompt, or for any activity that could push limits of any kind, the proper process scope sizing rituals must be employed.**
@@ -404,7 +404,7 @@ Diagnostic: if verification requires more than one method, or estimated tokens e
 - **Tags:** [dispatch-sequencing, dependencies, merge-order, preconditions]
 - **Confidence:** high — Dispatch 4 agent couldn't find Dispatch 1's output
 - **Status:** active
-- **Date:** 2026-03-02
+- **Date:** 2026-03-01
 - **Related:** L-00142, L-00143, L-00131
 
 When dispatch N depends on dispatch N-1's output files, the merge of N-1 to the working branch is a precondition of N, not a follow-up. Dispatch 4 (replace token proxy) couldn't find `lib/general-estimates.sh` because the checkpoint branch carrying Dispatch 1's output hadn't been merged to main. The agent created the file from scratch — correct decision in this case (no prior content to preserve), but a larger file with existing logic would have been silently overwritten. Dispatch dependency = merge dependency. State this explicitly in the dispatch prompt's Preconditions section: "Requires [branch] merged to [target]. Verify with: `git log --oneline [target] | grep [commit-msg-fragment]`".
@@ -414,7 +414,7 @@ When dispatch N depends on dispatch N-1's output files, the merge of N-1 to the 
 - **Tags:** [execution-routing, prompt-indirection, desktop-commander, context-limits]
 - **Confidence:** high — three checkpoint prompts failed before direct execution succeeded
 - **Status:** active
-- **Date:** 2026-03-02
+- **Date:** 2026-03-01
 - **Related:** L-00147, L-00143, M-00073
 
 When the execution environment is available, execute directly instead of writing prompts. Three checkpoint prompts were written, downloaded, and failed when pasted into Code tab sessions with existing context. The work could have been done directly via Desktop Commander from claude.ai. Writing a prompt to hand off to another Claude instance adds indirection, context overhead, and a failure mode (the prompt itself consuming tokens in an already-loaded session). Direct execution is faster and eliminates the handoff failure class. Exception: agent dispatches that create branches need Claude Code's git permissions and branch isolation.
@@ -424,7 +424,7 @@ When the execution environment is available, execute directly instead of writing
 - **Tags:** [pre-work-verification, redundant-work, scope-sizing, state-check]
 - **Confidence:** high — an agent prompt was written for 5 work items that were already complete
 - **Status:** active
-- **Date:** 2026-03-02
+- **Date:** 2026-03-01
 - **Related:** L-00142, L-00143
 
 Before writing an agent prompt, verify that the target work items aren't already done. A prompt was written for 5 changes (core injection, scope format, token reporting, behavioral compliance, core maintenance) — all 5 had already been completed by two earlier agent sessions working on related tasks. The prompt was scoped, estimated, and ready to run for work that didn't exist. A 30-second grep of each target file for the expected output string would have caught this. Rule: for each work item in any planned agent prompt, grep the target file for the expected artifact before writing the prompt. If the artifact exists, skip the item.
@@ -436,7 +436,7 @@ Before writing an agent prompt, verify that the target work items aren't already
 - **Tags:** [rule-infrastructure-gap, prose-vs-mechanical, dependency-ordering, L-00128]
 - **Confidence:** high — observed three times in one session
 - **Status:** active
-- **Date:** 2026-03-02
+- **Date:** 2026-03-01
 - **Related:** L-00128, L-00143, L-00142
 
 A process rule that references infrastructure which doesn't exist yet is decoration. This session wrote L-00143 (scope sizing ritual requiring `estimate_general_tokens()`), then wrote agent prompts saying "use the estimator" — but the estimator function didn't exist for three more dispatches. The rule was real, the prompts referenced it, and nothing worked because the dependency wasn't built yet. This is L-00128 (prose gets ignored) at the meta level: the rule about using the tool was itself prose until the tool existed. Countermeasure: when writing a process rule, immediately check whether its dependencies exist. If not, the first dispatch must build the dependency, and subsequent rules/dispatches must wait.
@@ -448,7 +448,7 @@ A process rule that references infrastructure which doesn't exist yet is decorat
 - **Tags:** [migration-debt, language-migration, compound-cost, bash-to-python]
 - **Confidence:** high — lib/general-estimates.sh written in bash during active bash→Python migration
 - **Status:** active
-- **Date:** 2026-03-02
+- **Date:** 2026-03-01
 - **Related:** L-00111, L-00124
 
 Writing new infrastructure in the outgoing language during a migration creates compound debt. The session identified that Dispatch 1 would create `lib/general-estimates.sh` — a new bash file — while the project was actively converting bash to Python. Claude flagged this ("building infrastructure in the outgoing language") and recommended Python implementation. The agent wrote bash anyway because the prompt specified bash. The file now works, passes tests, and needs to be migrated. New code written in the old language has double cost: the effort to write it plus the effort to migrate it. During active migrations, new infrastructure should use the target language unless there's a blocking dependency on the old system.
@@ -460,7 +460,7 @@ Writing new infrastructure in the outgoing language during a migration creates c
 - **Tags:** [learnings-quality, self-containment, jargon, system-legibility, actionability]
 - **Confidence:** high — Brian corrected L-00151 for using project-internal jargon ("dispatch") that future readers wouldn't understand
 - **Status:** active
-- **Date:** 2026-03-02
+- **Date:** 2026-03-01
 - **Related:** L-00128, L-00141
 
 Every learning entry must be self-contained, use system-legible language, and be actionable where possible. Project-internal jargon (e.g., "dispatch" meaning "agent prompt") makes entries opaque to a fresh Claude instance that onboards without session context. Each entry is read by future instances that may never have seen the term — if the entry requires external context to parse, it fails at its purpose. Three requirements: (1) define or avoid jargon — use plain descriptions a new reader can follow; (2) include enough context that the learning is understandable without reading other entries; (3) state a concrete countermeasure or action, not just an observation. An entry that says "dispatches should be sequenced" teaches nothing; "agent prompts with file dependencies must verify those files exist before execution" is actionable.

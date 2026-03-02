@@ -71,7 +71,7 @@ Type: empirical_finding
 Tags: agents, prompts, first-dispatch, validation
 Confidence: medium
 Status: active
-Date: 2026-03-02T03:00:00-05:00
+Date: 2026-03-01
 Related: L-00109 (validates), L-00045 (validates)
 
 Phase 2 agent (eval-sidecar conversion) succeeded on first dispatch: 31 tests, 77 assertions, mypy --strict clean, exactly 3 files modified (hard constraint). This is the first agent run using both the prompt engineering guide (L-00109) and dependency signatures instead of full source (L-00045) together. Single data point — not yet validated per Brian's demonstrated/validated distinction — but directionally supports the approach. Phase 1 also succeeded on first dispatch for all 5 agents. Combined: 6/6 first-dispatch successes since adopting the guide.
@@ -83,7 +83,7 @@ Type: empirical_finding
 Tags: agents, hard-constraints, boundary-enforcement
 Confidence: high
 Status: active
-Date: 2026-03-02T03:00:00-05:00
+Date: 2026-03-01
 Related: L-00001 (related_to), L-00016 (related_to), L-00121 (related_to)
 
 Hard constraints boundary enforcement worked under pressure. The Phase 2 agent noticed .gitignore needed Python cache entries but correctly stayed within its 3-file boundary (eval_sidecar.py, test_eval_sidecar.py, Agents.md). The agent wanted to do more and flagged it in its summary instead of acting. This validates the hard constraints pattern from a different angle than L-00001/L-00016 — those are about agents exceeding scope silently; this shows an agent recognizing a legitimate need and correctly deferring it.
@@ -95,7 +95,7 @@ Type: empirical_finding
 Tags: agents, preconditions, resilience
 Confidence: medium
 Status: active
-Date: 2026-03-02T03:00:00-05:00
+Date: 2026-03-01
 Related: L-00112 (related_to)
 
 Agent precondition check (HEAD hash) was invalidated by L-00112 coordination failure, but the agent produced correct output anyway. The precondition advanced from 6be9b74 to a67c60c (a learnings/ACTIVE-CONSIDERATIONS commit — no code changes). Either the agent didn't enforce the precondition strictly, or it adapted. The outcome was fine because the commit didn't touch any dependency, but this is a near-miss: if the intervening commit had modified a file the agent depended on, the output could have been silently wrong. Precondition checks exist for the bad case, not the good case.
@@ -107,7 +107,7 @@ Type: empirical_finding
 Tags: context-loss, validation, compaction
 Confidence: high
 Status: active
-Date: 2026-03-02T05:00:00-05:00
+Date: 2026-03-01
 Related: L-00130 (validates)
 
 L-00130 (design for context loss) was validated by real compaction event in the same session that wrote it. File-based architecture survived: .onboarding-state, learnings files, ACTIVE-CONSIDERATIONS.md, and transcript provided enough state for replacement context to resume work without asking "where were we?" Per L-00123's language distinction between "demonstrated" and "validated": the original writing was demonstration; this compaction event is confirming validation.
@@ -119,7 +119,7 @@ L-00130 (design for context loss) was validated by real compaction event in the 
 - **Tags:** [near-miss, agent-prompts, scope-sizing, schema-migration]
 - **Confidence:** high — direct observation
 - **Status:** active
-- **Date:** 2026-03-02
+- **Date:** 2026-03-01
 - **Related:** L-00142, L-00143, L-00123
 
 Schema standardization agent succeeded despite overscoped prompt (L-00142 violation). 23 files, +1275/-501 lines, zero orphaned IDs, all verification checks passed. This is a near-miss per L-00123 language: correct outcome does not validate the process. The agent could have hit context limits on a larger repo or with more complex entries. Verification passing confirms the output was correct, not that the scope was safe. Near-misses that succeed are harder to learn from than failures — they create false confidence that bundling works.
@@ -131,7 +131,7 @@ Schema standardization agent succeeded despite overscoped prompt (L-00142 violat
 - **Tags:** [token-estimation, calibration, proxy-metrics, general-estimates]
 - **Confidence:** high — direct observation from Dispatch 1 token report
 - **Status:** active
-- **Date:** 2026-03-02
+- **Date:** 2026-03-01
 - **Related:** L-00143, lib/general-estimates.sh
 
 Token estimation formula (lines_read × 4 + lines_written × 4 + 5000) produced 5860 "actual" tokens for a run with 37 tool calls. The formula only measures file I/O — it cannot see prompt injection, CLAUDE.md/repo context auto-loaded by the agent, tool call overhead (~200 tokens per invocation), inter-call reasoning, or verification output. True consumption was likely 20-30k. The 5000 "reasoning overhead" constant masks a variable that scales with tool call count and conversation complexity. Feeding this proxy data into general-estimates.jsonl would miscalibrate the estimator — the system would learn from wrong numbers. Proxy measurement that produces confidently wrong data is worse than no measurement. Replace with actual API token counts from Claude Code session metadata.
@@ -143,7 +143,7 @@ Token estimation formula (lines_read × 4 + lines_written × 4 + 5000) produced 
 - **Tags:** [context-limits, scope-sizing, token-estimation, degradation-ceiling]
 - **Confidence:** high — agent estimated 8.5% then hit context limit
 - **Status:** active
-- **Date:** 2026-03-02
+- **Date:** 2026-03-01
 - **Related:** L-00143, L-00145
 
 Context limit estimates must account for already-consumed context, not just the planned response. An agent estimated 8.5% utilization against the full 200k context window, stated "Proceeding," then failed to complete. The degradation ceiling formula calculates available room as `max_context × quality_factor`, but this assumes an empty context window. Correct formula: `available_room = (max_context × quality_factor) - current_context_used`. Without subtracting current context (conversation history, CLAUDE.md injection, tool definitions, system prompt), the estimate is meaningless. A fresh session and a 50-message session have radically different available room despite the same ceiling calculation.
@@ -155,7 +155,7 @@ Context limit estimates must account for already-consumed context, not just the 
 - **Tags:** [token-estimation, proxy-metrics, calibration, magnitude-error]
 - **Confidence:** high — direct comparison: proxy said 5,860, actual JSONL showed 1.9M
 - **Status:** active
-- **Date:** 2026-03-02
+- **Date:** 2026-03-01
 - **Related:** L-00145, L-00143
 
 First real token measurement via `get_session_actual_tokens` showed the proxy formula was off by ~300x, not the 2x the formula's self-computed error claimed. The formula's error calculation was also wrong because it divided proxy-by-proxy. The 104.8% "overestimate" error was itself a proxy artifact — the denominator (5,860 "actual") was as wrong as the numerator (12,000 "estimated"). Real comparison: 12,000 estimated vs ~1.9M actual = 99.4% underestimate. Lesson: a broken measurement system cannot self-diagnose. Requires external ground truth (in this case, Claude Code's JSONL session logs).
@@ -165,7 +165,7 @@ First real token measurement via `get_session_actual_tokens` showed the proxy fo
 - **Tags:** [token-estimation, cache-tokens, calibration, active-vs-cumulative]
 - **Confidence:** high — direct observation from checkpoint token report
 - **Status:** active
-- **Date:** 2026-03-02
+- **Date:** 2026-03-01
 - **Related:** L-00145, L-00148, L-00143
 
 Cache tokens dominate cumulative session totals but are irrelevant to scope estimation. A checkpoint session reported 3.17M "actual" tokens — 87.6% was cache reads (re-sent context: CLAUDE.md, tool definitions, conversation history). Active computation was ~31.5k (input + output). Comparing scope estimates against cumulative tokens produces meaningless calibration data — the number scales with API call count and session length, not with the work unit being estimated. The estimator must compare against active_tokens (input + output) only. This is distinct from L-00145 (proxy formula wrong) and L-00148 (magnitude error) — those identified the proxy was broken. This identifies that even real token data needs decomposition before it's useful for calibration.
@@ -177,7 +177,7 @@ Cache tokens dominate cumulative session totals but are irrelevant to scope esti
 - **Tags:** [claude-code, slash-commands, skills, chat-interface, platform-capabilities]
 - **Confidence:** high — tested directly, confirmed by official docs
 - **Status:** active
-- **Date:** 2026-03-02
+- **Date:** 2026-03-01
 - **Related:** L-00150, M-00076
 
 `.claude/commands/` (slash commands) and `.claude/skills/` (agent skills) only work in Claude Code (terminal). They do NOT work in claude.ai Chat tab or Claude Desktop Chat, despite docs suggesting skills work "outside of Claude Code." For cross-interface workflows (extract-learnings, checkpoint), the working path is: Claude's memory recognizes the trigger phrase + Desktop Commander provides filesystem access + natural language drives execution. No infrastructure file needed — just say the words.
@@ -189,7 +189,7 @@ Cache tokens dominate cumulative session totals but are irrelevant to scope esti
 - **Tags:** [self-assessment, compaction, recency-bias, session-scope]
 - **Confidence:** high — direct observation, Brian corrected
 - **Status:** active
-- **Date:** 2026-03-02
+- **Date:** 2026-03-01
 - **Related:** L-00001, L-00116, L-00130
 
 After context compaction, Claude assessed a 9-hour, 15+ commit session as "relatively short in terms of new things." The compaction summary was compact, so the session *felt* compact — but the summary is lossy by design (L-00130). This is L-00001 (agent self-assessments unreliable) manifesting at session scope: Claude's subjective sense of "how much happened" tracks context window density, not actual elapsed work. Mechanical countermeasure: before assessing session scope, run `git log --oneline --since="[session start]"` and count commits, files changed, learnings captured. Never trust the vibes.
@@ -201,7 +201,7 @@ After context compaction, Claude assessed a 9-hour, 15+ commit session as "relat
 - **Tags:** [shell-metacharacters, command-naming, zsh, cross-shell, silent-failure]
 - **Confidence:** high — `!learn` failed in zsh, required rename to `extract-learnings`
 - **Status:** active
-- **Date:** 2026-03-02
+- **Date:** 2026-03-01
 - **Related:** M-00075
 
 Shell metacharacters in command names cause silent failures across shells. The `!learn` command name was chosen to avoid conflicting with Claude's built-in `/learn`, but `!` is a history expansion character in zsh. `git commit -m "add !learn command"` triggered `zsh: event not found: learn`. `cp` and `git add` with the `!` required backslash escaping. The fix was renaming to `extract-learnings` — no metacharacters, no escaping, works everywhere. Rule: command names should contain only `[a-z0-9-]`. No `!`, `@`, `#`, `$`, `%`, `^`, `&`, `*`, or any character that any common shell treats specially.
@@ -213,7 +213,7 @@ Shell metacharacters in command names cause silent failures across shells. The `
 - **Tags:** [agent-resilience, precondition-recovery, dependency-chain, silent-deviation]
 - **Confidence:** high — Dispatch 4 agent created file that Dispatch 1 was supposed to create
 - **Status:** active
-- **Date:** 2026-03-02
+- **Date:** 2026-03-01
 - **Related:** L-00146, L-00142
 
 Agents that recover from unmet preconditions are more robust but break dependency chain visibility. Dispatch 4 (replace token proxy formula) discovered that `lib/general-estimates.sh` didn't exist — Dispatch 1 had never been run. Rather than halting and reporting the precondition failure, the agent created the file from scratch and continued. The work completed successfully. But the dependency violation was silent: the dispatch chain assumed Dispatch 1 → 4 ordering, and 4 ran without 1. This worked because the agent had enough context to recreate the missing piece. It could have gone wrong if Dispatch 1 had established conventions that Dispatch 4 unknowingly violated. Precondition failures should be reported even when recovered from — log it, then proceed.
@@ -225,7 +225,7 @@ Agents that recover from unmet preconditions are more robust but break dependenc
 - **Tags:** [token-metrics, cumulative-vs-active, cache-reads, measurement, calibration]
 - **Confidence:** high — 3.17M cumulative vs 31.5k active tokens in same session
 - **Status:** active
-- **Date:** 2026-03-02
+- **Date:** 2026-03-01
 - **Related:** L-00145, L-00148
 
 Cumulative token metrics (including cache reads) and active tokens (input + output) measure fundamentally different things and must never be compared or conflated. A 61-API-call session reported 3,174,082 cumulative tokens — 87.6% were cache reads (the same conversation context re-sent and cached on each call). Active tokens were ~31.5k. Reporting the cumulative number against a 9,380 scope estimate made the estimate look 337x wrong when it was actually 3.4x wrong. The fix: `get_session_actual_tokens()` now returns both `active_tokens` and `cumulative_tokens` as separate fields. Scope estimates compare against `active_tokens`. Billing analysis uses `cumulative_tokens`. Mixing them poisons calibration data.

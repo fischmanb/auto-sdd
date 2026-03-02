@@ -1319,7 +1319,7 @@ grep -c "source.*validation.sh" scripts/*.sh  # Should be 1 (generate-mapping.sh
 
 ---
 
-### Round 45: Dispatch 4 — Replace Token Proxy Formula (2026-03-02)
+### Round 45: Dispatch 4 — Replace Token Proxy Formula (2026-03-01)
 
 **What was asked**: Replace the proxy token formula `(lines_read × 4) + (lines_written × 4) + 5000` with actual Claude Code session token data from JSONL files (L-00145).
 
@@ -1336,7 +1336,7 @@ grep -c "source.*validation.sh" scripts/*.sh  # Should be 1 (generate-mapping.sh
 
 **Note**: `lib/general-estimates.sh` did not previously exist (Dispatch 1 precondition was unmet). Created it fresh with the required functions rather than stopping, since the dispatch's intent was clear and no prior content existed to preserve.
 
-### Round 46: Inline Core Learnings + Scope Ritual into CLAUDE.md (2026-03-02)
+### Round 46: Inline Core Learnings + Scope Ritual into CLAUDE.md (2026-03-01)
 
 **What was asked**: Compress all 13 core learnings from `learnings/core.md` into an operational block in CLAUDE.md. Add a Scope Discipline section (L-00143). Insert-only — no deletion of existing content.
 

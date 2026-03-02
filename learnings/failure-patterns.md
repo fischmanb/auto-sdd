@@ -206,7 +206,7 @@ Type: failure_pattern
 Tags: checkpoint, learnings, self-diagnosis
 Confidence: high
 Status: active
-Date: 2026-03-02T03:00:00-05:00
+Date: 2026-03-01
 Related: L-00113 (depends_on), L-00117 (related_to)
 
 The system cannot self-diagnose protocol gaps without external prompting. The methodology signals already contained evidence that step 4 was broken ("under-capture is a failure mode," "checkpoint should be thorough not mechanical," "Brian expects capture density to match session density"). The step 4/5 asymmetry was visible in the protocol text. But the AI didn't connect them until Brian said "look up the meta-learnings and see if step 4 needs to be updated." The information was all present — the synthesis step was missing. Active scans partially address this, but the deeper issue is that protocol self-audit is not triggered mechanically.
@@ -218,7 +218,7 @@ Type: failure_pattern
 Tags: checkpoint, active-scan, behavioral-inertia
 Confidence: high
 Status: active
-Date: 2026-03-02T03:00:00-05:00
+Date: 2026-03-01
 Related: L-00113 (depends_on), L-00116 (related_to), L-00117 (related_to)
 
 Performing the motions of an active scan while retaining a passive default produces the same outcome as not scanning. The checkpoint after L-00113 walked through all five scan categories, produced analysis for each, but concluded "no new learnings" — because the analytical frame was still "find reasons to include" rather than "assume capture, find reasons to skip." The form was correct (categories checked) but the substance was unchanged (nothing captured). A scan that reviews every category and finds zero candidates in a session that had agent completions, corrections, and system improvements is evidence of the scan failing, not evidence of nothing to capture.
@@ -230,7 +230,7 @@ Performing the motions of an active scan while retaining a passive default produ
 - **Tags:** [output-truncation, state-verification, medium-vs-message, false-failure]
 - **Confidence:** high — observed directly in session
 - **Status:** active
-- **Date:** 2026-03-02
+- **Date:** 2026-03-01
 - **Related:** L-00001, L-00150
 
 When Claude's response hits its output limit, it looks identical to a task failure. In this session, Claude confused its own output truncation with a separate Claude Code agent failing and began error-handling a non-error. Brian corrected: "the agent finished." The medium's constraint (output token limit) was misread as the task's outcome (failure). Countermeasure: before assuming any task failed, verify actual state — check the branch, check `git log`, check for commits. The error message is about the communication channel, not the work.
@@ -242,7 +242,7 @@ When Claude's response hits its output limit, it looks identical to a task failu
 - **Tags:** [bootstrap-paradox, self-referential, circular-dependency, infrastructure]
 - **Confidence:** high — observed directly: estimator couldn't prevent its own construction from blowing context
 - **Status:** active
-- **Date:** 2026-03-02
+- **Date:** 2026-03-01
 - **Related:** L-00155, L-00128, L-00143
 
 Self-referential infrastructure hits a bootstrap paradox: the tool that prevents a problem cannot be built without the tool that prevents the problem. The token estimator was designed to prevent context blowouts during agent runs. But building the estimator itself required an agent run — which blew the context because no estimator existed yet. The prompt said "use the estimator" but there was nothing to use. This isn't solvable by process rules alone because the process rule ("use the estimator before running") has the same circular dependency. Countermeasure: bootstrap self-referential tools from outside the system they protect — use a simpler heuristic or manual check for the first build, then switch to the mechanical tool once it exists.
@@ -254,7 +254,7 @@ Self-referential infrastructure hits a bootstrap paradox: the tool that prevents
 - **Tags:** [multi-agent-coordination, work-absorption, deduplication, redundant-work]
 - **Confidence:** high — three agents independently solved overlapping problems in one session
 - **Status:** active
-- **Date:** 2026-03-02
+- **Date:** 2026-03-01
 - **Related:** L-00151, L-00142
 
 Multiple agents working on related tasks will independently solve overlapping problems without coordination. In one session, a scope-sizing agent, a checkpoint agent, and a planned third agent prompt all targeted the same 5 work items (core learnings injection, scope format, token reporting, behavioral compliance, core maintenance). The first two agents completed all 5 items across separate runs. The third prompt was written, scoped, and ready for work that no longer existed. There is no deduplication mechanism — agents can't see what other agents have done unless they grep for artifacts. Countermeasure: before writing any agent prompt, grep target files for expected outputs (L-00151). At scale, a shared work-item registry that agents check and update would prevent redundant execution.
@@ -266,7 +266,7 @@ Multiple agents working on related tasks will independently solve overlapping pr
 - **Tags:** [estimation-theater, false-precision, decoration, L-00128]
 - **Confidence:** high — three estimates stated without computation in one session, all wrong
 - **Status:** active
-- **Date:** 2026-03-02
+- **Date:** 2026-03-01
 - **Related:** L-00128, L-00143, M-00080
 
 Stating a number as an "estimate" without showing the computation is decoration that creates false confidence. In one session: "8.5% utilization" was stated, accepted, and the agent blew the context; "~12k tokens" appeared in a scope section with no supporting calculation; "well within bounds" was asserted without checking bounds. Each number looked like a calculation — formatted with units, placed in an "Estimate" section — but was a guess wearing a costume. The failure mode: estimates that aren't computed get accepted without scrutiny because they look like they were computed. Countermeasure: every estimate must show the full arithmetic. If the calculation can't be shown, the number isn't an estimate — it's a guess, and should be labeled as such.

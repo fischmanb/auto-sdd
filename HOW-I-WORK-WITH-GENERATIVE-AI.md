@@ -775,7 +775,7 @@ Type: principle
 Tags: classification, learnings, tasks
 Confidence: high
 Status: active
-Date: 2026-03-02
+Date: 2026-03-01
 Related: L-00133 (related_to)
 
 Brian distinguishes between reusable principles (learnings) and actionable items (active considerations). When a finding is "here are 4 clusters that need curation," that's a task, not a learning — even though the method that surfaced it (L-00133) is a reusable principle. The classification criterion is: will a future session need this as a behavioral rule, or does it describe work to be done?
@@ -787,7 +787,7 @@ Type: observation
 Tags: compaction, resilience, architecture
 Confidence: high
 Status: active
-Date: 2026-03-02
+Date: 2026-03-01
 Related: L-00130 (related_to)
 
 Brian treats compaction survival as a real test, not a thought experiment. When the session's own context was compacted and the file-based architecture allowed resumption, the reaction was "are we killing it?" — the system proved itself under the exact condition it was designed for, in the same session that designed it.
@@ -799,7 +799,7 @@ Type: preference
 Tags: corpus-review, curation, maturity
 Confidence: high
 Status: active
-Date: 2026-03-02
+Date: 2026-03-01
 Related: L-00140 (related_to)
 
 Brian values full corpus reads at maturity inflection points. 60+ accumulated entries without a single curation pass is a debt signal. The instruction "read each line closely, tell me your impressions" is not a summary request — it's a structural audit. The output he valued was cluster identification and gap analysis, not a précis.
@@ -811,7 +811,7 @@ Type: principle
 Tags: review, close-read, methodology, corpus-analysis
 Confidence: high
 Status: active
-Date: 2026-03-02
+Date: 2026-03-01
 Related: L-00140 (related_to), L-00133 (related_to)
 
 Brian's definition of "close read" is a structural audit, not a summary. The expected output is cluster identification across entries, gap analysis between what a document promises and what exists, and maturity assessment of the overall system. This differs from keyword-based signal scanning (L-00133's `/review-signals`) by operating on structure and meaning, not pattern matching. When Brian says "read each line closely, tell me your impressions," the word "impressions" means structural findings — emergent groupings, philosophical foundations, inter-entry relationships no single entry reveals — not a précis or executive summary.
@@ -823,7 +823,7 @@ Type: observation
 Tags: scope-discipline, recursive-application
 Confidence: high
 Status: active
-Date: 2026-03-02
+Date: 2026-03-01
 Related: L-00143 (validates)
 
 Brian enforces scope discipline recursively — pointed out that Claude's own response about scope estimation didn't use the scope estimator. The system must apply to itself, not just to agents it dispatches.
@@ -835,7 +835,7 @@ Type: workflow_fact
 Tags: interface-routing, desktop-app, code-tab
 Confidence: high
 Status: active
-Date: 2026-03-02
+Date: 2026-03-01
 Related: L-00130 (related_to)
 
 Desktop app Chat tab cannot access local filesystem. Checkpoint protocol requires Code tab (Claude Code). Session routing is a precondition for protocol execution, not an afterthought.
@@ -847,7 +847,7 @@ Type: observation
 Tags: proxy-metrics, calibration, false-confidence
 Confidence: high
 Status: active
-Date: 2026-03-02
+Date: 2026-03-01
 Related: L-00145 (validates), L-00143 (related_to)
 
 Token estimation proxy formula produced data that would miscalibrate the estimator it feeds. Confidently wrong data is worse than no data. Brian's instinct to question the report ("does this seem right to you?") caught what the mechanical check could not — the formula validated its own output.
@@ -859,7 +859,7 @@ Type: preference
 Tags: operational-friction, documentation, shell-escaping
 Confidence: high
 Status: active
-Date: 2026-03-02
+Date: 2026-03-01
 Related: M-00073
 
 Brian treats small operational friction (zsh `!` escaping in filenames/commit messages) as worth documenting and fixing immediately rather than working around silently. Pattern: if a sharp edge cuts once, file it down before it cuts again. Consistent with L-00128 — prose workarounds get forgotten, mechanical fixes persist.
@@ -871,7 +871,7 @@ Brian treats small operational friction (zsh `!` escaping in filenames/commit me
 - **Tags:** [slash-commands, naming-convention, shell-escaping]
 - **Confidence:** high
 - **Status:** active
-- **Date:** 2026-03-02
+- **Date:** 2026-03-01
 - **Related:** M-00075, M-00073
 
 `!` prefix in Claude Code slash command filenames escapes the `/`, making the command unreachable. `!learn.md` had to be renamed to `extract-learnings.md`. Naming convention: avoid shell-special characters (`!`, `$`, `#`, backticks, etc.) in command filenames.
@@ -881,7 +881,7 @@ Brian treats small operational friction (zsh `!` escaping in filenames/commit me
 ## M-00077
 - **Type:** workflow_fact
 - **Tags:** [interface-routing, chat-vs-code, workflow-design]
-- **Date:** 2026-03-02
+- **Date:** 2026-03-01
 - **Related:** M-00076, L-00152
 
 Brian uses Chat tab (claude.ai / Desktop) for interactive sessions — planning, reviews, extract-learnings, checkpoints — and Code tab for agent dispatches that need git/branch permissions. He expects workflows like "extract learnings" and "checkpoint" to work from Chat via natural language + Desktop Commander, not requiring Code tab infrastructure. Interface routing is deliberate: Chat for thinking, Code for executing.
@@ -891,7 +891,7 @@ Brian uses Chat tab (claude.ai / Desktop) for interactive sessions — planning,
 ## M-00078
 - **Type:** workflow_fact
 - **Tags:** [desktop-commander, execution-style, act-dont-instruct]
-- **Date:** 2026-03-02
+- **Date:** 2026-03-01
 - **Related:** M-00077, L-00150
 
 Brian expects Claude to execute operations (git merges, pushes, conflict resolution, file edits) directly via Desktop Commander from Chat tab — not present bash blocks to copy-paste. "Execute using desktop commander as always." Desktop Commander is Claude's hands. When Claude has the tools to act, it should act. Writing instructions for Brian to execute manually is wasting his time.
@@ -901,7 +901,7 @@ Brian expects Claude to execute operations (git merges, pushes, conflict resolut
 ## M-00079
 - **Type:** workflow_fact
 - **Tags:** [correction-style, calibration-signals, communication-pattern]
-- **Date:** 2026-03-02
+- **Date:** 2026-03-01
 - **Related:** M-00020
 
 Brian's correction style is blunt and specific ("you dope", "you loon", "you scoped badly", "you failed"). These are calibration signals, not hostility. Each correction pinpoints exactly what went wrong and what the expected behavior was. Claude should take corrections immediately and apply them — no defensive hedging, no excessive apology, no multi-paragraph acknowledgment of the mistake. Fix the thing and keep moving.
@@ -911,7 +911,7 @@ Brian's correction style is blunt and specific ("you dope", "you loon", "you sco
 ## M-00080
 - **Type:** methodology_signal
 - **Tags:** [show-your-work, transparency, verification, estimation]
-- **Date:** 2026-03-02
+- **Date:** 2026-03-01
 - **Related:** L-00128, L-00143, L-00155
 
 "Show your work" is a general principle, not just for token estimates. A bare number ("Estimated: ~12k tokens") is decoration that no one can verify. The full calculation (files × lines × tokens/line + overhead = total) is verifiable and exposes errors. This applies to scope estimates, dependency counts, risk assessments — any claim that includes a number. If the number can't be reverse-engineered from the shown work, it's a guess labeled as an estimate. L-00128 (prose gets ignored) is the failure mode; showing the work is the countermeasure.
@@ -921,7 +921,7 @@ Brian's correction style is blunt and specific ("you dope", "you loon", "you sco
 ## M-00081
 - **Type:** workflow_fact
 - **Tags:** [multi-interface, session-architecture, chat-code-dc]
-- **Date:** 2026-03-02
+- **Date:** 2026-03-01
 - **Related:** M-00077, L-00152
 
 Brian's sessions routinely cross three interfaces with different capabilities: (1) Chat tab for interactive thinking — planning, reviews, learnings extraction, checkpoint coordination; (2) Code tab for agent dispatches needing git branch creation, isolation, and push permissions; (3) Desktop Commander (from Chat) for direct filesystem and git operations on main. The interfaces have different permission models and Claude should know which one it's operating in. Chat + DC can do most things except create new branches. Code tab is for isolated agent work that needs branch protection.
@@ -931,7 +931,7 @@ Brian's sessions routinely cross three interfaces with different capabilities: (
 ## M-00082
 - **Type:** observation
 - **Tags:** [quality-probing, calibration-test, output-verification]
-- **Date:** 2026-03-02
+- **Date:** 2026-03-01
 - **Related:** M-00079, L-00145
 
 Brian actively probes output quality rather than passively consuming it. "Does this seem right to you?" is typically a calibration test, not a genuine question — he already suspects the answer and is checking whether Claude catches the problem independently. In this session, he pasted a token report with a broken proxy formula and asked if it seemed right. The correct response is to analyze critically, not to affirm. When Brian asks "does this look right," treat it as a challenge to find what's wrong.
@@ -941,7 +941,7 @@ Brian actively probes output quality rather than passively consuming it. "Does t
 ## M-00083
 - **Type:** principle
 - **Tags:** [recursive-self-application, meta-process, eat-your-own-cooking]
-- **Date:** 2026-03-02
+- **Date:** 2026-03-01
 - **Related:** L-00143, L-00162, M-00080
 
 Brian demands recursive self-application: the system must use its own rules on itself. A session about scope estimation must itself use scope estimation. Brian corrected Claude when a response about the scope estimator didn't use the scope estimator: "that response did not complete, which means you did not use the scope estimator." Rules that apply to agents also apply to the session producing the agents. If the meta-process can't follow its own rules, the rules don't work.
@@ -951,7 +951,7 @@ Brian demands recursive self-application: the system must use its own rules on i
 ## M-00084
 - **Type:** observation
 - **Tags:** [failure-as-output, emergent-rules, same-session-learning]
-- **Date:** 2026-03-02
+- **Date:** 2026-03-01
 - **Related:** L-00160, L-00162, L-00155
 
 Process rules emerge from failures in the same session they're needed. L-00143 (scope sizing) was born from context blowouts during the session. L-00145 (proxy formula broken) from the session's own broken reports. L-00147 (context accounting) from the session's own wrong ceiling calculations. The session's failures ARE the session's primary output — the code changes are secondary to the process rules extracted from what went wrong. A session that produces zero failures is either not pushing hard enough or not scanning for them.
