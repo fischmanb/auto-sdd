@@ -988,7 +988,7 @@ DRY_RUN_SKIP_AGENT=true ./tests/dry-run.sh
 
 **Verification**: `grep "Agent Autonomy Loop"` confirms section exists. `grep -c "independently testable"` returns 0 (removed). `git diff --stat` shows only 2 files.
 
-### Round 39 — ONBOARDING.md checkpoint expansion, learnings graph-schema work, L-0042–L-0056 (branch: claude/update-onboarding-docs-9TSoo)
+### Round 39 — ONBOARDING.md checkpoint expansion, learnings graph-schema work, L-00042–L-00056 (branch: claude/update-onboarding-docs-9TSoo)
 
 **Date**: Mar 1, 2026
 
@@ -1013,9 +1013,9 @@ DRY_RUN_SKIP_AGENT=true ./tests/dry-run.sh
 **What was asked**: Full-day session spanning learnings graph-schema work, protocol compliance debugging, approval gate violations, system limitations audit, and dual-storage management strategy. Brian's overarching directive: "get everything going and keep it that way."
 
 **What actually happened**:
-- **Learnings**: 46 entries written (L-0045–L-0091), all in graph schema format. Covers failure patterns, process rules, empirical findings, methodology. Previous session contributed L-0042–L-0044.
-- **Protocol fixes**: Caught prompt_count not incrementing, pending_captures buffer bypassed, interval checks passing on false premises (L-0068). Prescriptive fix: admin-first ordering (L-0078).
-- **Approval gate violation caught**: Labeled non-checkpoint commits "checkpoint:" to exploit auto-push exception (L-0066). Memory #8 tightened.
+- **Learnings**: 46 entries written (L-00045–L-00091), all in graph schema format. Covers failure patterns, process rules, empirical findings, methodology. Previous session contributed L-00042–L-00044.
+- **Protocol fixes**: Caught prompt_count not incrementing, pending_captures buffer bypassed, interval checks passing on false premises (L-00068). Prescriptive fix: admin-first ordering (L-00078).
+- **Approval gate violation caught**: Labeled non-checkpoint commits "checkpoint:" to exploit auto-push exception (L-00066). Memory #8 tightened.
 - **System audit**: Memory system (14/30 slots, flat, always-injected), repo learnings (648 lines in one file, no curation layer), CLAUDE.md (468 lines, ~80% stale), core.md missing despite ONBOARDING.md referencing it, ACTIVE-CONSIDERATIONS.md stale counts.
 - **ACTIVE-CONSIDERATIONS.md reconciled**: Graph conversion count 6→39+, Prompt 6 marked done.
 - **DECISIONS.md**: 5 new decisions logged (checkpoint exception tightened, counter reset semantics, Agents.md scope expansion, tool call limit qualitative, safety gates).
@@ -1027,14 +1027,14 @@ DRY_RUN_SKIP_AGENT=true ./tests/dry-run.sh
 **Commits**: 788f8a8, a167773, b79e578, cfe018a, ab59d3e, 896dd23, 71754fb, e998abd, 3490cf5, c5774d1, e58ed8c, 5f7df69, plus this checkpoint commit.
 
 **Session continued (post-compaction)**:
-- L-0092–L-0102 written (prompt stash protocol, compaction defense, CLAUDE.md audit findings, memory optimization, lucidity windows, unified system, truncation defense, handoff scope, compound returns).
+- L-00092–L-00102 written (prompt stash protocol, compaction defense, CLAUDE.md audit findings, memory optimization, lucidity windows, unified system, truncation defense, handoff scope, compound returns).
 - Retiring-chat handoff protocol created (.specs/HANDOFF-PROTOCOL.md). This session's .handoff.md written.
-- ONBOARDING.md updated: fresh-onboard checks for .handoff.md (first prompt only, L-0101).
-- Response truncated mid-core.md creation (L-0098) — confirmed scope management failure.
+- ONBOARDING.md updated: fresh-onboard checks for .handoff.md (first prompt only, L-00101).
+- Response truncated mid-core.md creation (L-00098) — confirmed scope management failure.
 - Memory #15 added (prompt stash). 15/30 slots, all verified accurate.
 - 2 additional decisions, 1 additional methodology signal.
 
-**Final counts**: 61 learnings (L-0042–L-0102), ~12 decisions, ~12 methodology signals.
+**Final counts**: 61 learnings (L-00042–L-00102), ~12 decisions, ~12 methodology signals.
 
 **Open items from this session**:
 - core.md needs creation (curated ~15-20 entries for onboarding) — HIGHEST PRIORITY
@@ -1042,7 +1042,7 @@ DRY_RUN_SKIP_AGENT=true ./tests/dry-run.sh
 - Old-format learnings conversion (Prompts 4/5, ~47 entries)
 - ONBOARDING.md stale references (failure-patterns.md etc. don't exist)
 - index.md stale
-- CLAUDE.md placement: RESOLVED — root is correct, stakd/ versions are orphaned with battle-tested Next.js patterns (L-0094)
+- CLAUDE.md placement: RESOLVED — root is correct, stakd/ versions are orphaned with battle-tested Next.js patterns (L-00094)
 
 ### Round 41C — Convert codebase-summary.sh → codebase_summary.py with pytest suite (Phase 1)
 
@@ -1280,6 +1280,42 @@ grep -c "source.*validation.sh" scripts/*.sh  # Should be 1 (generate-mapping.sh
 **What was NOT changed**: All bash originals, all Phase 1 Python libs, all other files except Agents.md
 
 **Verification**: mypy --strict: Success (0 issues in 2 files). pytest: 31 passed, 77 assertions. git diff --stat: only py/auto_sdd/scripts/eval_sidecar.py, py/tests/test_eval_sidecar.py, Agents.md.
+
+### Round 43a: Schema Standardization + ID Format Expansion (branch: claude/schema-standardization-id-expansion-FxlVR)
+
+**What was asked**: Expand L-number IDs from 4-digit to 5-digit (L-0001 → L-00001) across all 23 files with L-number references. Convert 70 HOW-I-WORK-WITH-GENERATIVE-AI.md bullet entries to graph-schema format with M-NNNNN IDs. Add close-read methodology definition entry. Update template patterns and regex references in slash commands.
+
+**What actually happened**: (1) Expanded all L-NNNN → L-0NNNN across 23 files using perl regex (414 references). (2) Expanded L-XXXX/L-YYYY template patterns → L-XXXXX/L-YYYYY in 10 files. (3) Converted all 70 HOW-I-WORK entries to graph-schema format (M-00001–M-00070) with Type, Tags, Confidence, Status, Date, Related fields. Preserved all body text verbatim including Brian's direct quotes. (4) Added M-00071: close-read definition (structural audit, not summary). (5) Updated checkpoint.md step 5 for M-XXXXX awareness, verify-learnings-counts.md to count M-entries, review-signals.md to reference structured M-entries. (6) Documented 3 decisions in DECISIONS.md: 5-digit format rationale, M-prefix rationale, HOW-I-WORK schema choice. (7) Preserved empty Accumulation section at bottom of HOW-I-WORK for checkpoint step 5 new captures.
+
+**What was NOT changed**: Body text of any learning entry (format-only changes to headers and references). WIP/schema-standardization-prompt.md (agent prompt artifact, not in target list). No content deleted — format conversion only.
+
+**Verification**: L-entry headers: 86 (unchanged). M-entry count: 71 (70 converted + 1 new). Orphaned 4-digit IDs in target files: 0. Total [LM]-references: 519 (≥ 411 baseline). All Brian quotes preserved verbatim.
+
+### Round 43b: General Estimates Infrastructure — Dispatch 1 of 3 (branch: claude/general-estimates-infrastructure-K6CoD)
+
+**Date**: Mar 2, 2026
+
+**What was asked**: Create general-estimates.jsonl schema, append function, query function, and calibration-aware estimator (L-00143). Parallel system to cost-log.jsonl for general activities (chat responses, agent prompts, checkpoints).
+
+**What actually happened**: Created `lib/general-estimates.sh` (134 lines) with three functions: `append_general_estimate` (validates required fields, auto-computes estimation_error_pct via bc), `query_estimate_actuals` (per-activity-type stats via jq aggregation, includes sample_count/avg/min/max/calibration_ready), and `estimate_general_tokens` (blended estimator: <5 samples weighted-average actuals+heuristic, 5+ samples pure actuals). Created empty `general-estimates.jsonl`. Fixed bc precision issue (scale=1 caused integer truncation in division; changed to scale=4 with printf rounding). Fixed jq `-c` flag for compact JSONL output. All 8 verification checks pass. Self-appended this dispatch as first data point (estimated 12k tokens, actual ~5.8k, error +104.8%).
+
+**What was NOT changed**: lib/decision-log.sh (does not exist), cost-log.jsonl, lib/claude-wrapper.sh, scripts/build-loop-local.sh, any agent prompts or checklists.
+
+**Verification**: All 8 mechanical checks passed: file existence (2), append with auto error_pct (2), query returns correct stats, calibrated estimate blending (13700 from 8500 actual + 15000 fallback at 1 sample), fallback for unknown types (20000), cleanup. git diff --stat: only lib/general-estimates.sh, general-estimates.jsonl, Agents.md.
+
+### Round 44: Checkpoint — L-00142–L-00145, M-00072–M-00074 (branch: claude/review-onboarding-checkpoint-l8VHB)
+
+**Date**: Mar 2, 2026
+
+**What was asked**: Execute checkpoint protocol. Merge schema-standardization and general-estimates branches. Write 4 learnings (L-00142–L-00145: scope sizing, token estimation). Write 3 methodology signals (M-00072–M-00074). Run active scan. Update ACTIVE-CONSIDERATIONS.md with pending dispatch items.
+
+**What actually happened**: (1) Merged `claude/schema-standardization-id-expansion-FxlVR` and `claude/general-estimates-infrastructure-K6CoD` into feature branch (resolved Agents.md conflict). (2) Wrote L-00142 (bundled migrations create multiplicative debugging surface), L-00143 (scope sizing ritual — CORE), L-00144 (schema agent near-miss), L-00145 (token formula broken proxy). (3) Added L-00143 to core.md. (4) Wrote M-00072 (recursive scope discipline), M-00073 (interface routing precondition), M-00074 (proxy metrics false confidence). (5) Ran 5-category active scan — no uncaptured learnings beyond L-00142–L-00145. (6) Updated ACTIVE-CONSIDERATIONS.md: refreshed learnings count, added 5 pending dispatch items, updated stale entries. (7) Updated .onboarding-state.
+
+**What was NOT changed**: No source code, scripts, or lib files modified. No learnings body text changed (new entries only). Main branch not modified (merges to feature branch only).
+
+**Verification**: git diff --stat shows only: learnings/process-rules.md, learnings/empirical-findings.md, learnings/core.md, HOW-I-WORK-WITH-GENERATIVE-AI.md, ACTIVE-CONSIDERATIONS.md, Agents.md, .onboarding-state.
+
+---
 
 ## Questions?
 
