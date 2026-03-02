@@ -6,6 +6,15 @@
 > Each entry is a reference to the full entry in its type-specific file.
 > Read this file on every fresh onboard. No exceptions.
 
+## Maintenance
+
+Core learnings are reviewed when:
+- A core learning gets full mechanical enforcement (command/checkpoint step). If tool is validated over 3+ sessions, learning can be demoted (stays in category file, removed from core.md and CLAUDE.md).
+- A non-core learning is referenced in 3+ separate checkpoint scans → assess promotion.
+- Core count exceeds 15 → review, demote least-referenced to keep CLAUDE.md block under 600 tokens.
+
+Promotion and demotion require Brian's approval.
+
 ---
 
 ## L-00001 — Agent self-assessments are unreliable

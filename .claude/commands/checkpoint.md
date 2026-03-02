@@ -38,6 +38,7 @@ Single command to ensure all context management files are current. Prevents cont
 - For each candidate: propose entry to Brian (type, tags, body)
 - Do NOT auto-write to learnings files — Brian approves entries
 - **Self-test**: If this session wrote a new process rule, re-run the step it modifies to verify it works. Protocol adoption has a one-response latency (L-00117).
+- **Behavioral compliance check**: After scanning, review `learnings/core.md`. For each core learning: did this session comply? If violation found, capture it as a new learning. If all complied: state "Core compliance: all [N] core learnings followed this session." 30-second scan, not deep audit.
 - **Propagation check**: If any learning or protocol change was made, run `/verify-propagation`. This mechanically checks: core.md membership (L-00118), count drift via `/verify-learnings-counts` (L-00115), ONBOARDING.md/ACTIVE-CONSIDERATIONS.md staleness, and convention file references including CLAUDE.md (L-00125). (L-00114)
 ### 5. Methodology Signals
 - Scan session for operator-level insights: preferences, principles, reasoning patterns, workflow decisions, distinctions Brian drew, corrections that reveal generalizable observations
