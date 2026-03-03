@@ -423,3 +423,27 @@
 **Decision:** overnight_autonomous.py uses OvernightRunner as a standalone class that imports shared modules (build_gates, drift, branch_manager, etc.) directly, rather than subclassing BuildLoop.
 **Why:** The behavioral differences are too substantial for clean inheritance. Overnight pushes branches + creates PRs (BuildLoop doesn't), treats drift/test failures as non-blocking (BuildLoop blocks), has no signal fallback inference (BuildLoop has 3 success paths), and expects to commit on behalf of the agent (BuildLoop expects agent commits). A subclass would need to override nearly every method, defeating the purpose. Composition gives clean separation: shared modules handle mechanics, each orchestrator owns its own control flow.
 **Rejected:** Subclassing BuildLoop (too many method overrides, brittle coupling), extracting a shared BaseOrchestrator ABC (premature abstraction — only two consumers, divergent behavior), merging both into one configurable class (config explosion, flag-driven control flow).
+
+---
+
+## 2026-03-03 — Codebase summary: agent-generated, not regex-per-language
+
+**Decision:** Replace all per-language regex scanning in codebase_summary.py with a single agent call that produces a structural summary. Cache on git tree hash. Graceful fallback to empty string on failure.
+**Why:** Brian identified the core problem: hardcoding regex patterns per ecosystem doesn't scale. A Kotlin, Ruby, or Elixir project gets empty summaries. The agent already understands whatever language it's reading — putting language intelligence in Python regex is putting it in the wrong layer. The cost (one agent call per tree hash, cached) is amortized across an entire campaign.
+**Rejected:** Per-language regex (implemented first as claude/language-aware-summary-kUPAM covering TS/Python/Rust/Go, then superseded — every new language is a new gap), no codebase summary at all (agents rediscover the codebase from scratch every feature).
+
+---
+
+## 2026-03-03 — Eval and dead export scanning: keep as regex, not agent-based
+
+**Decision:** Type extraction, redeclaration checks, import counting, and dead export scanning remain regex-based with per-language patterns. Extend coverage (Python, Rust, Go) but don't replace with agent calls.
+**Why:** These run per commit in the inner build loop — potentially 30-60 times per campaign. Agent calls add 30-120s latency each at the exact point where fast feedback matters. Eval is non-blocking; degraded coverage on an unsupported language means a less informative score, not a build failure. Regex completes in milliseconds.
+**Rejected:** Agent-based eval (architecturally consistent with codebase summary decision but practically worse — adds significant latency for marginal quality improvement on a non-blocking gate).
+
+---
+
+## 2026-03-03 — Defer fcntl/Windows portability (Finding #27)
+
+**Decision:** Do not fix `fcntl.flock()` Windows incompatibility in reliability.py. Defer indefinitely.
+**Why:** auto-sdd runs on Brian's Mac. Agents run on Mac. No Windows use case exists or is planned. Cross-platform locking is a yak-shave with zero near-term payoff.
+**Rejected:** Implementing platform-conditional locking now (speculative scope), using a cross-platform locking library (new dependency for no user).

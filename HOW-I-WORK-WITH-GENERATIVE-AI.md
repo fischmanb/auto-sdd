@@ -1000,3 +1000,8 @@ The checkpoint protocol is the primary value-preservation mechanism across sessi
 
 Raw captures from checkpoint scans. New entries land here as `- (YYYY-MM-DD) text` during checkpoint step 5, then get converted to graph-schema entries above during periodic curation passes.
 
+- (2026-03-03) Brian enforces architectural consistency: when a design principle is established for one module (agent-based over regex), he expects it applied uniformly to analogous modules and challenges inconsistency directly ("why are you sure this should not be agent detection as well").
+- (2026-03-03) Brian catches scope inflation with "what do I actually need this for" — adding Rust/Go language support without asking what ecosystems Brian actually targets was immediately flagged. YAGNI enforced empirically.
+- (2026-03-03) Brian's correction style: short, precise, expects single-correction adherence. Having to repeat "you have agent(S) do it per prompt-engineering-guide.md" twice signals a process gap, not ambiguity in the instruction.
+- (2026-03-03) "prompt better" is a directive meaning "you now understand the architecture, rewrite the prompt to match" — not an invitation for further discussion or clarification.
+
