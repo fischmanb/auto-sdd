@@ -24,6 +24,7 @@ from auto_sdd.scripts.post_campaign_validation import (
     Phase2Result,
     Phase3Result,
     Phase4aResult,
+    Phase4bResult,
     ValidationPipeline,
     ValidationState,
     _find_seed_script,
@@ -31,6 +32,7 @@ from auto_sdd.scripts.post_campaign_validation import (
     build_discovery_prompt,
     build_failure_catalog,
     build_playwright_prompt,
+    build_rca_prompt,
     detect_coverage_gaps,
     detect_dev_command,
     detect_package_manager,
@@ -39,6 +41,7 @@ from auto_sdd.scripts.post_campaign_validation import (
     parse_discovery_output,
     parse_playwright_output,
     parse_port_from_output,
+    parse_rca_output,
 )
 
 
@@ -1601,3 +1604,307 @@ class TestBuildFailureCatalogRunId:
             phase_3_results, phase_2_features, "val-20260303-120000",
         )
         assert result["run_id"] == "val-20260303-120000"
+
+
+# ── Phase 4b (Root Cause Analysis) tests ──────────────────────────────────
+
+
+class TestBuildRcaPromptContent:
+    def test_build_rca_prompt_content(self) -> None:
+        """Prompt contains failure IDs, feature names, priority ranking,
+        confidence levels, max 15, root_causes key, file tree, and
+        does NOT instruct the agent to read source files."""
+        catalog: dict[str, Any] = {
+            "run_id": "val-test",
+            "catalog": [
+                {
+                    "id": "FAIL-001",
+                    "criterion_id": "AC-002",
+                    "feature": "News Filter",
+                    "feature_status": "PARTIAL",
+                    "result": "FAIL",
+                    "description": "Sort control missing",
+                    "expected": "Sort dropdown present",
+                    "actual": "No sort control found",
+                    "screenshot": "phase-3/news/fail.png",
+                },
+                {
+                    "id": "FAIL-002",
+                    "criterion_id": "AC-007",
+                    "feature": "Calendar View",
+                    "feature_status": "FOUND",
+                    "result": "FAIL",
+                    "description": "Events show undefined",
+                    "expected": "Event titles visible",
+                    "actual": "All tiles show undefined",
+                    "screenshot": "phase-3/cal/fail.png",
+                },
+            ],
+            "stats": {
+                "total_criteria": 20,
+                "passed": 18,
+                "failed": 2,
+                "blocked": 0,
+            },
+        }
+        discovery: dict[str, Any] = {
+            "routes_found": [
+                {"url": "/news", "interactive_elements": ["button:Filter"]},
+                {"url": "/calendar", "interactive_elements": ["div:Event"]},
+            ],
+        }
+        file_tree = "src/app/page.tsx\nsrc/components/Calendar.tsx\nsrc/lib/api.ts"
+        phase_2_features: list[dict[str, Any]] = [
+            {"feature": "News Filter", "status": "PARTIAL"},
+            {"feature": "Calendar View", "status": "FOUND"},
+        ]
+
+        prompt = build_rca_prompt(catalog, discovery, file_tree, phase_2_features)
+
+        # Contains failure IDs
+        assert "FAIL-001" in prompt
+        assert "FAIL-002" in prompt
+        # Contains feature names
+        assert "News Filter" in prompt
+        assert "Calendar View" in prompt
+        # Contains priority ranking keywords
+        assert "multiple features" in prompt.lower() or "blocking multiple features" in prompt.lower()
+        assert "runtime errors" in prompt.lower() or "Runtime errors" in prompt
+        # Contains confidence levels
+        assert "high" in prompt
+        assert "medium" in prompt
+        assert "low" in prompt
+        # Contains max 15
+        assert "15" in prompt
+        # Contains root_causes output key
+        assert "root_causes" in prompt
+        # Contains file tree content
+        assert "src/components/Calendar.tsx" in prompt
+        # Instructs agent NOT to read source files (prohibition present)
+        assert "do not" in prompt.lower() or "do not attempt" in prompt.lower()
+        # No positive instruction to read files
+        assert "please read source" not in prompt.lower()
+        assert "you should open file" not in prompt.lower()
+
+
+class TestBuildRcaPromptIncludesFeatureStatuses:
+    def test_build_rca_prompt_includes_feature_statuses(self) -> None:
+        """Prompt includes Phase 2 feature status summaries."""
+        catalog: dict[str, Any] = {
+            "run_id": "val-test",
+            "catalog": [
+                {
+                    "id": "FAIL-001", "criterion_id": "AC-001",
+                    "feature": "Auth", "feature_status": "MISSING",
+                    "result": "FAIL", "description": "No auth page",
+                    "expected": "Login page", "actual": "404",
+                    "screenshot": "",
+                },
+            ],
+            "stats": {"total_criteria": 5, "passed": 4, "failed": 1, "blocked": 0},
+        }
+        phase_2_features: list[dict[str, Any]] = [
+            {"feature": "Auth", "status": "MISSING"},
+            {"feature": "Dashboard", "status": "FOUND"},
+            {"feature": "Settings", "status": "DRIFTED"},
+            {"feature": "Profile", "status": "PARTIAL"},
+            {"feature": "Extras", "status": "UNEXPECTED"},
+        ]
+
+        prompt = build_rca_prompt(catalog, {}, "", phase_2_features)
+
+        assert "Auth: MISSING" in prompt
+        assert "Dashboard: FOUND" in prompt
+        assert "Settings: DRIFTED" in prompt
+        assert "Profile: PARTIAL" in prompt
+        assert "Extras: UNEXPECTED" in prompt
+
+
+class TestParseRcaOutputValid:
+    def test_parse_rca_output_valid(self) -> None:
+        """Valid fenced JSON with root_causes parses correctly."""
+        raw = (
+            "Here is the analysis:\n"
+            "```json\n"
+            '{\n'
+            '  "root_causes": [\n'
+            '    {\n'
+            '      "id": "RC-001",\n'
+            '      "priority": 1,\n'
+            '      "root_cause": "Missing tailwind tokens",\n'
+            '      "confidence": "high",\n'
+            '      "affected_failures": ["FAIL-001", "FAIL-002"],\n'
+            '      "affected_features": ["Dashboard", "Settings"],\n'
+            '      "likely_files": ["tailwind.config.ts"],\n'
+            '      "fix_description": "Add missing tokens",\n'
+            '      "estimated_complexity": "small"\n'
+            '    }\n'
+            '  ],\n'
+            '  "ungrouped_failures": [],\n'
+            '  "stats": {"total_failures": 2, "grouped_into_root_causes": 2, "ungrouped": 0, "root_cause_count": 1}\n'
+            '}\n'
+            '```\n'
+        )
+        result = parse_rca_output(raw)
+        assert result is not None
+        assert len(result["root_causes"]) == 1
+        assert result["root_causes"][0]["id"] == "RC-001"
+        assert result["root_causes"][0]["confidence"] == "high"
+        assert result["ungrouped_failures"] == []
+
+
+class TestParseRcaOutputInvalid:
+    def test_parse_rca_output_invalid(self) -> None:
+        """Garbage input returns None."""
+        assert parse_rca_output("this is not json at all") is None
+        assert parse_rca_output("") is None
+        assert parse_rca_output("```json\nnot valid\n```") is None
+
+
+class TestParseRcaOutputBadConfidence:
+    def test_parse_rca_output_bad_confidence(self) -> None:
+        """Root cause with invalid confidence level returns None."""
+        raw = (
+            '```json\n'
+            '{\n'
+            '  "root_causes": [\n'
+            '    {\n'
+            '      "id": "RC-001",\n'
+            '      "priority": 1,\n'
+            '      "root_cause": "Something broke",\n'
+            '      "confidence": "unknown",\n'
+            '      "affected_failures": ["FAIL-001"],\n'
+            '      "affected_features": ["Feature"],\n'
+            '      "likely_files": ["src/file.ts"],\n'
+            '      "fix_description": "Fix it",\n'
+            '      "estimated_complexity": "small"\n'
+            '    }\n'
+            '  ],\n'
+            '  "ungrouped_failures": [],\n'
+            '  "stats": {}\n'
+            '}\n'
+            '```\n'
+        )
+        assert parse_rca_output(raw) is None
+
+
+class TestParseRcaOutputMissingFields:
+    def test_parse_rca_output_missing_fields(self) -> None:
+        """Root cause missing likely_files returns None."""
+        raw = (
+            '```json\n'
+            '{\n'
+            '  "root_causes": [\n'
+            '    {\n'
+            '      "id": "RC-001",\n'
+            '      "priority": 1,\n'
+            '      "root_cause": "Something broke",\n'
+            '      "confidence": "high",\n'
+            '      "affected_failures": ["FAIL-001"],\n'
+            '      "affected_features": ["Feature"],\n'
+            '      "fix_description": "Fix it",\n'
+            '      "estimated_complexity": "small"\n'
+            '    }\n'
+            '  ],\n'
+            '  "ungrouped_failures": [],\n'
+            '  "stats": {}\n'
+            '}\n'
+            '```\n'
+        )
+        assert parse_rca_output(raw) is None
+
+
+class TestReadFailureCatalog:
+    def test_read_failure_catalog(self, tmp_project: Path) -> None:
+        """Pipeline reads failure catalog written by Phase 4a."""
+        pipeline = ValidationPipeline(
+            project_dir=tmp_project,
+            flush_mode="auto",
+            validation_timeout=5.0,
+        )
+        atexit.unregister(pipeline._cleanup)
+
+        # Write Phase 4a output
+        phase4a_dir = pipeline.log_dir / "phase-4a"
+        phase4a_dir.mkdir(parents=True, exist_ok=True)
+        catalog_data: dict[str, Any] = {
+            "run_id": "val-test",
+            "catalog": [
+                {
+                    "id": "FAIL-001", "criterion_id": "AC-001",
+                    "feature": "Home", "feature_status": "FOUND",
+                    "result": "FAIL", "description": "Broken",
+                    "expected": "Works", "actual": "Doesn't work",
+                    "screenshot": "",
+                },
+            ],
+            "stats": {"total_criteria": 1, "passed": 0, "failed": 1, "blocked": 0},
+        }
+        (phase4a_dir / "failure-catalog.v1.json").write_text(
+            json.dumps(catalog_data)
+        )
+
+        result = pipeline._read_failure_catalog()
+        assert result is not None
+        assert result["run_id"] == "val-test"
+        assert len(result["catalog"]) == 1
+        assert result["catalog"][0]["id"] == "FAIL-001"
+
+
+class TestPhase4bRequiresPhase4a:
+    def test_phase_4b_requires_phase_4a(self, tmp_project: Path) -> None:
+        """Phase 4a not completed — _run_phase_4b returns error without
+        calling run_claude."""
+        pipeline = ValidationPipeline(
+            project_dir=tmp_project,
+            flush_mode="auto",
+            validation_timeout=5.0,
+        )
+        atexit.unregister(pipeline._cleanup)
+
+        # Mark phases 0–3b complete but NOT 4a
+        for p in ("0", "1", "2a", "2b", "3", "3b"):
+            pipeline.state.mark_complete(p)
+
+        result = pipeline._run_phase_4b()
+        assert result.status == "RCA_FAILED"
+        assert "Phase 4a" in result.error
+
+
+class TestPhase4bSkipsOnEmptyCatalog:
+    @patch("auto_sdd.scripts.post_campaign_validation.run_claude")
+    def test_phase_4b_skips_on_empty_catalog(
+        self, mock_run_claude: MagicMock, tmp_project: Path,
+    ) -> None:
+        """Empty catalog (all passed) — _run_phase_4b returns RCA_SKIPPED
+        without calling run_claude."""
+        pipeline = ValidationPipeline(
+            project_dir=tmp_project,
+            flush_mode="auto",
+            validation_timeout=5.0,
+        )
+        atexit.unregister(pipeline._cleanup)
+
+        # Mark prior phases complete including 4a
+        for p in ("0", "1", "2a", "2b", "3", "3b", "4a"):
+            pipeline.state.mark_complete(p)
+
+        # Write empty failure catalog
+        phase4a_dir = pipeline.log_dir / "phase-4a"
+        phase4a_dir.mkdir(parents=True, exist_ok=True)
+        catalog_data: dict[str, Any] = {
+            "run_id": "val-test",
+            "catalog": [],
+            "stats": {"total_criteria": 10, "passed": 10, "failed": 0, "blocked": 0},
+        }
+        (phase4a_dir / "failure-catalog.v1.json").write_text(
+            json.dumps(catalog_data)
+        )
+
+        result = pipeline._run_phase_4b()
+        assert result.status == "RCA_SKIPPED"
+        assert result.root_causes == []
+        # No agent calls
+        mock_run_claude.assert_not_called()
+        # Phase marked complete
+        assert pipeline.state.is_complete("4b")
