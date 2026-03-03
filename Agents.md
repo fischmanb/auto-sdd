@@ -1555,6 +1555,20 @@ grep -c "source.*validation.sh" scripts/*.sh  # Should be 1 (generate-mapping.sh
 - Full test suite (712 tests): All passed, 0 regressions
 - git diff --stat: Only 2 Python files modified
 
+### Round 20: Phase 4b Root Cause Analysis (branch: claude/review-hard-constraints-Xu3SX)
+
+**What was asked:** Implement Phase 4b (Root Cause Analysis) — agent-based failure grouping, priority ranking, confidence assignment, and likely-file identification from the project tree.
+
+**What changed:**
+- `py/auto_sdd/scripts/post_campaign_validation.py`: Added Phase4bResult class (status/root_causes/ungrouped_failures/stats/error), build_rca_prompt() (agent prompt presenting catalog, discovery inventory, file tree, feature statuses, priority ranking, confidence levels, max-15 constraint), parse_rca_output() (JSON extraction with validation of required fields and confidence levels), _get_project_file_tree() (runs `find` with exclusions, 10s timeout), _read_failure_catalog() (reads latest failure-catalog.v*.json from phase-4a/), _run_phase_4b() (orchestrates the RCA pipeline — checks 4a complete, early-exits on empty catalog, builds prompt, calls agent, parses output, writes rca-report via doc registry). Updated run() to call _run_phase_4b instead of stub — RCA failure is non-fatal, pipeline continues. Updated module docstring to reflect Phases 0–4b.
+- `py/tests/test_post_campaign_validation.py`: Added 9 tests: prompt content validation, feature status inclusion, valid RCA parsing, invalid input, bad confidence rejection, missing fields rejection, failure catalog reading, Phase 4b requires 4a, skip on empty catalog.
+**NOT changed:** No other files. No changes to Phases 0–4a logic. Phase 5 remains a stub.
+**Verification:**
+- mypy --strict on both files: Success
+- Phase 4b tests (9 new): All passed
+- Full test suite (721 tests): All passed, 0 regressions
+- git diff --stat: Only 2 Python files modified (+ Agents.md)
+
 ---
 ## Questions?
 

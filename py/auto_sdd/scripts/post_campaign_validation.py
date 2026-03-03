@@ -1,10 +1,11 @@
-"""Post-campaign validation orchestrator with Phases 0–4a.
+"""Post-campaign validation orchestrator with Phases 0–4b.
 
 Boots a target project, validates it can start, discovers routes (Phase 1),
 generates acceptance criteria from specs (Phase 2a), runs gap detection
-(Phase 2b), validates acceptance criteria via Playwright (Phase 3), and
-builds a failure catalog from results (Phase 4a).
-Phases 4b–5 are stubs pending future milestones.
+(Phase 2b), validates acceptance criteria via Playwright (Phase 3),
+builds a failure catalog from results (Phase 4a), and runs agent-based
+root cause analysis on the catalog (Phase 4b).
+Phase 5 is a stub pending future milestones.
 
 Usage:
     python -m auto_sdd.scripts.post_campaign_validation
@@ -539,6 +540,27 @@ class Phase4aResult:
         return {
             "status": self.status,
             "catalog": self.catalog,
+            "stats": self.stats,
+            "error": self.error,
+            "timestamp": _now_iso(),
+        }
+
+
+class Phase4bResult:
+    """Structured result of Phase 4b (Root Cause Analysis)."""
+
+    def __init__(self) -> None:
+        self.status: str = "RCA_FAILED"
+        self.root_causes: list[dict[str, Any]] = []
+        self.ungrouped_failures: list[str] = []
+        self.stats: dict[str, Any] = {}
+        self.error: str = ""
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "status": self.status,
+            "root_causes": self.root_causes,
+            "ungrouped_failures": self.ungrouped_failures,
             "stats": self.stats,
             "error": self.error,
             "timestamp": _now_iso(),
@@ -1105,6 +1127,238 @@ def build_failure_catalog(
     }
 
 
+# ── Phase 4b helpers ─────────────────────────────────────────────────────
+
+
+def build_rca_prompt(
+    failure_catalog: dict[str, Any],
+    discovery_inventory: dict[str, Any],
+    project_file_tree: str,
+    phase_2_features: list[dict[str, Any]],
+) -> str:
+    """Build the agent prompt for Phase 4b: Root Cause Analysis.
+
+    Instructs the agent to group failures by probable root cause,
+    assign priority and confidence, identify likely files from the
+    project tree, and output structured JSON.
+    """
+    # Format catalog entries
+    catalog_entries = failure_catalog.get("catalog", [])
+    catalog_lines: list[str] = []
+    for entry in catalog_entries:
+        catalog_lines.append(
+            f"  - {entry.get('id', '?')}: [{entry.get('result', '?')}] "
+            f"feature=\"{entry.get('feature', '?')}\" "
+            f"(status={entry.get('feature_status', '?')}) "
+            f"criterion={entry.get('criterion_id', '?')}\n"
+            f"    description: {entry.get('description', '')}\n"
+            f"    expected: {entry.get('expected', '')}\n"
+            f"    actual: {entry.get('actual', '')}"
+        )
+    catalog_block = "\n".join(catalog_lines) if catalog_lines else "(none)"
+
+    catalog_stats = failure_catalog.get("stats", {})
+    stats_block = (
+        f"Total criteria: {catalog_stats.get('total_criteria', 0)}, "
+        f"Passed: {catalog_stats.get('passed', 0)}, "
+        f"Failed: {catalog_stats.get('failed', 0)}, "
+        f"Blocked: {catalog_stats.get('blocked', 0)}"
+    )
+
+    # Format feature status summary from Phase 2
+    feature_status_lines: list[str] = []
+    for feat in phase_2_features:
+        fname = feat.get("feature", "unknown")
+        fstatus = feat.get("status", "unknown")
+        feature_status_lines.append(f"  - {fname}: {fstatus}")
+    feature_status_block = (
+        "\n".join(feature_status_lines) if feature_status_lines else "(none)"
+    )
+
+    # Format discovery inventory summary
+    routes = discovery_inventory.get("routes_found", [])
+    discovery_lines: list[str] = []
+    for route in routes:
+        url = route.get("url", "?")
+        elements = route.get("interactive_elements", [])
+        discovery_lines.append(
+            f"  - {url} ({len(elements)} interactive elements)"
+        )
+    discovery_block = (
+        "\n".join(discovery_lines) if discovery_lines else "(none)"
+    )
+
+    # Truncate file tree if excessively long
+    tree_lines = project_file_tree.strip().split("\n")
+    if len(tree_lines) > 500:
+        tree_block = "\n".join(tree_lines[:500]) + "\n... (truncated)"
+    else:
+        tree_block = project_file_tree.strip() if project_file_tree.strip() else "(unavailable)"
+
+    return (
+        "You are a root cause analysis agent. Analyze the failure catalog below "
+        "and group failures by probable root cause.\n"
+        "\n"
+        "## Failure Catalog\n"
+        f"\n{catalog_block}\n"
+        f"\nCatalog stats: {stats_block}\n"
+        "\n"
+        "## Feature Statuses (from Phase 2)\n"
+        f"\n{feature_status_block}\n"
+        "\n"
+        "## App Structure (Discovery Inventory)\n"
+        f"\n{discovery_block}\n"
+        "\n"
+        "## Project File Tree\n"
+        f"\n{tree_block}\n"
+        "\n"
+        "## Instructions\n"
+        "\n"
+        "Group failures that likely share a common root cause. Multiple features "
+        "may fail because of one shared issue (e.g., a broken layout component, "
+        "a missing API route, a tailwind config problem).\n"
+        "\n"
+        "Use the discrepancy classifications from Phase 2 to inform your analysis — "
+        "DRIFTED features may have different root causes than MISSING ones.\n"
+        "\n"
+        "Priority ranking (highest to lowest):\n"
+        "1. Issues blocking multiple features\n"
+        "2. Runtime errors (console errors present)\n"
+        "3. MISSING features (entire feature absent)\n"
+        "4. PARTIAL features (elements missing from otherwise working pages)\n"
+        "5. DRIFTED features (implementation diverged from spec)\n"
+        "6. Visual/layout problems\n"
+        "7. Gap test failures (UNEXPECTED behavior in unspec'd elements)\n"
+        "\n"
+        "Confidence levels:\n"
+        "- high: strong evidence from multiple correlated failures\n"
+        "- medium: plausible but only 1-2 failures support it\n"
+        "- low: speculative, may be wrong\n"
+        "\n"
+        "Maximum 15 root cause groups. If more than 15 are needed, consolidate "
+        "the least important ones.\n"
+        "\n"
+        "For each root cause, provide:\n"
+        "- id: RC-001, RC-002, etc.\n"
+        "- priority: integer (1 = highest)\n"
+        "- root_cause: description of the probable root cause\n"
+        "- confidence: high, medium, or low\n"
+        "- affected_failures: list of failure IDs from the catalog\n"
+        "- affected_features: list of feature names\n"
+        "- likely_files: list of file paths from the project tree\n"
+        "- fix_description: what needs to change\n"
+        "- estimated_complexity: small, medium, or large\n"
+        "\n"
+        "Failures that don't fit any group go in ungrouped_failures.\n"
+        "\n"
+        "IMPORTANT: Do NOT attempt to read source files, open files, or access "
+        "build logs. Your analysis is based solely on the failure symptoms, app "
+        "structure, and file tree provided above.\n"
+        "\n"
+        "Output your analysis as a single JSON object fenced with ``` markers:\n"
+        "```json\n"
+        "{\n"
+        '  "root_causes": [\n'
+        "    {\n"
+        '      "id": "RC-001",\n'
+        '      "priority": 1,\n'
+        '      "root_cause": "description",\n'
+        '      "confidence": "high",\n'
+        '      "affected_failures": ["FAIL-001"],\n'
+        '      "affected_features": ["Feature Name"],\n'
+        '      "likely_files": ["src/file.ts"],\n'
+        '      "fix_description": "what to fix",\n'
+        '      "estimated_complexity": "small"\n'
+        "    }\n"
+        "  ],\n"
+        '  "ungrouped_failures": [],\n'
+        '  "stats": {\n'
+        '    "total_failures": 0,\n'
+        '    "grouped_into_root_causes": 0,\n'
+        '    "ungrouped": 0,\n'
+        '    "root_cause_count": 0\n'
+        "  }\n"
+        "}\n"
+        "```\n"
+    )
+
+
+_VALID_CONFIDENCE_LEVELS = {"high", "medium", "low"}
+
+_RCA_REQUIRED_FIELDS: list[tuple[str, type]] = [
+    ("id", str),
+    ("priority", int),
+    ("root_cause", str),
+    ("confidence", str),
+    ("affected_failures", list),
+    ("likely_files", list),
+    ("fix_description", str),
+]
+
+
+def parse_rca_output(raw_output: str) -> dict[str, Any] | None:
+    """Extract and validate RCA JSON from agent output.
+
+    Looks for a fenced JSON code block first, then tries to find an
+    inline JSON object with a ``root_causes`` key.  Returns None if
+    parsing or validation fails.
+    """
+    # Try fenced code block first
+    fence_pattern = re.compile(r"```(?:json)?\s*\n?(.*?)```", re.DOTALL)
+    match = fence_pattern.search(raw_output)
+    candidate = match.group(1).strip() if match else None
+
+    parsed: dict[str, Any] | None = None
+
+    if candidate:
+        try:
+            obj = json.loads(candidate)
+            if isinstance(obj, dict) and "root_causes" in obj:
+                parsed = obj
+        except (json.JSONDecodeError, ValueError):
+            pass
+
+    # Fallback: try to find a JSON object in the raw output
+    if parsed is None:
+        brace_start = raw_output.find("{")
+        if brace_start != -1:
+            depth = 0
+            for i in range(brace_start, len(raw_output)):
+                if raw_output[i] == "{":
+                    depth += 1
+                elif raw_output[i] == "}":
+                    depth -= 1
+                    if depth == 0:
+                        try:
+                            obj = json.loads(raw_output[brace_start : i + 1])
+                            if isinstance(obj, dict) and "root_causes" in obj:
+                                parsed = obj
+                        except (json.JSONDecodeError, ValueError):
+                            pass
+                        break
+
+    if parsed is None:
+        return None
+
+    # Validate root_causes is a list
+    root_causes = parsed.get("root_causes")
+    if not isinstance(root_causes, list):
+        return None
+
+    # Validate each root cause entry
+    for rc in root_causes:
+        if not isinstance(rc, dict):
+            return None
+        for field_name, field_type in _RCA_REQUIRED_FIELDS:
+            val = rc.get(field_name)
+            if not isinstance(val, field_type):
+                return None
+        if rc["confidence"] not in _VALID_CONFIDENCE_LEVELS:
+            return None
+
+    return parsed
+
+
 def run_phase_0(
     project_dir: Path,
     timeout: float = 60.0,
@@ -1572,6 +1826,56 @@ class ValidationPipeline:
                 return data
         return None
 
+    def _get_project_file_tree(self) -> str:
+        """Return a newline-separated listing of project files.
+
+        Excludes common non-source directories.  Returns empty string on
+        failure (non-fatal — the agent works with less context).
+        """
+        excludes = [
+            "-not", "-path", "*/node_modules/*",
+            "-not", "-path", "*/.git/*",
+            "-not", "-path", "*/.next/*",
+            "-not", "-path", "*/dist/*",
+            "-not", "-path", "*/build/*",
+            "-not", "-path", "*/__pycache__/*",
+            "-not", "-path", "*/.venv/*",
+            "-not", "-name", "*.pyc",
+        ]
+        try:
+            result = subprocess.run(
+                ["find", str(self.project_dir), "-type", "f"] + excludes,
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
+            # Make paths relative to project_dir
+            prefix = str(self.project_dir)
+            lines: list[str] = []
+            for line in result.stdout.strip().split("\n"):
+                line = line.strip()
+                if line.startswith(prefix):
+                    line = line[len(prefix):].lstrip("/")
+                if line:
+                    lines.append(line)
+            return "\n".join(sorted(lines))
+        except (subprocess.TimeoutExpired, OSError) as exc:
+            logger.warning("Failed to get project file tree: %s", exc)
+            return ""
+
+    def _read_failure_catalog(self) -> dict[str, Any] | None:
+        """Read the latest failure catalog from Phase 4a output."""
+        phase4a_dir = self.log_dir / "phase-4a"
+        if not phase4a_dir.exists():
+            return None
+        for p in sorted(
+            phase4a_dir.glob("failure-catalog.v*.json"), reverse=True,
+        ):
+            data = _read_json(p)
+            if isinstance(data, dict):
+                return data
+        return None
+
     def _run_phase_2a(self) -> list[dict[str, Any]] | None:
         """Execute Phase 2a: Spec-Based AC Writer.
 
@@ -2022,6 +2326,114 @@ class ValidationPipeline:
         result.stats = stats
         return result
 
+    def _run_phase_4b(self) -> Phase4bResult:
+        """Execute Phase 4b: Root Cause Analysis.
+
+        Uses an agent to analyze the failure catalog, group failures by
+        probable root cause, identify likely files, and prioritize for
+        fix agents.  RCA failure is non-fatal for the pipeline.
+        """
+        phase = "4b"
+        result = Phase4bResult()
+
+        if self.resume and self.state.is_complete(phase):
+            logger.info("Phase 4b already complete — skipping (resume mode)")
+            result.status = "RCA_COMPLETE"
+            return result
+
+        logger.info("═══ Phase 4b: Root Cause Analysis ═══")
+
+        # Phase 4a must have completed
+        if not self.state.is_complete("4a"):
+            result.error = "Phase 4b requires Phase 4a to be complete"
+            logger.error(result.error)
+            return result
+
+        # Read failure catalog
+        catalog_data = self._read_failure_catalog()
+        if catalog_data is None:
+            result.error = "Could not read failure catalog from Phase 4a"
+            logger.error(result.error)
+            return result
+
+        # Early exit: no failures to analyze
+        catalog_entries = catalog_data.get("catalog", [])
+        if len(catalog_entries) == 0:
+            logger.info("No failures to analyze — all tests passed")
+            self.state.mark_complete(phase)
+            result.status = "RCA_SKIPPED"
+            return result
+
+        # Read discovery inventory (for app structure context)
+        discovery = self._read_discovery_inventory()
+        if discovery is None:
+            discovery = {}
+            logger.warning("Discovery inventory unavailable — continuing without it")
+
+        # Read acceptance criteria (for feature status summary)
+        phase_2_features = self._read_acceptance_criteria()
+        if phase_2_features is None:
+            phase_2_features = []
+            logger.warning("Acceptance criteria unavailable — continuing without it")
+
+        # Get project file tree
+        file_tree = self._get_project_file_tree()
+
+        # Build prompt
+        prompt = build_rca_prompt(
+            catalog_data, discovery, file_tree, phase_2_features,
+        )
+
+        # Invoke the RCA agent
+        try:
+            claude_result = run_claude(
+                ["-p", "--dangerously-skip-permissions", prompt],
+                cwd=self.project_dir,
+                timeout=600,
+            )
+        except (AgentTimeoutError, ClaudeOutputError) as exc:
+            result.error = f"Phase 4b agent failed: {exc}"
+            logger.error(result.error)
+            return result
+
+        # Parse the output
+        rca_data = parse_rca_output(claude_result.output)
+        if rca_data is None:
+            result.error = "Failed to parse RCA agent output"
+            logger.warning(result.error)
+            return result
+
+        # Write RCA report to disk
+        rca_json = json.dumps(rca_data, indent=2) + "\n"
+        version = self.doc_registry._next_version("rca-report")
+        rca_path = (
+            self.log_dir / "phase-4b" / f"rca-report.v{version}.json"
+        )
+        self.doc_registry.register(
+            doc_id="rca-report",
+            phase="4b",
+            path=rca_path,
+            content=rca_json,
+        )
+
+        # Log stats
+        rca_stats = rca_data.get("stats", {})
+        logger.info(
+            "Phase 4b complete: root_causes=%d grouped=%d ungrouped=%d",
+            rca_stats.get("root_cause_count", 0),
+            rca_stats.get("grouped_into_root_causes", 0),
+            rca_stats.get("ungrouped", 0),
+        )
+
+        # Mark complete
+        self.state.mark_complete(phase)
+
+        result.status = "RCA_COMPLETE"
+        result.root_causes = rca_data.get("root_causes", [])
+        result.ungrouped_failures = rca_data.get("ungrouped_failures", [])
+        result.stats = rca_stats
+        return result
+
     def _run_phase_stub(self, phase: str) -> int:
         """Stub for phases 1–5: raises NotImplementedError."""
         phase_names: dict[str, str] = {
@@ -2079,8 +2491,16 @@ class ValidationPipeline:
             logger.error("Phase 4a FAILED: %s", phase4a_result.error)
             return EXIT_PARTIAL
 
-        # Phases 4b–5 (stubs)
-        for phase in PHASE_ORDER[7:]:
+        # Phase 4b (Root Cause Analysis — agent call, non-fatal)
+        phase4b_result = self._run_phase_4b()
+        if phase4b_result.status not in ("RCA_COMPLETE", "RCA_SKIPPED"):
+            logger.warning(
+                "Phase 4b did not complete: %s — continuing pipeline",
+                phase4b_result.error,
+            )
+
+        # Phase 5 (stub)
+        for phase in PHASE_ORDER[8:]:
             if self.resume and self.state.is_complete(phase):
                 logger.info("Phase %s already complete — skipping", phase)
                 continue
