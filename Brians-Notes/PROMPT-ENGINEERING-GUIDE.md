@@ -47,7 +47,7 @@ Explicit file allowlist, banned commands, and a `git diff --stat` gate. This sec
 
 - These instructions override any conflicting guidance in CLAUDE.md or other repo-level configuration files.
 - Follow the numbered steps in this prompt IN ORDER. Do not explore or investigate files speculatively. The steps describe what to build; read what you need to build it.
-- You may ONLY modify these files: <explicit list> (always include Agents.md for implementation prompts — agents write their own round entry)
+- You may ONLY modify these files: <explicit list> (always include Agents.md and general-estimates.jsonl for implementation prompts — agents write their own round entry and the Token Usage Report appends calibration data automatically)
 - You may ONLY create these new files: <explicit list, or "none">
 - You may NOT run npm, yarn, pip, brew, or any package manager command
 - You may NOT delete any files
@@ -125,7 +125,7 @@ The chat session writing the prompt is responsible for:
 3. Including this report block in every agent prompt — no exceptions
 
 ### 6. Commit (no merge)
-- `git add` only the explicitly allowed files (never `git add -A` or `git add .`)
+- `git add` only the explicitly allowed files (never `git add -A` or `git add .`) — always include `general-estimates.jsonl` alongside implementation files and `Agents.md`
 - Commit with descriptive message to your feature branch
 - Do NOT merge to main — Brian merges manually after verification
 - Do NOT push — Brian pushes manually from his machine (sandbox lacks GitHub auth)

@@ -1,20 +1,207 @@
 # auto-sdd
 
-Spec-driven development with autonomous AI agents. You define features as Gherkin specs in a roadmap. The build loop picks the next one, hands it to a fresh agent, validates the output mechanically (compile, tests, drift check), commits, and moves on. No human in the loop during builds. No shared context between features except what you explicitly define.
+Spec-driven development with autonomous AI agents. You define features as specs in a roadmap. The build loop picks the next one, hands it to a fresh agent, validates the output mechanically (compile, tests, drift check), commits, and moves on. No human in the loop during builds. No shared context between features except what you explicitly define.
 
-The system has been hardened over 35 rounds of iterative development against documented failure modes — agents fabricating work, ignoring explicit instructions, self-assessing incorrectly, failing silently. Every architectural decision traces back to a specific observed failure. 5,200+ lines of orchestration and reliability code. 
+The system has been hardened over 35+ rounds of iterative development against documented failure modes — agents fabricating work, ignoring explicit instructions, self-assessing incorrectly, failing silently. Every architectural decision traces back to a specific observed failure.
 
-To date: Two full 28-feature campaigns fully autonomous with published performance data, and a documented taxonomy of how AI agents actually fail in production loops.
+To date: two full 28-feature campaigns on a React/Next.js codebase with published performance data, a clean 3/3 validation run against a fresh full-stack project (31 minutes, zero failures, compiles and runs), and a documented taxonomy of how AI agents actually fail in production loops.
 
 Forked from [AdrianRogowski/auto-sdd](https://github.com/AdrianRogowski/auto-sdd), which introduced the concept. This fork rebuilt the runtime.
 
 ---
 
+## System Overview
+auto-sdd is a build loop that takes a project spec and autonomously produces working software by orchestrating AI agents. Each feature gets its own agent session with a fresh context window. The orchestrator handles sequencing, error recovery, and quality gates — the human reviews output, not process.
+
+Built on top of [Claude Code](https://docs.anthropic.com/en/docs/claude-code) (Anthropic's CLI). The orchestrator is the value layer — it turns a one-shot "paste a prompt and pray" workflow into a repeatable, gated pipeline.
+
+```
+SPEC LAYER                    BUILD LOOP                         QUALITY GATES
+─────────                     ──────────                         ─────────────
+
+ roadmap.md ──┐               ┌─────────────────────┐
+   (features, │               │  Parse roadmap       │
+    deps,     ├──────────────▶│  Topological sort    │
+    ordering) │               │  Load resume state   │
+              │               └─────────┬───────────┘
+ *.feature.md │                         │
+   (per-feature│                        ▼
+    specs)    │               ┌─────────────────────┐
+              │               │  FOR each feature:   │
+ CLAUDE.md ───┘               │                     │
+   (project                   │  1. Setup branch    │
+    constraints)              │  2. Build prompt     │──▶ Claude Code agent
+                              │  3. Run agent        │     (fresh context,
+                              │  4. Parse signals    │      reads codebase,
+                              │  5. Post-build gates │◀──   writes code,
+                              │  6. Record state     │      commits)
+                              │                     │
+                              │  On failure:         │
+                              │    retry w/ feedback │
+                              │    or mark failed    │
+                              │                     │
+                              └─────────┬───────────┘
+                                        │
+                                        ▼
+                              ┌─────────────────────┐
+                              │  Build summary       │
+                              │  (JSON, per-feature  │
+                              │   timing + status)   │
+                              └─────────────────────┘
+```
+
+**What the gates check:** TypeScript compiles (`tsc --noEmit`), HEAD advanced (agent actually committed, not just claimed to), working tree clean, signal protocol (`FEATURE_BUILT`, `BUILD_FAILED`, etc.), and custom build/test commands (configurable per project).
+
+**What the gates don't check:** whether the app actually runs. That's what auto-QA is for.
+---
+
+## Auto-QA: Post-Campaign Validation
+
+After the build loop finishes, a separate multi-agent pipeline boots the app, browses it, generates acceptance criteria from specs, tests them via Playwright, catalogs failures, performs root cause analysis, and fixes them through the existing build gates.
+
+Each phase is an isolated agent with fresh context. Phase 1 doesn't know what the specs say. Phase 2 doesn't see source code. Phase 4a doesn't guess at causes. This prevents the failure mode where a single agent with too much context rationalizes bugs away.
+
+```
+Build loop finishes
+        │
+        ▼
+┌──────────────────┐
+│  PHASE 0         │  Pure shell. No agents.
+│  Runtime         │  npm install → npm build → npm dev
+│  Bootstrap       │  Health check (poll until 200)
+│                  │  Auth bootstrap (seed test account)
+└────────┬─────────┘
+         │ App running on localhost
+         ▼
+┌──────────────────┐
+│  PHASE 1         │  Agent gets: browser + URL. Nothing else.
+│  Discovery       │  No specs, no roadmap, no source code.
+│                  │  Browses blind. Screenshots every page.
+│                  │  Outputs: route inventory, nav graph,
+│                  │  interactive elements, console errors.
+└────────┬─────────┘
+         │ "What exists"
+         ▼┌──────────────────┐
+│  PHASE 2         │  Agent gets: specs + discovery inventory.
+│  AC Generation   │  Compares what SHOULD exist vs what DOES.
+│                  │  Classifies each feature:
+│  2a: spec-based  │    FOUND / MISSING / PARTIAL / DRIFTED
+│  2b: gap detect  │  Writes Playwright-testable acceptance
+│                  │  criteria for each feature.
+└────────┬─────────┘
+         │ "What to test"
+         ▼
+┌──────────────────┐
+│  PHASE 3         │  One agent per feature.
+│  Playwright      │  Writes + executes Playwright tests
+│  Validation      │  from acceptance criteria.
+│                  │  PASS / FAIL / BLOCKED per criterion.
+│  3b: gap tests   │  Screenshots on failure.
+└────────┬─────────┘
+         │ "What's broken"
+         ▼
+┌──────────────────┐
+│  PHASE 4a        │  Objective catalog. No interpretation.
+│  Failure Catalog │  What failed, what was expected, what
+│                  │  actually happened, screenshot ref.
+├──────────────────┤
+│  PHASE 4b        │  Groups failures by root cause.
+│  Root Cause      │  Identifies likely files. Prioritizes
+│  Analysis        │  by impact (multi-feature > single).
+└────────┬─────────┘
+         │ "Why it's broken + where to fix"
+         ▼┌──────────────────┐
+│  PHASE 5         │  One agent per root cause.
+│  Fix Agents      │  Fixes go through same build gates.
+│                  │  Re-runs ONLY affected Playwright
+│                  │  tests to verify the fix.
+│                  │  Revert on failed re-validation.
+└──────────────────┘
+```
+
+Full spec in [`WIP/post-campaign-validation.md`](WIP/post-campaign-validation.md).
+
+---
+
+## Context Persistence
+
+Every Claude session starts blank. auto-sdd treats this as an engineering problem. The repo itself is the persistence layer — structured so a fresh Claude instance can boot to productive in one read pass.
+
+```
+  Claude Session (ephemeral)          Repository (persistent)
+  ─────────────────────────           ──────────────────────
+
+  ┌───────────────────────┐           ┌──────────────────────┐
+  │  Fresh instance       │◀══════════│  CLAUDE.md           │
+  │  (knows nothing)      │  auto-    │  (auto-read by CLI)  │
+  │                       │  injected │  - project identity  │
+  │                       │           │  - hard constraints  │
+  │                       │           │  - core learnings    │
+  └───────────┬───────────┘           └──────────────────────┘
+              │
+              │ reads                  ┌──────────────────────┐
+              ├───────────────────────▶│  .onboarding-state   │
+              │                        │  (JSON checkpoint)   │              │                        │  - prompt_count      │
+              │                        │  - last_hash         │
+              │                        │  - captures pending  │
+              │                        └──────────────────────┘
+              │
+              │ reads                  ┌──────────────────────┐
+              ├───────────────────────▶│  ACTIVE-             │
+              │                        │  CONSIDERATIONS.md   │
+              │                        │  - priority stack    │
+              │                        │  - what's in flight  │
+              │                        │  - what's blocked    │
+              │                        └──────────────────────┘
+              │
+              │ reads on demand        ┌──────────────────────┐
+              ├───────────────────────▶│  learnings/          │
+              │                        │  ├─ core.md (13)     │
+              │                        │  ├─ empirical.md     │
+              │                        │  ├─ process-rules.md │
+              │                        │  └─ ...              │
+              │                        └──────────────────────┘
+              │
+              │ reads on demand        ┌──────────────────────┐
+              └───────────────────────▶│  Agents.md           │
+                                       │  (full work log)     │
+                                       │  - every round       │
+                                       │  - what changed      │
+                                       │  - what broke        │
+                                       └──────────────────────┘
+```
+
+**Two storage layers, different jobs:**
+
+Claude.ai's memory system provides brief, keyword-level triggers (project name, communication preferences, what's active). The repo provides the detail: 100+ learnings entries in graph schema with typed relationships (SUPERSEDES, DERIVED_FROM, VALIDATED_BY), full architectural context, and the priority stack. Memory sets the tone; the repo provides the knowledge.
+
+**The learnings system:** Each entry is self-contained — a fresh Claude instance can read one entry and understand it without context. Entries have a lifecycle: Observation → Demonstrated → Validated → Core (top 13, inlined into CLAUDE.md). At any point, entries can be REFUTED and archived with a reason. Signal scores (1-8+) track confidence based on how many independent sessions confirmed the pattern.
+
+**The checkpoint protocol:** Saying "checkpoint" triggers a deterministic flush: scan for uncaptured learnings, write approved entries to `learnings/`, update `.onboarding-state`, update `ACTIVE-CONSIDERATIONS.md`, commit and push. Everything the session learned is persisted in structured form. The next session boots with that knowledge on first read.
+
+The typical AI workflow is conversational — you teach the AI about your project, it helps, the conversation ends, you start over. auto-sdd inverts that. The repo teaches the AI. Sessions are interchangeable because the knowledge lives in the repo, not in any one conversation.
+
+---
+
 ## Campaign Results
 
-Two identical 28-feature campaigns were run against the same React + TypeScript + Next.js codebase, one on Sonnet 4.6 and one on Haiku 4.5, to answer a simple question: does a faster model build faster?
+### CRE Lease Comp Tracker (validation run)
 
-The Sonnet campaign completed all 28 features with zero failures in 6.8 hours.
+A clean-room test against a project the system had never seen. Full-stack app: React/Vite/Tailwind frontend, Express/SQLite backend, JWT auth.
+
+| Metric | Result |
+|---|---|
+| Features built | **3/3** |
+| Features failed | **0** |
+| Total time | **31 minutes** |
+| TypeScript | Compiles clean (client + server) |
+| Runtime | Auth, filtering, pagination, CSV export all functional |
+
+This validated the Python build loop against a fresh project with no stakd-specific assumptions.
+
+### Stakd campaigns (28-feature comparison)
+
+Two identical 28-feature campaigns against a React/TypeScript/Next.js codebase, one on Sonnet 4.6 and one on Haiku 4.5.
 
 | Metric | Sonnet 4.6 | Haiku 4.5 |
 |---|---|---|
@@ -24,55 +211,37 @@ The Sonnet campaign completed all 28 features with zero failures in 6.8 hours.
 | **Throughput** | **4.0 features/hour** | **3.8 features/hour** |
 | Median feature time | 9.2 min | 7.4 min |
 | Cost per feature | $0.07 | $0.08 |
-| Drift reconciliation rate | 75% | 73% |
+| Drift reconciliation | 75% | 73% |
 
 *Haiku campaign in progress — metrics based on partial data
 
-### Key findings
+**Key finding: model inference speed is not the bottleneck.** Haiku generates tokens ~2x faster than Sonnet. Throughput is nearly identical. Wall time is dominated by npm install, TypeScript compilation, test execution — not LLM generation. Most teams building multi-agent systems would get this wrong.
 
-**Model inference speed is not the bottleneck.** Haiku generates tokens roughly 2x faster than Sonnet. Throughput is nearly identical. The wall time is dominated by CPU/disk-bound operations — npm install, TypeScript compilation, test execution, drift checks — not LLM generation. Most teams building multi-agent systems would get this wrong.
-
-**Parallelism across features beats faster models.** Two Haiku agents building simultaneously would outperform one Sonnet agent, because the fixed-cost steps that dominate each feature run can overlap.
-
-**Drift rates are model-independent.** Both models produce spec-to-implementation drift at ~72%. Drift is a property of the translation problem, not the model. The drift reconciliation system catches real mismatches that compound if left unchecked.
-
-**Cost is dominated by context, not generation.** Cache read tokens dominate both cost profiles. The system pays for context loading. Reducing context window size cuts costs more than switching models.
-
-Full campaign data, raw logs, and analysis in [`campaign-results/`](campaign-results/).
+Full campaign data and analysis in [`campaign-results/`](campaign-results/).
 
 ---
 
-## What We Learned About Agent Reliability
+## Agent Reliability Findings
 
-35 rounds of development produced a taxonomy of how agents actually fail in production loops. These aren't edge cases — they're the dominant failure modes.
+35+ rounds of development produced a taxonomy of how agents actually fail in production loops. These aren't edge cases — they're the dominant failure modes.
 
-**Agents fabricate work.** Round 1: the agent produced a detailed description of bugs in code it never wrote. Zero files created. Reported success. This is why every validation step in the pipeline is mechanical — compile checks, test counts, grep for signals. The shell trusts nothing the agent says about itself.
+**Agents fabricate work.** Round 1: the agent produced a detailed description of bugs in code it never wrote. Zero files created. Reported success. This is why every validation step is mechanical — the shell trusts nothing the agent says about itself.
 
-**Agents ignore explicit instructions.** Across Rounds 32-34, agents were told "do NOT push to origin" in multiple formulations. Push rate: 100%. Prompt wording made no difference. This is documented as expected behavior, not a bug to fix.
+**Agents ignore explicit instructions.** Across Rounds 32-34, agents were told "do NOT push to origin" in multiple formulations. Push rate: 100%. Prompt wording made no difference.
 
-**Self-assessment is uncorrelated with reality.** The build loop was designed around this finding. Every agent step is followed by a shell-side validation gate. The agent says "tests pass" — the shell runs the tests. The agent says "clean compile" — the shell runs the compiler. The agent's narrative is discarded; only mechanical signals matter.
+**Self-assessment is uncorrelated with reality.** Every agent step is followed by a shell-side validation gate. The agent says "tests pass" — the shell runs the tests. The agent's narrative is discarded; only mechanical signals matter.
 
-**78% build failure rate was not a code problem.** Round 11 diagnosed a sustained failure rate. Root cause: API credit exhaustion, not context loss or bad prompts. The system was retrying doomed calls. Credit exhaustion detection now halts immediately instead of burning cycles.
+**78% build failure rate was not a code problem.** Root cause: API credit exhaustion, not context loss or bad prompts. The system was retrying doomed calls. Credit exhaustion detection now halts immediately.
 
-The full failure catalog lives in [`learnings/`](learnings/) — entries across 5 type files (failure patterns, process rules, empirical findings, domain knowledge, architectural rationale), with the highest-signal entries curated in [`learnings/core.md`](learnings/core.md). Each entry uses a flat key:value schema with global L-XXXXX IDs. The round-by-round work log is in [`Agents.md`](Agents.md).
+The full failure catalog lives in [`learnings/`](learnings/), with highest-signal entries curated in [`learnings/core.md`](learnings/core.md). The round-by-round work log is in [`Agents.md`](Agents.md).
 
 ---
 
 ## Architecture
 
-### Build validation pipeline
+### Python build loop (primary)
 
-Every feature passes through mechanical validation before commit:
-
-```
-BUILD ──▶ COMPILE CHECK ──▶ TESTS ──▶ DRIFT CHECK ──▶ COMMIT
-  │            │               │
-  └── retry ◄──┴── retry ◄────┘
-```
-
-Each agent step runs in a fresh context window. The shell re-runs build and tests as a hard gate after every agent step — no additional tokens spent, no trust in self-assessment.
-
-Post-build, three non-blocking validation gates run: test count regression detection (warns if passing tests drop), dead export detection (scans for exported symbols with zero import sites), and static analysis (auto-detects ESLint, Biome, or framework-specific linters).
+The orchestrator is implemented in Python (`py/auto_sdd/`), with 650+ tests covering unit, integration, and dry-run scenarios. The dry-run integration tests exercise real git operations, real file I/O, and real state persistence with only the Claude CLI call mocked.
 
 ### Signal protocol
 
@@ -87,23 +256,19 @@ REVIEW_CLEAN / REVIEW_FIXED / REVIEW_FAILED        # Code review
 
 ### Codebase summary injection
 
-Each build agent receives a generated summary of existing components, type exports, import graph, and learnings from prior features. This prevents type redeclaration, import conflicts, and repeated mistakes across features within a campaign.
+Each build agent receives a generated summary of existing components, type exports, and import graph. Cached on tree hash — regenerated only when the codebase changes. Prevents type redeclaration, import conflicts, and repeated mistakes across features within a campaign.
 
 ### Eval sidecar
 
-A separate process polls for new commits during a campaign, runs mechanical evaluations (and optionally agent-based evaluations), and writes per-feature JSON results. Observational only — never blocks builds, never modifies source files. Aggregates a campaign summary on shutdown via cooperative drain.
+A separate process polls for new commits during a campaign, runs mechanical evaluations (and optionally agent-based evaluations), and writes per-feature JSON results. Observational only — never blocks builds, never modifies source files.
 
-### Cost tracking
+### Token estimation and calibration
 
-Every Claude CLI invocation is wrapped through `lib/claude-wrapper.sh`, which extracts token counts and cost data to JSONL. Build summary reports aggregate per-feature timing, test counts, token usage, and model used.
+Every agent prompt includes a Token Usage Report that records estimated vs actual token consumption to `general-estimates.jsonl`. A graduated blend (20% per data point, up to 100% at 5+ samples) calibrates future estimates against historical actuals. This feeds scope decisions — when to split prompts, when context budget is tight.
 
----
+### Bash build loop (legacy)
 
----
-
-## Developer Workflow
-
-**Checkpoint command.** Saying "checkpoint" in a chat session (or `/checkpoint` in Claude Code) triggers a deterministic context management update: flush pending captures to `ACTIVE-CONSIDERATIONS.md`, append decisions to `DECISIONS.md`, flag learnings for review, verify `ONBOARDING.md` hash integrity, and commit. One word replaces manual reconciliation across five files. See [`.claude/commands/checkpoint.md`](.claude/commands/checkpoint.md).
+The original bash implementation (`scripts/build-loop-local.sh`, `lib/reliability.sh`) remains in the repo. The Python version is the primary path for all new work.
 
 ---
 
@@ -111,75 +276,72 @@ Every Claude CLI invocation is wrapped through `lib/claude-wrapper.sh`, which ex
 
 ```
 auto-sdd/
-├── scripts/
-│   ├── build-loop-local.sh        # Main build loop
-│   ├── overnight-autonomous.sh    # Overnight automation variant
-│   └── eval-sidecar.sh            # Eval sidecar — polls commits, runs evals
+├── py/                                # Python build loop (primary)
+│   ├── auto_sdd/
+│   │   ├── scripts/
+│   │   │   ├── build_loop.py          # Main build loop orchestrator
+│   │   │   ├── eval_sidecar.py        # Eval sidecar process
+│   │   │   ├── overnight_autonomous.py
+│   │   │   ├── nightly_review.py
+│   │   │   └── generate_mapping.py
+│   │   └── lib/
+│   │       ├── reliability.py         # Locking, state, topo sort, signals
+│   │       ├── branch_manager.py      # Branch setup, cleanup, strategies
+│   │       ├── build_gates.py         # Post-build validation gates
+│   │       ├── claude_wrapper.py      # Claude CLI wrapper + cost logging
+│   │       ├── codebase_summary.py    # Cross-feature context generation
+│   │       ├── prompt_builder.py      # Agent prompt construction
+│   │       ├── drift.py               # Drift detection
+│   │       ├── eval_lib.py            # Eval functions
+│   │       └── general_estimates.py   # Token estimation calibration
+│   └── tests/                         # 650+ tests
+│       ├── test_build_loop.py
+│       ├── test_dry_run.py            # Integration tests (real git, mocked agent)
+│       ├── test_reliability.py
+│       ├── test_eval_sidecar.py
+│       └── ...
 │
-├── lib/
-│   ├── reliability.sh             # Shared runtime: locking, backoff, state, truncation,
-│   │                              #   cycle detection, crash recovery
-│   ├── codebase-summary.sh        # Cross-feature context: components, types, imports
-│   ├── eval.sh                    # Eval functions: mechanical checks, prompt gen, signal parsing
-│   ├── claude-wrapper.sh          # Claude CLI wrapper + JSONL cost logging
-│   └── validation.sh              # YAML frontmatter validation
+├── scripts/                           # Bash build loop (legacy)
+│   ├── build-loop-local.sh
+│   └── eval-sidecar.sh
+├── lib/                               # Bash shared libraries (legacy)
+│   ├── reliability.sh
+│   ├── claude-wrapper.sh
+│   └── general-estimates.sh           # Token estimation (bash)
 │
-├── tests/
-│   ├── test-reliability.sh
-│   ├── test-validation.sh
-│   ├── test-codebase-summary.sh
-│   ├── test-eval.sh
-│   ├── dry-run.sh                 # Structural integration test
-│   └── fixtures/dry-run/          # Test fixtures
+├── learnings/                         # Knowledge graph (flat files, graph schema)
+│   ├── core.md                        # 13 highest-signal entries
+│   ├── failure-patterns.md
+│   ├── process-rules.md
+│   ├── empirical-findings.md
+│   ├── domain-knowledge.md
+│   └── architectural-rationale.md
 │
-├── learnings/                     # Failure catalog and process knowledge
-│   ├── core.md                    # Highest-signal entries curated for agent onboarding
-│   ├── failure-patterns.md        # How agents fail in production loops
-│   ├── process-rules.md           # Operational discipline learned the hard way
-│   ├── empirical-findings.md      # Measured data from campaigns
-│   ├── domain-knowledge.md        # Framework/tooling gotchas
-│   └── architectural-rationale.md # Why the architecture is shaped this way
+├── campaign-results/                  # Campaign data and analysis
+│   ├── raw/v2-sonnet/
+│   ├── raw/v3-haiku/
+│   └── reports/
 │
-├── campaign-results/              # Campaign data, raw logs, generated reports
-│   ├── raw/v2-sonnet/             # Sonnet 4.6 campaign artifacts
-│   ├── raw/v3-haiku/              # Haiku 4.5 campaign artifacts
-│   └── reports/                   # Analysis and comparison reports
+├── WIP/
+│   └── post-campaign-validation.md    # Auto-QA spec (v0.3)
 │
-├── .specs/
-│   ├── vision.md                  # App vision template
-│   ├── roadmap.md                 # Feature roadmap (source of truth for builds)
-│   └── features/                  # Feature specs (.feature.md)
-│
-├── .claude/commands/              # Slash commands for Claude Code agents
-│   ├── checkpoint.md              # Context management checklist (one-word trigger)
-│   └── ...                        # build-next, catch-drift, vision, roadmap, etc.
-│
-├── docs/
-│   └── campaign-data-recovery.md  # Recovery playbook for lost build logs
+├── .specs/                            # Spec templates
+│   ├── vision.md
+│   ├── roadmap.md
+│   └── features/
 │
 ├── Brians-Notes/
-│   └── PROMPT-ENGINEERING-GUIDE.md  # Prompt methodology for agent hardening
+│   └── PROMPT-ENGINEERING-GUIDE.md
 │
-├── ONBOARDING.md                  # Full project context for new sessions
-├── ACTIVE-CONSIDERATIONS.md       # Priority stack and in-flight work
-├── INDEX.md                       # One-line lookup table for all project files
-├── DECISIONS.md                   # Append-only decision log
-├── DESIGN-PRINCIPLES.md           # Architectural principles with rationale
-├── CLAUDE.md                      # Instructions read by Claude Code agents automatically
-├── Agents.md                      # Round-by-round agent work log — asked vs actual
-├── .env.local.example             # Full config reference
-└── VERSION                        # 2.0.0
+├── CLAUDE.md                          # Auto-read by Claude Code agents
+├── ONBOARDING.md                      # Boot protocol for new sessions
+├── ACTIVE-CONSIDERATIONS.md           # Priority stack
+├── DECISIONS.md                       # Append-only decision log
+├── DESIGN-PRINCIPLES.md               # Architectural principles
+├── Agents.md                          # Round-by-round work log
+├── general-estimates.jsonl            # Token calibration data
+└── VERSION                            # 2.0.0
 ```
-
----
-
-## Requirements
-
-- [Claude Code](https://docs.anthropic.com/en/docs/claude-code): `npm install -g @anthropic-ai/claude-code`
-- `ANTHROPIC_API_KEY` in your shell environment
-- **bash 5+** (macOS ships 3.2): `brew install bash`
-- `yq`: `brew install yq`
-- `gh` (GitHub CLI, for PR creation): `brew install gh`
 
 ---
 
@@ -189,76 +351,75 @@ auto-sdd/
 git clone https://github.com/fischmanb/auto-sdd.git
 cd auto-sdd
 
-# Verify everything works
-./tests/test-reliability.sh
-./tests/test-codebase-summary.sh
-./tests/test-eval.sh
-DRY_RUN_SKIP_AGENT=true ./tests/dry-run.sh
+# Verify tests pass
+py/.venv/bin/python -m pytest py/tests/ -q
 
 # Point it at a project
-cp .env.local.example .env.local
-# Edit .env.local — set TEST_CHECK_CMD, BUILD_CHECK_CMD, model preferences
-
-# Define features
-cd /path/to/your-project
-/vision "A task management app for small teams"
-/roadmap create
+# Your project needs: .specs/roadmap.md, .specs/vision.md, CLAUDE.md
 
 # Build
-PROJECT_DIR=/path/to/your-project MAX_FEATURES=4 ~/auto-sdd/scripts/build-loop-local.sh
+cd ~/auto-sdd && \
+PROJECT_DIR=/path/to/your-project \
+MAX_FEATURES=3 \
+BRANCH_STRATEGY=sequential \
+py/.venv/bin/python -m auto_sdd.scripts.build_loop
+
+# With build checks
+BUILD_CHECK_CMD="cd client && npx tsc --noEmit" \
+TEST_CHECK_CMD="npm test" \
+py/.venv/bin/python -m auto_sdd.scripts.build_loop
 
 # Resume after crash
-~/auto-sdd/scripts/build-loop-local.sh --resume
+ENABLE_RESUME=true py/.venv/bin/python -m auto_sdd.scripts.build_loop
 ```
 
 ---
 
 ## Configuration
 
-Key `.env.local` settings:
+Key environment variables:
 
 ```bash
+# Required
+PROJECT_DIR=/path/to/project       # Target project
+
 # Build validation
-BUILD_CHECK_CMD=""          # Auto-detected (tsc, cargo check, etc.)
-TEST_CHECK_CMD=""           # Auto-detected (npm test, pytest, etc.)
-POST_BUILD_STEPS="test,dead-code,lint"   # Validation gates (all non-blocking)
-DRIFT_CHECK=true
+BUILD_CHECK_CMD=""                  # Auto-detected or explicit
+TEST_CHECK_CMD=""                   # Auto-detected or explicit
+DRIFT_CHECK=true                    # Spec-to-implementation drift detection
 
 # Model selection (each step gets a fresh context window)
-BUILD_MODEL=""              # Main build agent (default: claude-sonnet-4-6)
-DRIFT_MODEL=""              # Drift detection agent
-REVIEW_MODEL=""             # Code review agent
+AGENT_MODEL=""                      # Build agent (default: system default)
+DRIFT_MODEL=""                      # Drift detection
+REVIEW_MODEL=""                     # Code review
 
-# Roadmap
-MAX_FEATURES=4              # Features per run
-BRANCH_STRATEGY=chained     # chained | independent | both | sequential
+# Orchestration
+MAX_FEATURES=4                      # Features per run
+MAX_RETRIES=2                       # Retries per feature on failure
+BRANCH_STRATEGY=sequential          # sequential | chained | independent | both
+ENABLE_RESUME=true                  # Resume from last successful feature
+AGENT_TIMEOUT=1800                  # Per-agent timeout in seconds
 
-# Eval sidecar (runs alongside build loop)
-EVAL_AGENT=true             # Enable agent-based evals in addition to mechanical
+# Eval sidecar
+EVAL_SIDECAR=false                  # Run evals alongside builds
+
+# Logging
+LOGS_DIR=~/logs/{project}           # Build summaries and logs
 ```
 
 ---
 
-## Testing
+## Requirements
 
-```bash
-cd ~/auto-sdd
-
-# Unit and integration tests
-./tests/test-reliability.sh        # Locking, backoff, state, truncation
-./tests/test-validation.sh         # YAML frontmatter
-./tests/test-codebase-summary.sh   # Component/type/import scanning
-./tests/test-eval.sh               # Mechanical eval, signal parsing
-
-# Structural dry-run (no API key needed)
-DRY_RUN_SKIP_AGENT=true ./tests/dry-run.sh
-```
+- Python 3.11+
+- [Claude Code](https://docs.anthropic.com/en/docs/claude-code): `npm install -g @anthropic-ai/claude-code`
+- Active Claude authentication (`claude login`)
 
 ---
 
 ## Credits
 
-Original concept by [Adrian Rogowski](https://github.com/AdrianRogowski/auto-sdd), inspired by [Ryan Carson's Compound Engineering](https://x.com/ryancarson) approach. This fork rebuilt the runtime over 35 rounds of development, adding the reliability layer, test suite, eval system, and campaign infrastructure.
+Original concept by [Adrian Rogowski](https://github.com/AdrianRogowski/auto-sdd). This fork rebuilt the runtime over 35+ rounds, adding the reliability layer, test suite (650+), eval system, campaign infrastructure, Python orchestrator, knowledge persistence architecture, and auto-QA pipeline.
 
 ## License
 
