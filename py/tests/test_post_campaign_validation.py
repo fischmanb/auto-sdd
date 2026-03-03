@@ -13,13 +13,18 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from auto_sdd.scripts.post_campaign_validation import (
+    EXIT_ALL_PASS,
+    EXIT_INFRA_FAILURE,
     DocumentRegistry,
+    Phase1Result,
     ValidationPipeline,
     ValidationState,
     _find_seed_script,
+    build_discovery_prompt,
     detect_dev_command,
     detect_package_manager,
     health_check,
+    parse_discovery_output,
     parse_port_from_output,
 )
 
@@ -447,3 +452,130 @@ class TestCleanupKillsServer:
         atexit.unregister(pipeline._cleanup)
         # Should not raise
         pipeline._cleanup()
+
+
+# ── Phase 1: Discovery Agent tests ───────────────────────────────────────────
+
+
+class TestBuildDiscoveryPrompt:
+    def test_with_credentials(self) -> None:
+        prompt = build_discovery_prompt(
+            app_url="http://localhost:3000",
+            credentials={"email": "qa@test.local", "password": "s3cret"},
+            screenshot_dir="/tmp/screenshots",
+        )
+        assert "http://localhost:3000" in prompt
+        assert "qa@test.local" in prompt
+        assert "s3cret" in prompt
+        assert "Playwright" in prompt
+        assert "/tmp/screenshots" in prompt
+        # Must NOT contain spec-related terms
+        for forbidden in ("roadmap", "spec", "feature"):
+            assert forbidden not in prompt.lower(), (
+                f"Prompt must not reference '{forbidden}'"
+            )
+
+    def test_without_credentials(self) -> None:
+        prompt = build_discovery_prompt(
+            app_url="http://localhost:5173",
+            credentials=None,
+            screenshot_dir="/tmp/shots",
+        )
+        assert "http://localhost:5173" in prompt
+        assert "/tmp/shots" in prompt
+        # No login instructions when no credentials
+        assert "log in" not in prompt.lower()
+        assert "email" not in prompt.lower()
+        assert "password" not in prompt.lower()
+
+
+class TestParseDiscoveryOutput:
+    def test_valid_json_fenced(self) -> None:
+        raw = (
+            "I browsed the app and found the following:\n"
+            "```json\n"
+            '{\n'
+            '  "routes_found": [\n'
+            '    {"url": "/dashboard", "screenshot_path": "d.png",'
+            '     "interactive_elements": ["button:Save"],'
+            '     "console_errors": [], "visual_issues": []}\n'
+            '  ],\n'
+            '  "navigation_graph": {"/": ["/dashboard"]},\n'
+            '  "global_issues": ["CSS not loading"],\n'
+            '  "unreachable_dead_ends": ["/broken"]\n'
+            '}\n'
+            "```\n"
+            "That's everything I found."
+        )
+        result = parse_discovery_output(raw)
+        assert result is not None
+        assert len(result["routes_found"]) == 1
+        assert result["routes_found"][0]["url"] == "/dashboard"
+        assert result["navigation_graph"] == {"/": ["/dashboard"]}
+        assert result["global_issues"] == ["CSS not loading"]
+        assert result["unreachable_dead_ends"] == ["/broken"]
+
+    def test_inline_json(self) -> None:
+        raw = (
+            'Here is the result: {"routes_found": [{"url": "/"}], '
+            '"navigation_graph": {"/": []}, '
+            '"global_issues": [], "unreachable_dead_ends": []} done.'
+        )
+        result = parse_discovery_output(raw)
+        assert result is not None
+        assert len(result["routes_found"]) == 1
+        assert result["routes_found"][0]["url"] == "/"
+
+    def test_invalid_output(self) -> None:
+        raw = "I could not browse the app. Something went wrong.\nNo JSON here."
+        result = parse_discovery_output(raw)
+        assert result is None
+
+    def test_missing_routes_found_key(self) -> None:
+        raw = (
+            '```json\n'
+            '{"navigation_graph": {"/": []}, "global_issues": []}\n'
+            '```'
+        )
+        result = parse_discovery_output(raw)
+        assert result is None
+
+
+class TestPhase1Resume:
+    def test_phase_1_skipped_on_resume(self, tmp_project: Path) -> None:
+        state_path = tmp_project / ".sdd-state" / "validation-state.json"
+        run_id = "val-resume-p1"
+        state = ValidationState(state_path, run_id)
+        state.mark_complete("0")
+        state.mark_complete("1")
+
+        pipeline = ValidationPipeline(
+            project_dir=tmp_project,
+            flush_mode="auto",
+            validation_timeout=5.0,
+            resume=True,
+        )
+        pipeline.run_id = run_id
+        pipeline.state = ValidationState(state_path, run_id)
+
+        atexit.unregister(pipeline._cleanup)
+        exit_code = pipeline._run_phase_1()
+        assert exit_code == EXIT_ALL_PASS
+
+
+class TestPhase1RequiresPhase0:
+    @patch("auto_sdd.scripts.post_campaign_validation.run_claude")
+    def test_phase_1_requires_phase_0(
+        self, mock_run_claude: MagicMock, tmp_project: Path,
+    ) -> None:
+        pipeline = ValidationPipeline(
+            project_dir=tmp_project,
+            flush_mode="auto",
+            validation_timeout=5.0,
+        )
+
+        atexit.unregister(pipeline._cleanup)
+        # Phase 0 was NOT marked complete
+        exit_code = pipeline._run_phase_1()
+        assert exit_code == EXIT_INFRA_FAILURE
+        mock_run_claude.assert_not_called()

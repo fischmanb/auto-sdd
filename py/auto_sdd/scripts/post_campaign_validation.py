@@ -32,6 +32,12 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from auto_sdd.lib.claude_wrapper import (
+    AgentTimeoutError,
+    ClaudeOutputError,
+    run_claude,
+)
+
 logger = logging.getLogger(__name__)
 
 # ── Constants ────────────────────────────────────────────────────────────────
@@ -423,6 +429,151 @@ class Phase0Result:
         }
 
 
+class Phase1Result:
+    """Structured result of Phase 1 (Discovery Agent)."""
+
+    def __init__(self) -> None:
+        self.status: str = "DISCOVERY_FAILED"
+        self.routes_found: list[dict[str, Any]] = []
+        self.navigation_graph: dict[str, Any] = {}
+        self.global_issues: list[str] = []
+        self.unreachable_dead_ends: list[str] = []
+        self.error: str = ""
+        self.screenshot_dir: str = ""
+        self.route_count: int = 0
+        self.agent_duration_ms: int | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "status": self.status,
+            "routes_found": self.routes_found,
+            "navigation_graph": self.navigation_graph,
+            "global_issues": self.global_issues,
+            "unreachable_dead_ends": self.unreachable_dead_ends,
+            "error": self.error,
+            "screenshot_dir": self.screenshot_dir,
+            "route_count": self.route_count,
+            "agent_duration_ms": self.agent_duration_ms,
+            "timestamp": _now_iso(),
+        }
+
+
+# ── Phase 1 helpers ──────────────────────────────────────────────────────────
+
+
+def build_discovery_prompt(
+    app_url: str,
+    credentials: dict[str, Any] | None,
+    screenshot_dir: str,
+) -> str:
+    """Build the agent prompt for Phase 1 discovery.
+
+    The agent browses the app with no spec knowledge and inventories
+    what it finds.
+    """
+    login_block = ""
+    if credentials:
+        email = credentials.get("email", "")
+        password = credentials.get("password", "")
+        login_block = (
+            f"\n\nFirst, log in to the application using these credentials:\n"
+            f"  Email: {email}\n"
+            f"  Password: {password}\n"
+            f"After logging in, begin systematic browsing.\n"
+        )
+
+    return (
+        f"You are a QA discovery agent. Browse the web application at {app_url} "
+        f"systematically using Playwright."
+        f"{login_block}"
+        f"\n\nInstructions:\n"
+        f"- Visit every discoverable page by following navigation links, buttons, "
+        f"sidebar items, and menu entries.\n"
+        f"- On each page: inventory all interactive elements (buttons, links, forms, "
+        f"inputs, dropdowns), note any console errors, note any visual issues "
+        f"(broken layouts, missing images, overlapping text).\n"
+        f"- Take a screenshot of each distinct page and save it to: {screenshot_dir}\n"
+        f"- Maximum 20 routes. If you discover more than 20 distinct routes, stop "
+        f"and note \"discovered 20+ routes, stopped at limit\".\n"
+        f"- Maximum 5 minutes of browsing.\n"
+        f"- Do NOT assume anything about what should exist. Report only what you "
+        f"actually observe.\n"
+        f"\n"
+        f"Output your findings as a single JSON block fenced with ``` markers, "
+        f"using this exact schema:\n"
+        f"```json\n"
+        f'{{\n'
+        f'  "routes_found": [\n'
+        f'    {{\n'
+        f'      "url": "/path",\n'
+        f'      "screenshot_path": "discovery/page.png",\n'
+        f'      "interactive_elements": ["button:Submit", "link:Home"],\n'
+        f'      "console_errors": [],\n'
+        f'      "visual_issues": []\n'
+        f'    }}\n'
+        f'  ],\n'
+        f'  "navigation_graph": {{"/": ["/dashboard"]}},\n'
+        f'  "global_issues": [],\n'
+        f'  "unreachable_dead_ends": []\n'
+        f'}}\n'
+        f"```\n"
+    )
+
+
+def parse_discovery_output(raw_output: str) -> dict[str, Any] | None:
+    """Extract and validate the discovery JSON from agent output.
+
+    Looks for a fenced JSON code block first, then tries the full output
+    as inline JSON.  Returns None if parsing or validation fails.
+    """
+    # Try fenced code block first
+    fence_pattern = re.compile(r"```(?:json)?\s*\n?(.*?)```", re.DOTALL)
+    match = fence_pattern.search(raw_output)
+    candidate = match.group(1).strip() if match else None
+
+    parsed: dict[str, Any] | None = None
+
+    if candidate:
+        try:
+            obj = json.loads(candidate)
+            if isinstance(obj, dict):
+                parsed = obj
+        except (json.JSONDecodeError, ValueError):
+            pass
+
+    # Fallback: try to find a JSON object in the raw output
+    if parsed is None:
+        # Look for the outermost { ... } containing routes_found
+        brace_start = raw_output.find("{")
+        if brace_start != -1:
+            # Find matching closing brace
+            depth = 0
+            for i in range(brace_start, len(raw_output)):
+                if raw_output[i] == "{":
+                    depth += 1
+                elif raw_output[i] == "}":
+                    depth -= 1
+                    if depth == 0:
+                        try:
+                            obj = json.loads(raw_output[brace_start : i + 1])
+                            if isinstance(obj, dict):
+                                parsed = obj
+                        except (json.JSONDecodeError, ValueError):
+                            pass
+                        break
+
+    if parsed is None:
+        return None
+
+    # Validate required keys
+    if "routes_found" not in parsed or not isinstance(parsed["routes_found"], list):
+        return None
+    if "navigation_graph" not in parsed or not isinstance(parsed["navigation_graph"], dict):
+        return None
+
+    return parsed
+
+
 def run_phase_0(
     project_dir: Path,
     timeout: float = 60.0,
@@ -740,6 +891,123 @@ class ValidationPipeline:
         logger.info("Phase 0 complete: %s", phase_result.status)
         return EXIT_ALL_PASS
 
+    def _run_phase_1(self) -> int:
+        """Execute Phase 1: Discovery Agent."""
+        phase = "1"
+        if self.resume and self.state.is_complete(phase):
+            logger.info("Phase 1 already complete — skipping (resume mode)")
+            return EXIT_ALL_PASS
+
+        logger.info("═══ Phase 1: Discovery Agent ═══")
+
+        # Phase 0 must have completed — we need the app URL
+        if not self.state.is_complete("0"):
+            logger.error("Phase 1 requires Phase 0 to be complete")
+            return EXIT_INFRA_FAILURE
+
+        # Read app URL from the Phase 0 runtime report
+        report_dir = self.log_dir / "phase-0"
+        app_url: str | None = None
+        if report_dir.exists():
+            for p in sorted(report_dir.glob("runtime-report.v*.json"), reverse=True):
+                data = _read_json(p)
+                if isinstance(data, dict) and data.get("url"):
+                    app_url = str(data["url"])
+                    break
+
+        if not app_url:
+            logger.error("Could not find app URL from Phase 0 runtime report")
+            return EXIT_INFRA_FAILURE
+
+        # Load credentials if available
+        creds_path = self.project_dir / ".sdd-state" / "qa-credentials.json"
+        credentials: dict[str, Any] | None = None
+        if creds_path.exists():
+            credentials = _read_json(creds_path)
+            if not isinstance(credentials, dict):
+                credentials = None
+
+        # Create screenshot directory
+        screenshot_dir = self.log_dir / "phase-1" / "screenshots"
+        screenshot_dir.mkdir(parents=True, exist_ok=True)
+
+        # Build prompt
+        prompt = build_discovery_prompt(app_url, credentials, str(screenshot_dir))
+
+        # Invoke the discovery agent
+        phase1_result = Phase1Result()
+        phase1_result.screenshot_dir = str(screenshot_dir)
+
+        start_ms = int(time.monotonic() * 1000)
+        try:
+            claude_result = run_claude(
+                ["-p", "--dangerously-skip-permissions", prompt],
+                cwd=self.project_dir,
+                timeout=300,
+            )
+        except AgentTimeoutError as exc:
+            elapsed = int(time.monotonic() * 1000) - start_ms
+            phase1_result.error = f"Discovery agent timed out: {exc}"
+            phase1_result.agent_duration_ms = elapsed
+            logger.error("Phase 1 FAILED: %s", phase1_result.error)
+            self._write_phase1_report(phase1_result)
+            return EXIT_PARTIAL
+        except ClaudeOutputError as exc:
+            elapsed = int(time.monotonic() * 1000) - start_ms
+            phase1_result.error = f"Discovery agent output error: {exc}"
+            phase1_result.agent_duration_ms = elapsed
+            logger.error("Phase 1 FAILED: %s", phase1_result.error)
+            self._write_phase1_report(phase1_result)
+            return EXIT_PARTIAL
+
+        elapsed = int(time.monotonic() * 1000) - start_ms
+        phase1_result.agent_duration_ms = elapsed
+
+        # Parse the discovery output
+        parsed = parse_discovery_output(claude_result.output)
+        if parsed is None:
+            phase1_result.error = (
+                "Failed to parse discovery JSON from agent output. "
+                f"Raw output (first 500 chars): {claude_result.output[:500]}"
+            )
+            logger.error("Phase 1 FAILED: %s", phase1_result.error)
+            self._write_phase1_report(phase1_result)
+            return EXIT_PARTIAL
+
+        # Populate result from parsed discovery
+        phase1_result.status = "DISCOVERY_COMPLETE"
+        phase1_result.routes_found = parsed.get("routes_found", [])
+        nav_graph = parsed.get("navigation_graph", {})
+        phase1_result.navigation_graph = nav_graph if isinstance(nav_graph, dict) else {}
+        global_issues = parsed.get("global_issues", [])
+        phase1_result.global_issues = global_issues if isinstance(global_issues, list) else []
+        dead_ends = parsed.get("unreachable_dead_ends", [])
+        phase1_result.unreachable_dead_ends = dead_ends if isinstance(dead_ends, list) else []
+        phase1_result.route_count = len(phase1_result.routes_found)
+
+        # Write discovery inventory
+        self._write_phase1_report(phase1_result)
+
+        self.state.mark_complete(phase)
+        logger.info(
+            "Phase 1 complete: %s (%d routes found)",
+            phase1_result.status,
+            phase1_result.route_count,
+        )
+        return EXIT_ALL_PASS
+
+    def _write_phase1_report(self, result: Phase1Result) -> None:
+        """Write Phase 1 discovery inventory to the doc registry."""
+        report_json = json.dumps(result.to_dict(), indent=2) + "\n"
+        version = self.doc_registry._next_version("discovery-inventory")
+        report_path = self.log_dir / "phase-1" / f"discovery-inventory.v{version}.json"
+        self.doc_registry.register(
+            doc_id="discovery-inventory",
+            phase="1",
+            path=report_path,
+            content=report_json,
+        )
+
     def _run_phase_stub(self, phase: str) -> int:
         """Stub for phases 1–5: raises NotImplementedError."""
         phase_names: dict[str, str] = {
@@ -775,8 +1043,13 @@ class ValidationPipeline:
         if exit_code == EXIT_RUNTIME_FAILED:
             return exit_code
 
-        # Phases 1–5 (stubs)
-        for phase in PHASE_ORDER[1:]:
+        # Phase 1
+        exit_code = self._run_phase_1()
+        if exit_code != EXIT_ALL_PASS:
+            return exit_code
+
+        # Phases 2a–5 (stubs)
+        for phase in PHASE_ORDER[2:]:
             if self.resume and self.state.is_complete(phase):
                 logger.info("Phase %s already complete — skipping", phase)
                 continue

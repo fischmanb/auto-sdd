@@ -1451,6 +1451,38 @@ grep -c "source.*validation.sh" scripts/*.sh  # Should be 1 (generate-mapping.sh
 - `pytest py/tests/ --ignore=py/tests/test_comp_detail.py -q`: 676 passed (0 regressions, up from 635 in round before last)
 - `git diff --stat` after staging: Only 3 files (2 new Python + Agents.md)
 
+### Round N+1: Phase 1 Discovery Agent (branch: claude/review-hard-constraints-6nEDM)
+
+**What was asked**: Implement Phase 1 (Discovery Agent) in the post-campaign validation pipeline. This is Milestone 2 from the spec — the phase that generates ground truth about what the app actually contains by browsing with no spec knowledge.
+
+**What actually happened**:
+- Added `Phase1Result` class (following `Phase0Result` pattern) with fields: status, routes_found, navigation_graph, global_issues, unreachable_dead_ends, error, screenshot_dir, route_count, agent_duration_ms.
+- Added `build_discovery_prompt()` — constructs agent prompt telling it to browse via Playwright, inventory pages, take screenshots. Includes credentials if available. Excludes all spec/roadmap knowledge.
+- Added `parse_discovery_output()` — extracts JSON from agent output (fenced or inline), validates required keys (routes_found, navigation_graph).
+- Added `_run_phase_1()` method to `ValidationPipeline` — checks Phase 0 complete, loads credentials, creates screenshot dir, calls `run_claude` with 300s timeout, handles AgentTimeoutError/ClaudeOutputError, writes discovery-inventory.vN.json via doc registry.
+- Added `_write_phase1_report()` helper for doc registry writes.
+- Updated `run()` to call `_run_phase_1()` instead of stub for phase "1".
+- Added import for `run_claude`, `AgentTimeoutError`, `ClaudeOutputError` from claude_wrapper.
+
+**Changes to `py/tests/test_post_campaign_validation.py`** — 8 new tests (49 total):
+- `test_build_discovery_prompt_with_credentials`: Verifies URL, credentials, Playwright in prompt; forbidden words (roadmap, spec, feature) absent.
+- `test_build_discovery_prompt_without_credentials`: Verifies no login instructions when credentials=None.
+- `test_parse_discovery_output_valid_json`: Fenced JSON block parsed correctly.
+- `test_parse_discovery_output_inline_json`: Inline JSON parsed correctly.
+- `test_parse_discovery_output_invalid`: Garbage text returns None.
+- `test_parse_discovery_output_missing_keys`: Missing routes_found returns None.
+- `test_phase_1_skipped_on_resume`: Resume mode skips completed Phase 1.
+- `test_phase_1_requires_phase_0`: Returns EXIT_INFRA_FAILURE without calling run_claude if Phase 0 incomplete.
+
+**What was NOT changed**: No existing tests modified. No files created. No files deleted. No packages installed.
+
+**Verification results**:
+- `mypy --strict` on implementation: Success, 0 errors
+- `mypy --strict --ignore-missing-imports` on tests: Success, 0 errors
+- `pytest py/tests/test_post_campaign_validation.py -v`: 49 passed
+- `pytest py/tests/ --ignore=py/tests/test_comp_detail.py -q`: 684 passed, 0 regressions
+- `git diff --stat`: Only 2 files (py/auto_sdd/scripts/post_campaign_validation.py, py/tests/test_post_campaign_validation.py)
+
 ---
 ## Questions?
 
