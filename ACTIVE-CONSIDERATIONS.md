@@ -39,7 +39,8 @@ Ordered by efficiency gain per complexity added:
    - **Phase 0 DONE**: Runtime bootstrap (package manager detection, production build gate, dev server start, health check, auth bootstrap). 41 tests. Merged at `b7feb18`.
    - **Phase 1 DONE**: Discovery Agent (Playwright-based blind browse, structured inventory of routes/elements/nav graph). 8 new tests. Merged at `874cbd0`.
    - **Phase 2a+2b DONE**: AC generation (spec-based criteria writer with FOUND/MISSING/PARTIAL/DRIFTED/UNEXPECTED classification) + mechanical gap detection (pure Python set operations, replaces second agent call). 11 new tests. Merged at `ca3d6f1`. Refactored at `df1d588` to eliminate second agent call.
-   - **Phase 3 NEXT**: Playwright validation — execute acceptance criteria as automated tests.
+   - **Phase 3 DONE**: Playwright Validation (per-feature agent invocations, PASS/FAIL/BLOCKED per criterion, retry handling, screenshots on failure). 9 new tests. Merged at `891eda6`.
+   - **Phase 4a NEXT**: Failure Catalog — mechanical Python (no agent call). Agent prompt written, pending execution.
    - Implementation in `py/auto_sdd/scripts/post_campaign_validation.py` (60 tests, mypy --strict clean).
 5. **Local model integration** — Replace cloud API with local LM Studio on Mac Studio. Reference: `archive/local-llm-pipeline/`. *Not started.*
 6. **Adaptive routing / parallelism** — Only if data from 1–3 justifies complexity. *Deprioritized.*
