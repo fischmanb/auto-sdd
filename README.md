@@ -260,7 +260,9 @@ Each build agent receives a generated summary of existing components, type expor
 
 ### Eval sidecar
 
-A separate process polls for new commits during a campaign, runs mechanical evaluations (and optionally agent-based evaluations), and writes per-feature JSON results. Observational only — never blocks builds, never modifies source files.
+A separate process polls for new commits during a campaign, runs mechanical evaluations (and optionally agent-based evaluations), and feeds findings back into subsequent build prompts via the repeated-mistakes feedback loop. Never blocks builds or modifies source files directly, but actively influences agent behavior — if feature 1's eval catches a pattern violation, feature 2's agent prompt includes that feedback.
+
+Currently the sidecar produces per-feature scores and mistake flags. The planned next layer extracts structured learnings from eval outcomes across features, identifies cross-campaign patterns (which mistake types recur, which prompt adjustments actually reduce failure rates), and feeds those patterns back into both the sidecar's own evaluation criteria and the build loop's prompt construction. The system improves its own quality gates based on what it observes failing.
 
 ### Token estimation and calibration
 
