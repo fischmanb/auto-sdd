@@ -561,3 +561,43 @@ The eval sidecar has a documented gap between its current implementation (qualit
 - **Related:** L-00167 (depends_on)
 
 The implementation-grounding test: when describing what a system does, the claim is valid only if you can point to the specific function, data structure, or output format that implements it. If you cannot, the capability is aspirational and must be stated as such. This applies to both external communication (stakeholder descriptions) and internal planning (agent prompt design). Derived from the eval sidecar incident where "extracts learnings and analyzes patterns" was stated as implemented when the actual implementation is a one-line EVAL_NOTES string field.
+
+
+---
+
+## L-00172 — Scope audit prompts to general principles, not symptoms of known examples
+
+- **Type:** process_rule
+- **Tags:** prompt-engineering, audit, generalization
+- **Confidence:** high
+- **Status:** active
+- **Date:** 2026-03-03
+- **Related:** L-00143 (related_to), L-00163 (related_to)
+
+When writing audit or evaluation prompts, frame checks as general principles rather than specific known symptoms. An audit prompt that says "check for client→server import chains" catches one failure mode. A prompt that says "check for dependency boundary violations where a module in layer A transitively reaches layer C" catches the class. Symptom-scoped prompts encode the last failure; principle-scoped prompts catch the next one. Derived from project-agnostic audit (Round 46) where initial framing was overly coupled to stakd-specific patterns.
+
+---
+
+## L-00173 — Apply settled design reasoning to analogous modules without being prompted
+
+- **Type:** process_rule
+- **Tags:** consistency, design-decisions, agent-behavior
+- **Confidence:** high
+- **Status:** active
+- **Date:** 2026-03-03
+- **Related:** L-00011 (related_to)
+
+When a design decision is settled for one module (e.g., use `sh` instead of `bash` for portability in build_gates.py), apply the same reasoning to all analogous modules in the same codebase without waiting to be told. Each module that shares the same constraints should inherit the same solution. Requiring the operator to re-state settled reasoning per module is a process failure — it means the agent treated the decision as local when it was systemic. Derived from Rounds 47-49 where portability fixes had to be applied file-by-file after the principle was already established.
+
+---
+
+## L-00174 — Do not add speculative ecosystem support without confirming targets
+
+- **Type:** process_rule
+- **Tags:** scope, assumptions, stakeholder-alignment
+- **Confidence:** high
+- **Status:** active
+- **Date:** 2026-03-03
+- **Related:** L-00143 (related_to)
+
+Before adding support for languages, frameworks, or ecosystems not already present in the project, ask the operator what they actually target. Adding Go dead-export scanning or Rust import counting to a Python/TypeScript project is speculative scope expansion — it costs implementation time, increases test surface, and adds code that may never execute against real data. If the operator wants broad ecosystem support, they'll say so. Default to what exists. Derived from Round 48 where multilang eval patterns were added without confirming Brian's target stack.
