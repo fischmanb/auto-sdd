@@ -28,6 +28,7 @@ Ordered by efficiency gain per complexity added:
    - **Phase 5 DONE**: OvernightRunner (overnight-autonomous.sh → Python). Composition over subclass. 640 lines, 70 tests. Merged at `9bf0f05`. 454 tests total, zero regressions.
    - **Phase 6 DONE**: Final scripts (nightly_review, generate_mapping, general_estimates). 760 lines impl + 890 lines tests. 114 new tests. Merged at `b7114f8`. 568 tests total, zero regressions.
    - **CONVERSION COMPLETE.** All bash scripts and libs have Python equivalents. Remaining: integration test against real project, retire bash test suites (2,149 lines), extract errors.py/signals.py/state.py from reliability.py monolith (conventions specify these but Phase 1 inlined them).
+   - **Post-conversion audit COMPLETE (2026-03-03).** Project-agnostic audit found 30 findings (5 BLOCKING, 9 WARNING, 9 INFO, 7 CLEAN). 16 non-INFO findings resolved in Rounds 47-49: codebase summary replaced with agent-generated (cached on tree hash), eval/dead-export scan extended to Python/Rust/Go, infrastructure hardened (tempdir, sh, sidecar fallback, configurable branch). Finding #27 (fcntl/Windows) deferred. 7 remaining findings are INFO-only.
 3. ~~**Build loop design improvements — folded into Phase 4 (2026-03-01).**~~ ✅ DONE — L-00111 patterns wired into Phase 4 prompts.
 4. **Eval sidecar gap: quality gate → learning system (post-migration).**
    - Current: per-commit scoring (compliance, scope, integration) + `repeated_mistakes` feedback into next build prompt. Campaign summary is aggregate tallies only.
@@ -45,6 +46,7 @@ Correlates t-shirt sizes with actual metrics from `logs/build-summary-*.json`. W
 ### Other active items
 
 - **Learnings system — IMPLEMENTED (2026-03-01)**: 100+ graph-compliant entries (L-00001–L-00163, M-00001–M-00084), 13 curated in `core.md`, all inlined into CLAUDE.md. Schema standardization complete (5-digit IDs). Token calibration infrastructure: general-estimates.jsonl + 4 functions in lib/general-estimates.sh. Remaining: old-format conversion (Prompts 4/5), index.md stale.
+- **Recently completed (2026-03-03)**: Project-agnostic audit + 3 remediation rounds (47-49). Agent-based codebase summary, multilang eval patterns, infra portability. Main at `d2f8792`. All branches merged and cleaned.
 - **Recently completed (2026-03-01)**: Token estimation proxy replaced (L-00145/L-00148/L-00149), L-00143 wired into infrastructure (d1a1a72), core learnings inlined into CLAUDE.md (f7be98c), Dispatches 2–4 all landed. Queue empty.
 - **HOW-I-WORK corpus curation (2026-03-01)**: 74 entries converted to graph schema (M-00001–M-00074). Full corpus read identified 4+ coherent clusters ready for formalization. Action: curate entries into named sections, promote mature patterns to learnings.
 - **Knowledge graph for workflow continuity (2026-02-28)**: Personal workflow tool for cross-session context. *Design phase — no implementation started.*
