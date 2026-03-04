@@ -302,7 +302,7 @@ class TestCommitDiscovery:
         h_feat = _make_commit(
             repo, "feature.txt", "feat", "feat: on branch"
         )
-        _git(repo, "checkout", "master")
+        _git(repo, "checkout", "main")
         _make_commit(repo, "main.txt", "main", "feat: on main")
         _git(repo, "merge", "feature", "--no-ff", "-m", "Merge feature")
         merge_head = _git(repo, "rev-parse", "HEAD")
