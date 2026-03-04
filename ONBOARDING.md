@@ -50,8 +50,8 @@ See **`DESIGN-PRINCIPLES.md`** — project-wide constraints on grepability, grap
 - **Model logging per feature**: actual model used recorded in build summary JSON and human-readable table (Round 23).
 - **Post-run branch cleanup**: merged `auto/chained-*` and `auto/independent-*` branches auto-deleted after build summary (Round 23).
 - **NODE_ENV guard**: explicitly sets `NODE_ENV=development` before agent calls (Round 23).
-- **Test suite**: 68 unit assertions (`test-reliability.sh`), 10 validation assertions (`test-validation.sh`), 23 codebase-summary assertions (`test-codebase-summary.sh`), 53 eval assertions (`test-eval.sh`), structural dry-run. **154 total assertions passing.**
-- **Cost tracking**: `lib/claude-wrapper.sh` logs token/cost data as JSONL.
+- **Test suite**: **740 pytest tests passing in ~16s.** Python test suite covers all modules: build gates, prompt builder, drift, reliability, eval sidecar, build loop, overnight runner, branch manager, and more. Bash test suites (154 assertions) are legacy — Python equivalents supersede them.
+- **Cost tracking**: `py/auto_sdd/lib/claude_wrapper.py` logs token/cost data as JSONL.
 - **Build summary reports**: per-feature timing, test counts, token usage, model used, written to `logs/build-summary-{timestamp}.json`.
 - **Git stash hardening**: dirty worktree can't cascade failures across features.
 - **Credit exhaustion detection**: both scripts halt immediately when API credits run out instead of retrying doomed calls.
@@ -67,7 +67,7 @@ See **`DESIGN-PRINCIPLES.md`** — project-wide constraints on grepability, grap
 
 ### Remediation status
 
-All remediation rounds (21-37) complete. **154 assertions passing.** See Agents.md for per-round details and git history for individual commits. This section is frozen — new work items go into ACTIVE-CONSIDERATIONS.md while active and get pruned when done.
+All remediation rounds (21-37) complete. **740 Python tests passing (~16s).** See Agents.md for per-round details and git history for individual commits. This section is frozen — new work items go into ACTIVE-CONSIDERATIONS.md while active and get pruned when done.
 
 ### Known gaps
 
@@ -102,13 +102,13 @@ See **`ACTIVE-CONSIDERATIONS.md`** — priority stack, in-flight work, and open 
 | **ARCHITECTURE.md** | Design decisions for the local LLM pipeline (system 2, archived) and context management philosophy | When working on the local model integration |
 | **Brians-Notes/PROMPT-ENGINEERING-GUIDE.md** | Methodology for writing hardened agent prompts. Failure catalog and process lessons are in `.specs/learnings/agent-operations.md` | Before writing any new agent prompts |
 | **WIP/post-campaign-validation.md** | Post-campaign validation pipeline spec (v0.3). Seven-phase multi-agent system for runtime validation, auth bootstrap, Playwright testing, failure cataloging, RCA, and automated fixes | When implementing or extending post-campaign validation |
-| **lib/reliability.sh** | Shared runtime: lock, backoff, state, truncation, cycle detection (~594 lines) | When debugging build failures or modifying shared behavior |
-| **lib/codebase-summary.sh** | Generates cross-feature context summary (component registry, type exports, import graph, learnings) | When modifying the summary format or debugging agent context issues |
-| **lib/eval.sh** | Eval functions: mechanical checks, prompt generation, signal parsing, result writing | When modifying eval behavior or adding new eval signals |
-| **lib/claude-wrapper.sh** | Wraps `claude` CLI, extracts text to stdout, logs cost data to JSONL | When debugging cost tracking or agent invocation |
-| **scripts/build-loop-local.sh** | Main orchestration script (~2299 lines) | When modifying the build loop |
-| **scripts/overnight-autonomous.sh** | Overnight automation variant (~1041 lines) | When modifying overnight runs |
-| **scripts/eval-sidecar.sh** | Eval sidecar — runs alongside build loop, polls for commits, evaluates features (~354 lines) | When modifying eval behavior or running evals |
+| **py/auto_sdd/lib/reliability.py** | Shared runtime: lock, backoff, state, truncation, cycle detection | When debugging build failures or modifying shared behavior |
+| **py/auto_sdd/lib/codebase_summary.py** | Generates cross-feature context summary (agent-based, cached on tree hash) | When modifying the summary format or debugging agent context issues |
+| **py/auto_sdd/lib/eval_lib.py** | Eval functions: mechanical checks, prompt generation, signal parsing, result writing | When modifying eval behavior or adding new eval signals |
+| **py/auto_sdd/lib/claude_wrapper.py** | Wraps `claude` CLI, extracts text to stdout, logs cost data to JSONL | When debugging cost tracking or agent invocation |
+| **py/auto_sdd/scripts/build_loop.py** | Main orchestration: `BuildLoop` class (~1650 lines) | When modifying the build loop |
+| **py/auto_sdd/scripts/overnight_autonomous.py** | Overnight automation: `OvernightRunner` class (~1350 lines) | When modifying overnight runs |
+| **py/auto_sdd/scripts/eval_sidecar.py** | Eval sidecar — runs alongside build loop, polls for commits, evaluates features | When modifying eval behavior or running evals |
 | **.env.local.example** | Full config reference (167 lines) | When setting up or changing config |
 
 ---
@@ -117,11 +117,11 @@ See **`ACTIVE-CONSIDERATIONS.md`** — priority stack, in-flight work, and open 
 
 Two systems live in this repo:
 
-**System 1 — Orchestration (active)**: `scripts/build-loop-local.sh` and `overnight-autonomous.sh` call Claude Code agents with a fresh context per feature. Each feature goes through: BUILD → COMPILE CHECK → TESTS → DRIFT CHECK → COMMIT. The shell validates between every agent step — no trust in self-assessment.
+**System 1 — Orchestration (active)**: `py/auto_sdd/scripts/build_loop.py` (`BuildLoop` class) and `overnight_autonomous.py` (`OvernightRunner` class) call Claude Code agents with a fresh context per feature. Each feature goes through: BUILD → COMPILE CHECK → TESTS → DRIFT CHECK → COMMIT. Python validates between every agent step — no trust in self-assessment. Bash originals (`scripts/build-loop-local.sh`, `overnight-autonomous.sh`) are dead code — Python equivalents supersede them.
 
 **System 2 — Local LLM pipeline (archived)**: Multi-stage pipeline (plan → build → review → fix) for locally-hosted models. Archived to `archive/local-llm-pipeline/`. Preserved for future LM Studio integration.
 
-`lib/reliability.sh` serves System 1 only.
+`py/auto_sdd/lib/reliability.py` serves System 1 only.
 
 ### Signal protocol
 
@@ -148,29 +148,19 @@ REVIEW_CLEAN / REVIEW_FIXED / REVIEW_FAILED    # Review agent
 ## How to Verify Everything Works
 
 ```bash
-cd ~/auto-sdd
+cd ~/auto-sdd/py
 
-# Requires bash 5+ (brew install bash). Scripts use #!/usr/bin/env bash
-# so ./script works directly as long as Homebrew bash is in PATH (default after install).
+# Run full Python test suite (740 tests, ~16s)
+.venv/bin/pytest tests/ -q
 
-# Syntax check all scripts
-bash -n scripts/build-loop-local.sh
-bash -n scripts/overnight-autonomous.sh
-bash -n lib/reliability.sh
-bash -n lib/validation.sh
+# Run with timing to catch regressions
+.venv/bin/pytest tests/ --durations=5 -q
 
-# Unit tests
-./tests/test-reliability.sh        # 68 assertions
-./tests/test-validation.sh         # 10 assertions
-./tests/test-codebase-summary.sh   # 23 assertions
-./tests/test-eval.sh               # 53 assertions
-
-# Structural dry-run (no agent/API needed)
-DRY_RUN_SKIP_AGENT=true ./tests/dry-run.sh
-
-# Full dry-run (requires claude CLI + ANTHROPIC_API_KEY)
-./tests/dry-run.sh
+# Type checking
+.venv/bin/mypy --strict auto_sdd/
 ```
+
+Legacy bash tests (`tests/test-*.sh`, `tests/dry-run.sh`) still exist but are superseded by the Python suite. Bash scripts (`scripts/*.sh`, `lib/*.sh`) are dead code.
 
 ---
 
