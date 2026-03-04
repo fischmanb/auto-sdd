@@ -322,6 +322,7 @@ class TestBuildLoopRun:
                 loop.run()
         assert loop.loop_built == 0
 
+    @patch("auto_sdd.lib.prompt_builder.generate_codebase_summary", return_value="mock summary")
     @patch("auto_sdd.scripts.build_loop.run_claude")
     @patch("auto_sdd.scripts.build_loop.setup_branch_chained")
     @patch("auto_sdd.scripts.build_loop.cleanup_branch_chained")
@@ -342,6 +343,7 @@ class TestBuildLoopRun:
         mock_cleanup: MagicMock,
         mock_setup: MagicMock,
         mock_claude: MagicMock,
+        mock_summary: MagicMock,
         tmp_path: Path,
     ) -> None:
         loop = _make_loop(tmp_path)
@@ -459,54 +461,58 @@ class TestResumeFromState:
         ]
 
         with patch(
-            "auto_sdd.scripts.build_loop.run_claude"
-        ) as mock_claude:
-            mock_claude.return_value = MagicMock(
-                output="FEATURE_BUILT: dashboard\nSPEC_FILE: spec.md\nSOURCE_FILES: src/dash.ts",
-            )
+            "auto_sdd.lib.prompt_builder.generate_codebase_summary",
+            return_value="mock summary",
+        ):
             with patch(
-                "auto_sdd.scripts.build_loop.setup_branch_chained"
-            ) as mock_setup:
-                mock_setup.return_value = MagicMock(
-                    branch_name="auto/chained-456",
-                    worktree_path=None,
+                "auto_sdd.scripts.build_loop.run_claude"
+            ) as mock_claude:
+                mock_claude.return_value = MagicMock(
+                    output="FEATURE_BUILT: dashboard\nSPEC_FILE: spec.md\nSOURCE_FILES: src/dash.ts",
                 )
                 with patch(
-                    "auto_sdd.scripts.build_loop.cleanup_branch_chained",
-                    return_value="auto/chained-456",
-                ):
+                    "auto_sdd.scripts.build_loop.setup_branch_chained"
+                ) as mock_setup:
+                    mock_setup.return_value = MagicMock(
+                        branch_name="auto/chained-456",
+                        worktree_path=None,
+                    )
                     with patch(
-                        "auto_sdd.scripts.build_loop.check_working_tree_clean",
-                        return_value=True,
+                        "auto_sdd.scripts.build_loop.cleanup_branch_chained",
+                        return_value="auto/chained-456",
                     ):
                         with patch(
-                            "auto_sdd.scripts.build_loop.clean_working_tree"
+                            "auto_sdd.scripts.build_loop.check_working_tree_clean",
+                            return_value=True,
                         ):
                             with patch(
-                                "auto_sdd.scripts.build_loop.check_build",
-                                return_value=BuildCheckResult(
-                                    success=True, output=""
-                                ),
+                                "auto_sdd.scripts.build_loop.clean_working_tree"
                             ):
                                 with patch(
-                                    "auto_sdd.scripts.build_loop.check_drift",
-                                    return_value=DriftCheckResult(
-                                        passed=True, summary="ok"
+                                    "auto_sdd.scripts.build_loop.check_build",
+                                    return_value=BuildCheckResult(
+                                        success=True, output=""
                                     ),
                                 ):
                                     with patch(
-                                        "auto_sdd.scripts.build_loop.extract_drift_targets",
-                                        return_value=DriftTargets(
-                                            spec_file="spec.md",
-                                            source_files="src/dash.ts",
+                                        "auto_sdd.scripts.build_loop.check_drift",
+                                        return_value=DriftCheckResult(
+                                            passed=True, summary="ok"
                                         ),
                                     ):
                                         with patch(
-                                            "auto_sdd.scripts.build_loop._get_head",
-                                            side_effect=["abc123", "def456"],
+                                            "auto_sdd.scripts.build_loop.extract_drift_targets",
+                                            return_value=DriftTargets(
+                                                spec_file="spec.md",
+                                                source_files="src/dash.ts",
+                                            ),
                                         ):
-                                            loop._run_build_loop(
-                                                "chained", features
+                                            with patch(
+                                                "auto_sdd.scripts.build_loop._get_head",
+                                                side_effect=["abc123", "def456"],
+                                            ):
+                                                loop._run_build_loop(
+                                                    "chained", features
                                             )
 
         # auth was skipped, only dashboard built
