@@ -71,6 +71,19 @@ def detect_build_check(
             return ""
         return override
 
+    # Framework-specific builds (must precede generic tsconfig)
+    # Next.js: `next build` catches server/client boundary violations
+    # that `tsc --noEmit` misses (L-00012). Must check before tsconfig
+    # because Next.js projects always have tsconfig.json too.
+    nextjs_configs = [
+        "next.config.js",
+        "next.config.mjs",
+        "next.config.ts",
+        "next.config.cjs",
+    ]
+    if any((project_dir / cfg).exists() for cfg in nextjs_configs):
+        return "npm run build"
+
     # TypeScript
     if (project_dir / "tsconfig.build.json").exists():
         return "npx tsc --noEmit --project tsconfig.build.json"
