@@ -643,4 +643,24 @@ Mechanical enforcement in prompt_builder.py: `MAX_INJECTED_SECTION_LINES` (150) 
 - **Date:** 2026-03-04
 - **Related:** L-00174 (reinforces), L-00143 (related_to)
 
-Do not build preventive infrastructure for ecosystems that have zero observed failures. The Round 50 prompt included 50 constraint patterns across Go, Rust, Python, and general TypeScript — ecosystems where no transitive boundary violation had ever occurred in actual campaigns. Each pattern requires maintenance (docs change, frameworks evolve, false patterns mislead agents). The only observed failures were in Next.js. Writing 50 speculative patterns to prevent hypothetical failures in 5 other ecosystems is engineering effort with no data justifying it. When observed failures emerge in a new ecosystem, add coverage then — the marginal cost of a single constraint file is low. The upfront cost of maintaining six files with 62 patterns against zero signal is not.
+Do not build preventive infrastructure for ecosystems that have zero observed failures.
+
+## L-00180 — Silent instruction overrides are never acceptable
+
+- **Type:** process-rule
+- **Tags:** chat-discipline, Brian-correction, communication
+- **Status:** active
+- **Date:** 2026-03-04
+- **Related:** L-00178 (reinforces)
+
+When deviating from an explicit Brian instruction, always state what you're doing differently and why in the same response. Silent overrides — even when the reasoning is sound — are never acceptable. Brian must always know when his instructions are being modified and the rationale. This was triggered by repeatedly ignoring the stash-reads instruction without explanation, which caused wasted tool calls, a failed response, and extra billing costs.
+
+## L-00181 — Stash key findings from file reads to a scratch file; never re-read same regions
+
+- **Type:** process-rule
+- **Tags:** tool-efficiency, chat-discipline, Brian-correction
+- **Status:** active
+- **Date:** 2026-03-04
+- **Related:** L-00180 (reinforces)
+
+When reading files for investigation, stash key findings (function locations, patterns, class boundaries) to a local scratch file (e.g. `/tmp/sdd-scratch.md`) after first read. Never re-read the same file regions across tool calls. This is a hard rule. Violating it caused 11+ redundant reads across two responses, one of which failed to complete, burning Extra Usage billing. The Round 50 prompt included 50 constraint patterns across Go, Rust, Python, and general TypeScript — ecosystems where no transitive boundary violation had ever occurred in actual campaigns. Each pattern requires maintenance (docs change, frameworks evolve, false patterns mislead agents). The only observed failures were in Next.js. Writing 50 speculative patterns to prevent hypothetical failures in 5 other ecosystems is engineering effort with no data justifying it. When observed failures emerge in a new ecosystem, add coverage then — the marginal cost of a single constraint file is low. The upfront cost of maintaining six files with 62 patterns against zero signal is not.

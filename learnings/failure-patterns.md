@@ -270,3 +270,13 @@ Multiple agents working on related tasks will independently solve overlapping pr
 - **Related:** L-00128, L-00143, M-00080
 
 Stating a number as an "estimate" without showing the computation is decoration that creates false confidence. In one session: "8.5% utilization" was stated, accepted, and the agent blew the context; "~12k tokens" appeared in a scope section with no supporting calculation; "well within bounds" was asserted without checking bounds. Each number looked like a calculation — formatted with units, placed in an "Estimate" section — but was a guess wearing a costume. The failure mode: estimates that aren't computed get accepted without scrutiny because they look like they were computed. Countermeasure: every estimate must show the full arithmetic. If the calculation can't be shown, the number isn't an estimate — it's a guess, and should be labeled as such.
+
+## L-00182 — Tests calling _build_single_feature must mock generate_codebase_summary
+
+- **Type:** failure-pattern
+- **Tags:** test-hang, missing-mock, subprocess
+- **Status:** active
+- **Date:** 2026-03-04
+- **Related:** L-00180 (same session)
+
+Tests calling `_build_single_feature` or `_build_feature_prompt` must mock `generate_codebase_summary` — it calls `run_claude` which spawns real `subprocess.run(["claude",...])`. This caused the 71-test hang in `test_overnight_autonomous`. Six tests were affected. Fix: `@patch("...generate_codebase_summary", return_value="mock summary")`. General principle: any test exercising a code path that eventually calls an external CLI must mock every intermediate function that spawns subprocesses, not just the top-level agent runner.
