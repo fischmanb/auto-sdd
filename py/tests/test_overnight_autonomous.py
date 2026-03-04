@@ -418,6 +418,9 @@ class TestBuildFeatures:
         assert built == 0
         assert failed == 0
 
+    @patch("auto_sdd.scripts.overnight_autonomous.generate_codebase_summary", return_value="mock summary")
+    @patch("auto_sdd.scripts.overnight_autonomous.check_drift")
+    @patch("auto_sdd.scripts.overnight_autonomous.extract_drift_targets")
     @patch("auto_sdd.scripts.overnight_autonomous._run_git")
     @patch("auto_sdd.scripts.overnight_autonomous.run_agent_with_backoff")
     @patch("auto_sdd.scripts.overnight_autonomous.emit_topo_order")
@@ -428,10 +431,15 @@ class TestBuildFeatures:
         mock_topo: MagicMock,
         mock_agent: MagicMock,
         mock_git: MagicMock,
+        mock_drift_targets: MagicMock,
+        mock_drift: MagicMock,
+        mock_summary: MagicMock,
         tmp_path: Path,
     ) -> None:
         runner = _make_runner(tmp_path)
         runner.main_branch = "main"
+
+        mock_drift.return_value = MagicMock(passed=True)
 
         mock_topo.return_value = [Feature(id=1, name="auth", complexity="M")]
 
@@ -470,6 +478,7 @@ class TestBuildFeatures:
         assert built == 1
         assert failed == 0
 
+    @patch("auto_sdd.scripts.overnight_autonomous.generate_codebase_summary", return_value="mock summary")
     @patch("auto_sdd.scripts.overnight_autonomous._run_git")
     @patch("auto_sdd.scripts.overnight_autonomous.run_agent_with_backoff")
     @patch("auto_sdd.scripts.overnight_autonomous.emit_topo_order")
@@ -480,6 +489,7 @@ class TestBuildFeatures:
         mock_topo: MagicMock,
         mock_agent: MagicMock,
         mock_git: MagicMock,
+        mock_summary: MagicMock,
         tmp_path: Path,
     ) -> None:
         runner = _make_runner(tmp_path, max_retries=1, min_retry_delay=0)
@@ -510,12 +520,14 @@ class TestBuildFeatures:
 class TestBuildSingleFeature:
     """Tests for OvernightRunner._build_single_feature."""
 
+    @patch("auto_sdd.scripts.overnight_autonomous.generate_codebase_summary", return_value="mock summary")
     @patch("auto_sdd.scripts.overnight_autonomous._run_git")
     @patch("auto_sdd.scripts.overnight_autonomous.run_agent_with_backoff")
     def test_credit_exhaustion_raises(
         self,
         mock_agent: MagicMock,
         mock_git: MagicMock,
+        mock_summary: MagicMock,
         tmp_path: Path,
     ) -> None:
         runner = _make_runner(tmp_path)
@@ -534,12 +546,14 @@ class TestBuildSingleFeature:
         with pytest.raises(AutoSddError, match="credits exhausted"):
             runner._build_single_feature("1", "auth", 0, 1)
 
+    @patch("auto_sdd.scripts.overnight_autonomous.generate_codebase_summary", return_value="mock summary")
     @patch("auto_sdd.scripts.overnight_autonomous._run_git")
     @patch("auto_sdd.scripts.overnight_autonomous.run_agent_with_backoff")
     def test_no_features_ready_returns_false(
         self,
         mock_agent: MagicMock,
         mock_git: MagicMock,
+        mock_summary: MagicMock,
         tmp_path: Path,
     ) -> None:
         runner = _make_runner(tmp_path)
@@ -696,6 +710,9 @@ class TestCreatePr:
 class TestResumeMode:
     """Tests for resume functionality."""
 
+    @patch("auto_sdd.scripts.overnight_autonomous.generate_codebase_summary", return_value="mock summary")
+    @patch("auto_sdd.scripts.overnight_autonomous.check_drift")
+    @patch("auto_sdd.scripts.overnight_autonomous.extract_drift_targets")
     @patch("auto_sdd.scripts.overnight_autonomous._run_git")
     @patch("auto_sdd.scripts.overnight_autonomous.run_agent_with_backoff")
     @patch("auto_sdd.scripts.overnight_autonomous.emit_topo_order")
@@ -706,11 +723,16 @@ class TestResumeMode:
         mock_topo: MagicMock,
         mock_agent: MagicMock,
         mock_git: MagicMock,
+        mock_drift_targets: MagicMock,
+        mock_drift: MagicMock,
+        mock_summary: MagicMock,
         tmp_path: Path,
     ) -> None:
         runner = _make_runner(tmp_path)
         runner.main_branch = "main"
         runner.built_feature_names = ["auth"]
+
+        mock_drift.return_value = MagicMock(passed=True)
 
         mock_topo.return_value = [
             Feature(id=1, name="auth", complexity="M"),
@@ -1016,12 +1038,14 @@ class TestFullRun:
 class TestBranchStrategy:
     """Tests for branch creation with different strategies."""
 
+    @patch("auto_sdd.scripts.overnight_autonomous.generate_codebase_summary", return_value="mock summary")
     @patch("auto_sdd.scripts.overnight_autonomous._run_git")
     @patch("auto_sdd.scripts.overnight_autonomous.run_agent_with_backoff")
     def test_independent_branches_from_main(
         self,
         mock_agent: MagicMock,
         mock_git: MagicMock,
+        mock_summary: MagicMock,
         tmp_path: Path,
     ) -> None:
         runner = _make_runner(tmp_path, branch_strategy="independent")
