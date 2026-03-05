@@ -102,21 +102,31 @@ Agents have landed on wrong branches and wrong commits multiple times. Precondit
 Every agent prompt must include a Token Usage Report block as its final operational step before commit. This is not optional and not decorative — it feeds the calibration loop in `general-estimates.jsonl`. Without it, scope estimates remain guesses forever.
 
 ```bash
-source lib/general-estimates.sh
-echo "=== TOKEN USAGE REPORT ==="
-echo "activity_type: <descriptive-slug>"
-echo "estimated_tokens_pre: <N from scope estimate>"
-ACTUAL_TOKENS=$(get_session_actual_tokens)
-echo "actual_tokens_data: $ACTUAL_TOKENS"
-ACTIVE=$(echo "$ACTUAL_TOKENS" | jq '.active_tokens // 0')
-CUMULATIVE=$(echo "$ACTUAL_TOKENS" | jq '.cumulative_tokens // 0')
-echo "active_tokens (input+output): $ACTIVE"
-echo "cumulative_tokens (incl cache): $CUMULATIVE"
-EST=<N>  # same number as estimated_tokens_pre
-echo "estimation_error_pct: $(echo "scale=1; (($EST - $ACTIVE) / $ACTIVE) * 100" | bc)"
-echo "source: $(echo "$ACTUAL_TOKENS" | jq -r '.source')"
-append_general_estimate "{\"timestamp\":\"$(date -u '+%Y-%m-%dT%H:%M:%SZ')\",\"activity_type\":\"<slug>\",\"estimated_tokens_pre\":$EST,\"active_tokens\":$ACTIVE,\"cumulative_tokens\":$CUMULATIVE}"
-echo "=== END REPORT ==="
+cd py && .venv/bin/python -c "
+from auto_sdd.lib.general_estimates import get_session_actual_tokens, append_general_estimate
+from datetime import datetime, timezone
+t = get_session_actual_tokens()
+est = <N>  # same number as estimated_tokens_pre
+active = t['active_tokens']
+cumulative = t['cumulative_tokens']
+err = round((est - active) / active * 100, 1) if active else 0
+print('=== TOKEN USAGE REPORT ===')
+print(f'activity_type: <slug>')
+print(f'estimated_tokens_pre: {est}')
+print(f'actual_tokens_data: {t}')
+print(f'active_tokens (input+output): {active}')
+print(f'cumulative_tokens (incl cache): {cumulative}')
+print(f'estimation_error_pct: {err}')
+print(f'source: {t[\"source\"]}')
+append_general_estimate({
+    'timestamp': datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'),
+    'activity_type': '<slug>',
+    'estimated_tokens_pre': est,
+    'active_tokens': active,
+    'cumulative_tokens': cumulative,
+})
+print('=== END REPORT ===')
+" && cd ..
 ```
 
 The chat session writing the prompt is responsible for:

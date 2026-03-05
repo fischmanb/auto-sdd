@@ -1620,6 +1620,23 @@ grep -c "source.*validation.sh" scripts/*.sh  # Should be 1 (generate-mapping.sh
 - git diff --stat: Only allowed files modified
 
 ---
+
+### Round 51: Replace bash token usage report template with Python equivalent (branch: claude/review-hard-constraints-6HZCB)
+
+**What was asked**: The Token Usage Report template in PROMPT-ENGINEERING-GUIDE.md and conventions.md referenced bash functions (`source lib/general-estimates.sh`, `get_session_actual_tokens`, `append_general_estimate`) that are dead code. Python equivalents exist at `py/auto_sdd/lib/general_estimates.py`. Replace the bash template with Python `python3 -c` invocations that agents can actually run.
+
+**What changed**:
+- `Brians-Notes/PROMPT-ENGINEERING-GUIDE.md`: Replaced bash token usage report template (section 5) with Python equivalent using `from auto_sdd.lib.general_estimates import get_session_actual_tokens, append_general_estimate`. Same output format (`=== TOKEN USAGE REPORT ===` block), same placeholders (`<slug>`, `<N>`). Surrounding prose unchanged.
+- `py/auto_sdd/conventions.md`: Replaced identical bash template with same Python equivalent. Both files now consistent.
+
+**What was NOT changed**: No new files created. No files deleted. No changes to any Python source code, tests, or scripts. No package manager commands run. Surrounding prose in both files untouched.
+
+**Verification results**:
+- Python import sanity check: `from auto_sdd.lib.general_estimates import get_session_actual_tokens, append_general_estimate` — imports ok
+- pytest: all tests pass
+- git diff --stat: only allowed files modified
+
+---
 ## Questions?
 
 See [ARCHITECTURE.md](./ARCHITECTURE.md) for deeper design rationale.
