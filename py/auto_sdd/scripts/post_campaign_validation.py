@@ -1998,8 +1998,22 @@ def run_phase_0(
     logger.info("Detected package manager: %s", pm)
 
     # Check for monorepo / split-project layout
-    if not (project_dir / "package.json").exists():
-        logger.info("No root package.json — entering monorepo mode")
+    # A root package.json without a build script (e.g., only playwright deps)
+    # should still fall through to monorepo mode
+    root_pkg = project_dir / "package.json"
+    root_has_build = False
+    if root_pkg.exists():
+        try:
+            root_scripts = json.loads(root_pkg.read_text()).get("scripts", {})
+            root_has_build = "build" in root_scripts
+        except (json.JSONDecodeError, OSError):
+            pass
+
+    if not root_pkg.exists() or not root_has_build:
+        if not root_has_build and root_pkg.exists():
+            logger.info("Root package.json has no build script — entering monorepo mode")
+        else:
+            logger.info("No root package.json — entering monorepo mode")
         result = _run_phase_0_monorepo(project_dir, pm, timeout, result)
         if result.status != "RUNTIME_READY":
             return result
