@@ -22,7 +22,13 @@ Ordered by efficiency gain per complexity added:
    - 3 Phase 1 rounds: (1) vector store + wire writers, (2) analysis framework + intra-campaign injection, (3) convention eval signals
    - Phase 2 (after real campaign): auto-QA feature attribution, cross-campaign ML model
    - Phase 3 (after 3+ campaigns): meta-learner
-3. **Integration test of Python build pipeline against real project** — may combine with #1 (run campaign then auto-QA in sequence).
+3. **Investigate Playwright validation granularity — may be critically simplistic.**
+   - How does auto-QA's Playwright validation capture UI interactions? Screenshots? What timing/granularity?
+   - Animations, transitions, dropdowns, multi-step interactions — how is each visual state verified?
+   - If it's just "take screenshot, check text exists," that misses: dropdown renders correctly, options are all present and work, animations complete, hover states, loading states, error states.
+   - Could require burst screenshots (frame-like capture), DOM state assertions alongside visual checks, or Playwright's built-in waitForSelector/toBeVisible patterns.
+   - Investigation folded into #1's agent prompt. Findings determine whether auto-QA's Playwright approach needs redesign before running against CRE.
+4. **Integration test of Python build pipeline against real project** — may combine with #1 (run campaign then auto-QA in sequence).
 4. **Extract `errors.py`/`signals.py`/`state.py` from `reliability.py` monolith** — Conventions specify these modules but Phase 1 inlined them. Low urgency.
 5. **Local model integration** — Replace cloud API with local LM Studio on Mac Studio. Reference: `archive/local-llm-pipeline/`. *Not started.*
 6. **Adaptive routing / parallelism** — Only if data from campaigns justifies complexity. *Deprioritized.*
