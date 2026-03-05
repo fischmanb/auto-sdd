@@ -479,3 +479,21 @@
 **Decision:** Fix `detect_build_check()` to detect Next.js projects (via `next.config.*`) and return `npm run build` instead of `tsc --noEmit`. Rejected the stashed Round 50 prompt (`.stashed-prompt-round50.md`) which would have created 6 constraint files with 62 patterns across 6 ecosystems and a detection+injection pipeline in prompt_builder.py.
 **Why:** The root cause of L-00012 recurring across campaigns was that the build gate ran `tsc --noEmit` for Next.js projects, which doesn't check server/client bundle boundaries. `next build` does — it's how the ecosystem enforces those constraints. A 10-line detection fix makes L-00012 mechanically catchable per-feature through the existing retry → drift check chain. The constraint injection approach violated the project's founding principle (L-00001): don't teach agents rules, verify mechanically. It also covered 5 ecosystems (Go, Rust, Python, general TS, cross-language) with zero observed failures to justify the 62 patterns and ongoing maintenance burden.
 **Rejected:** Round 50 constraint injection (misaligned with mechanical verification philosophy, speculative ecosystem coverage, high token cost per prompt, maintenance burden on constraint files). Narrow constraint injection (Next.js only — still redundant once the build gate is correct). Doing nothing (L-00012 hit on two consecutive campaigns).
+
+## 2026-03-04 — Campaign Intelligence System: architecture and implementation approach
+
+**Decision:** Build a campaign intelligence system with sectioned vector store, pluggable pattern analysis (feature-flagged), mechanical detection, and project-configurable quality dimensions. 6 rounds across 3 phases. Full plan: `WIP/campaign-intelligence-system.md`.
+
+**Key sub-decisions:**
+- **Vector store in Round 1** (not deferred): Build the abstraction layer early because the data model is known and 6 rounds will extend through API rather than refactor raw JSONL. Counter-argument to YAGNI: the plan is concrete enough to justify foundation investment.
+- **Rule registry feature-flagged** (not deferred): Include protocol from Round 2 but gate behind `ENABLE_PATTERN_ANALYSIS` env var. Avoids both premature activation AND later refactor. Feature flag is the middle path.
+- **Mechanical convention checks first**: Static analysis (import graph, type safety, code duplication) over agent judgment for convention eval. Agent eval only for genuinely subjective dimensions (naming, architecture). Mechanical signals weighted higher in model.
+- **Project-configurable quality dimensions**: `.sdd-config/eval-dimensions.yaml` instead of hardcoded signal names. Makes system generalizable beyond auto-sdd.
+- **Single risk-context.md file**: Replaces `read_latest_eval_feedback` chain. Eval sidecar writes, prompt builder reads. Single writer, single reader.
+- **Rounds collapsed (1+2 → 1)**: First round produces vectors AND wires writers. Value in 2 rounds not 3.
+- **Manual seeding**: Seed vectors with stakd post-mortem findings to eliminate cold start.
+- **Intra/cross-campaign split**: Intra-campaign injection (real-time, within build loop) is architecturally separate from cross-campaign learning (offline, between campaigns). Different data availability, latency, and feedback loops.
+
+**Why:** Pressure testing revealed gaps: hardcoded signals prevented generalization, agent-judged convention eval was untrustworthy, cold start made first campaign worthless, pure-infrastructure rounds deferred value. Each was addressed without compromising the compounding learning loop.
+
+**Rejected:** Flat dataclass schema (rigid, every new signal requires schema change). Raw JSONL without abstraction (defers refactor cost to Round 5 when auto-QA needs merge semantics). Agent-only convention eval (unverifiable judgment). Deferred rule registry (creates refactor debt). Three separate infrastructure-only rounds before any analysis capability.

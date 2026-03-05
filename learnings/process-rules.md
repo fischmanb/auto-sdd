@@ -684,3 +684,53 @@ When reading files for investigation, stash key findings (function locations, pa
 - **Related:** L-00181 (operationalizes)
 
 The `/tmp/sdd-scratch.md` pattern works. Stash diagnostic findings (durations output, line numbers, root cause) after first tool call, then execute fixes from the stash with zero re-reads. This session: one `--durations` call → stash → 3 edits → done. Previous session without stashing: 11+ reads across two responses, one failed to complete.
+
+## L-00187 — Brian's design pressure test is a deliberate 3-step sequence
+
+- **Type:** process-rule
+- **Tags:** design-methodology, pressure-test, Brian-pattern
+- **Status:** active
+- **Date:** 2026-03-04
+- **Related:** L-00178 (complementary)
+
+Brian's design pressure test is a deliberate 3-step sequence: (1) commit the plan to a file first — this creates accountability and a reviewable artifact, (2) pressure test against the stated goal — does the plan actually achieve what it claims?, (3) pressure test for simplicity — can the same outputs be achieved via simpler, more extensible, or more efficient means? The order matters: committing first prevents retroactive plan-washing. Goal testing catches fundamental gaps. Simplicity testing catches over-engineering. Results feed back as concrete revisions to the committed plan. First observed during the campaign intelligence system design (`WIP/campaign-intelligence-system.md`), where it surfaced 7 improvements including project-configurable quality dimensions, mechanical convention checks, round consolidation, and cold-start seeding.
+
+## L-00188 — Build foundations early when the data model is clear; feature-flag capabilities that aren't yet validated
+
+- **Type:** process-rule
+- **Tags:** architecture, YAGNI, foundation, Brian-pattern
+- **Status:** active
+- **Date:** 2026-03-04
+- **Related:** L-00187 (same session)
+
+Brian rejects pure YAGNI when the data model is clear and the implementation plan is concrete. "I don't want to defer for the counter-argument reasons" — when you know the API surface and the extension points, building the abstraction early is cheaper than refactoring raw code later. The middle path for capabilities that are needed but not yet validated: include the infrastructure, feature-flag it off. This avoids both premature activation AND later refactor debt. Observed during the campaign intelligence system design (`WIP/campaign-intelligence-system.md`): `vector_store.py` (the JSONL-backed feature vector store) was kept in the first implementation round rather than deferred to the fifth, because the sectioned schema and CRUD API were well-defined across a 6-round plan. The pattern rule registry was included from the second round but gated behind `ENABLE_PATTERN_ANALYSIS` env var until validated with real campaign data.
+
+## L-00189 — Separate intra-run real-time feedback from cross-run accumulated learning
+
+- **Type:** process-rule
+- **Tags:** design-methodology, signal-sources, system-thinking, Brian-pattern
+- **Status:** active
+- **Date:** 2026-03-04
+- **Related:** L-00187 (same session)
+
+When designing a learning system, separate Application into (a) intra-run real-time feedback and (b) cross-run accumulated learning. They have different data availability (partial vs complete), different latency requirements (must be fast vs can be offline), and different feedback loops (injection into next feature vs model training between campaigns). Also: always ask what other systems produce signals that should feed the model. During the campaign intelligence system design, Brian connected auto-QA's runtime signals and the eval sidecar's build-time signals into one unified feature vector — neither system alone captures the full picture. A feature can pass all build gates and still break the app at runtime (stakd-v2: 28/28 features built, `npm run build` fails on transitive import).
+
+## L-00190 — Quantitative outcome signals are insufficient; capture qualitative choice signals mechanically
+
+- **Type:** process-rule
+- **Tags:** design-methodology, qualitative-signals, Brian-correction
+- **Status:** active
+- **Date:** 2026-03-04
+- **Related:** L-00189 (complementary)
+
+Quantitative outcome signals (pass/fail, counts, durations) are necessary but insufficient for a learning system. Qualitative signals about *choices* — did the agent use proper abstractions, follow project conventions, maintain architectural boundaries — predict downstream failures that outcome metrics miss. The stakd-v2 transitive import (28/28 built, app broken) is the canonical example: all quantitative gates passed, but a convention violation (server import from client component) caused the failure. Mechanical static analysis (import graph validation, type coverage, duplication detection) should capture qualitative signals where possible, with agent judgment reserved for genuinely subjective dimensions only. Identified during the campaign intelligence system design when Brian asked whether the system captured qualitative code choices — it didn't.
+
+## L-00191 — Learnings must be self-contained: always include project and context references
+
+- **Type:** process-rule
+- **Tags:** learnings-quality, self-contained, meta-learning, Brian-correction
+- **Status:** active
+- **Date:** 2026-03-04
+- **Related:** L-00180 (same class — communication discipline)
+
+Every learning entry must be legible to a fresh reader with no session context. References to implementation details (round numbers, file names, design phases) must be grounded with the project or plan they belong to. "Round 2" means nothing without "Round 2 of the campaign intelligence system (`WIP/campaign-intelligence-system.md`)." This applies to all new captures going forward AND should be checked during checkpoint step 4 active scan — if an existing learning contains ungrounded references, flag it for revision. The failure mode: learnings that made sense in-session become cryptic within a week because the context evaporated.
