@@ -14,6 +14,7 @@ Configuration is read from environment variables:
     PROJECT_DIR          Required. Path to the target project.
     FLUSH_MODE           "auto" (default) or "manual".
     VALIDATION_TIMEOUT   Seconds for Phase 0 health check (default 60).
+    AGENT_TIMEOUT        Seconds for each Claude agent call (default 600).
 """
 from __future__ import annotations
 
@@ -2188,12 +2189,14 @@ class ValidationPipeline:
         validation_timeout: float = 60.0,
         resume: bool = False,
         phase: str | None = None,
+        agent_timeout: float = 600.0,
     ) -> None:
         self.project_dir = project_dir.resolve()
         self.flush_mode = flush_mode
         self.validation_timeout = validation_timeout
         self.resume = resume
         self.single_phase = phase
+        self.agent_timeout = int(agent_timeout)
 
         self.run_id = f"val-{datetime.now(timezone.utc).strftime('%Y%m%d-%H%M%S')}"
 
@@ -2377,7 +2380,7 @@ class ValidationPipeline:
             claude_result = run_claude(
                 ["-p", "--dangerously-skip-permissions", prompt],
                 cwd=self.project_dir,
-                timeout=300,
+                timeout=self.agent_timeout,
             )
         except AgentTimeoutError as exc:
             elapsed = int(time.monotonic() * 1000) - start_ms
@@ -2556,7 +2559,7 @@ class ValidationPipeline:
             claude_result = run_claude(
                 ["-p", "--dangerously-skip-permissions", prompt],
                 cwd=self.project_dir,
-                timeout=600,
+                timeout=self.agent_timeout,
             )
         except (AgentTimeoutError, ClaudeOutputError) as exc:
             logger.error("Phase 2a agent failed: %s", exc)
@@ -2780,7 +2783,7 @@ class ValidationPipeline:
                 claude_result = run_claude(
                     ["-p", "--dangerously-skip-permissions", prompt],
                     cwd=self.project_dir,
-                    timeout=300,
+                    timeout=self.agent_timeout,
                 )
             except (AgentTimeoutError, ClaudeOutputError) as exc:
                 logger.error(
@@ -3038,7 +3041,7 @@ class ValidationPipeline:
             claude_result = run_claude(
                 ["-p", "--dangerously-skip-permissions", prompt],
                 cwd=self.project_dir,
-                timeout=600,
+                timeout=self.agent_timeout,
             )
         except (AgentTimeoutError, ClaudeOutputError) as exc:
             result.error = f"Phase 4b agent failed: {exc}"
@@ -3225,7 +3228,7 @@ class ValidationPipeline:
                     claude_result = run_claude(
                         ["-p", "--dangerously-skip-permissions", prompt],
                         cwd=self.project_dir,
-                        timeout=600,
+                        timeout=self.agent_timeout,
                     )
                 except (AgentTimeoutError, ClaudeOutputError) as exc:
                     logger.error(
@@ -3368,7 +3371,7 @@ class ValidationPipeline:
                                         reval_prompt,
                                     ],
                                     cwd=self.project_dir,
-                                    timeout=300,
+                                    timeout=self.agent_timeout,
                                 )
                                 reval_parsed = parse_playwright_output(
                                     reval_result.output,
@@ -3617,6 +3620,9 @@ def main(argv: list[str] | None = None) -> int:
     validation_timeout = float(
         os.environ.get("VALIDATION_TIMEOUT", "60")
     )
+    agent_timeout = float(
+        os.environ.get("AGENT_TIMEOUT", "600")
+    )
 
     pipeline = ValidationPipeline(
         project_dir=project_dir,
@@ -3624,6 +3630,7 @@ def main(argv: list[str] | None = None) -> int:
         validation_timeout=validation_timeout,
         resume=args.resume,
         phase=args.phase,
+        agent_timeout=agent_timeout,
     )
 
     # Handle flush-only modes
