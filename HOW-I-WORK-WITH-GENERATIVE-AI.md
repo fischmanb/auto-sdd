@@ -1022,6 +1022,19 @@ Brian validates infrastructure through fast iteration loops rather than exhausti
 
 ---
 
+## M-00090
+
+- **Type:** observation
+- **Tags:** artifact-lifecycle, test-infrastructure, beyond-immediate-scope
+- **Confidence:** high
+- **Status:** active
+- **Date:** 2026-03-05
+- **Related:** M-00089 (same session)
+
+Brian thinks beyond the immediate run when evaluating test infrastructure decisions. When observing that auto-QA wiped QA credentials on cleanup, his reaction wasn't just "that broke this run" — it was "do we really wanna wipe QA credentials on an Auto-QA fail? We may not even want to do so on a pass." He traced the lifecycle: credentials are needed for manual investigation after failures, for re-running individual phases, for `--resume`, and for back-to-back runs. The cleanup behavior was designed for a single-run worldview; Brian immediately saw the multi-run, multi-mode reality. Pattern: when evaluating any side effect of a pipeline step, ask "what happens to this artifact in every mode the pipeline supports, not just the happy path."
+
+---
+
 ## Accumulation (DEPRECATED — see L-00194)
 
 > **Process change (2026-03-04):** New methodology observations go directly into graph-schema M-entries above. This section is a backlog of raw captures that predate the change. Clear by converting to schema entries or discarding. Do NOT add new raw entries here.

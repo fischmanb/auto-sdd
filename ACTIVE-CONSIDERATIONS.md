@@ -10,14 +10,13 @@
 
 Ordered by efficiency gain per complexity added:
 
-1. **Auto-QA validation against CRE lease tracker — Phase 0 passes, full pipeline pending.**
-   - Plan: `WIP/auto-qa-cre-validation.md` (4 rounds)
-   - **Completed**: Investigation (2 agent prompts), `--phase` flag, monorepo support, Playwright prompt hardening (networkidle, multi-step interactions, retry parity), health check path discovery, per-port status, configurable `AGENT_TIMEOUT` (default 600s), qa-seed.ts for CRE, Phase 0 monorepo fallback when root package.json has no build script
-   - **Phase 0 passes clean**: Both ports detected (3001 + 5173), health paths discovered (`/api/health`), auth bootstrapped (`qa-test@test.local`), teardown on cleanup
-   - **Blocker found and fixed**: Phase 1 agent installed playwright at CRE root, creating a root `package.json` that broke monorepo detection. Fixed with build-script check fallback + CRE .gitignore.
-   - **Phase 1 timed out at 300s** (old default). Agent timeout now 600s. Not yet re-tested.
-   - **Next action**: Re-run full pipeline (`PROJECT_DIR=~/cre-lease-tracker ... post_campaign_validation`). Tee output to `/tmp/auto-qa-cre-run.log`.
-   - Produces first real runtime signal data for CIS
+1. **Auto-QA validation against CRE lease tracker — first full run complete, fixes applied, ready for re-run.**
+   - Plan: `WIP/auto-qa-cre-validation.md` (4 rounds, updated with run results + post-run fixes)
+   - **First full run (val-20260305-223636)**: 31 min, $5.61. 14/25 pass, 3 fail, 8 blocked. All 4 fix agents failed (root-only build gate). Details in WIP.
+   - **Post-run fixes applied**: Phase 5 monorepo build gates, infra failure skip in Phase 5, credential persistence (`--teardown` explicit), configurable `AGENT_TIMEOUT` (600s), Phase 0 monorepo fallback for root package.json without build script, CRE .gitignore for agent artifacts.
+   - **QA credentials restored** in CRE (`qa-test@test.local`).
+   - **Next action**: Re-run full pipeline to validate fixes. Expect: fix agents succeed for RC-002/003/004, RC-001 (infra) skipped.
+   - **Open**: Phase 1 may have browsed API health URL instead of client URL. 8 BLOCKED from parse error may recur.
 2. **Campaign intelligence system — design complete, implementation blocked on #1.**
    - Full plan: `WIP/campaign-intelligence-system.md` (pressure-tested, revised)
    - CIS value depends on auto-QA producing validated runtime signals. Build-only CIS is just a fancier eval sidecar.

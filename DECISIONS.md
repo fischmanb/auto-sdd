@@ -509,3 +509,9 @@
 **Decision:** Make all Claude agent call timeouts in the auto-QA pipeline configurable via `AGENT_TIMEOUT` env var (default 600s). Harden Phase 0 monorepo detection to fall through when root `package.json` exists but has no `build` script.
 **Why:** Phase 1 discovery agent timed out at 300s against CRE (3 features — smallest possible project). 300s was a hardcoded constant with no override. Separately, Phase 1's agent ran `npm install playwright` at CRE root, creating a `package.json` with only playwright deps. This caused Phase 0 to take the single-project path on subsequent runs and fail (`npm run build` with no build script). Both are production-run-only bugs invisible to tests.
 **Rejected:** Increasing only Phase 1's timeout (same problem exists in all 6 agent calls). Hardcoded 600s everywhere (loses configurability for different environments).
+
+## 2026-03-05 — QA credentials persist; teardown is explicit
+
+**Decision:** `_cleanup()` no longer tears down the QA account or wipes credentials. New `teardown_qa()` method and `--teardown` CLI flag for explicit credential wipe. Credentials persist across runs, `--resume`, and `--phase` invocations.
+**Why:** Brian identified that wiping credentials on every run (including failures) prevented manual investigation of failures (can't log in to poke around), prevented re-running individual phases (`--phase 3` has no auth), and broke `--resume` workflows. The QA account is a test utility, not a security risk — it should persist until explicitly removed.
+**Rejected:** Teardown on success only (still breaks `--phase` re-runs after a successful run). Teardown on explicit `--no-persist` flag (double-negative, confusing). No teardown capability at all (need cleanup for final end-of-campaign housekeeping).

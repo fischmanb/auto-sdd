@@ -291,6 +291,16 @@ Tests calling `_build_single_feature` or `_build_feature_prompt` must mock `gene
 
 Claude Code agents running with `--dangerously-skip-permissions` in a project directory can create artifacts (package.json, node_modules, lock files) that break subsequent pipeline phases. Pipeline code must defensively handle unexpected project state changes between phases. Defenses: (1) pipeline code checks for meaningful content (e.g., build script presence) before choosing code paths, not just file existence, (2) project `.gitignore` prevents artifacts from persisting across runs, (3) agent prompts should instruct dependency installation in subdirectories, not project root. Observed during auto-QA validation against CRE lease tracker (`WIP/auto-qa-cre-validation.md`): Phase 1's discovery agent ran `npm install playwright` at CRE root, creating a root `package.json` with only playwright deps. Phase 0's monorepo detection on the next run saw the root `package.json`, took the single-project path, and failed (`npm run build` with no build script).
 
+## L-00197 — When fixing a bug in one pipeline phase, grep for the same pattern in all phases
+
+- **Type:** failure-pattern
+- **Tags:** monorepo, pattern-replication, incomplete-fix
+- **Status:** active
+- **Date:** 2026-03-05
+- **Related:** L-00195 (same session)
+
+When fixing a bug in one pipeline phase, grep for the same pattern in all phases. The root-only `npm run build` bug in auto-QA (`post_campaign_validation.py`) appeared in Phase 0 (fixed via agent prompt with monorepo support), then reappeared in Phase 5's build gates (same `subprocess.run([pm, "run", "build"], cwd=str(self.project_dir))` pattern, different function). Each was discovered by running the pipeline and hitting the next instance — sequential discovery that should have been a parallel fix. After fixing any phase-specific bug, search for the relevant pattern across the entire file.
+
 ## L-00183 — Wrapping code in a new `with` block requires re-indenting the entire body
 
 - **Type:** failure-pattern
