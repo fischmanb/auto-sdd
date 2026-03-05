@@ -497,3 +497,9 @@
 **Why:** Pressure testing revealed gaps: hardcoded signals prevented generalization, agent-judged convention eval was untrustworthy, cold start made first campaign worthless, pure-infrastructure rounds deferred value. Each was addressed without compromising the compounding learning loop.
 
 **Rejected:** Flat dataclass schema (rigid, every new signal requires schema change). Raw JSONL without abstraction (defers refactor cost to Round 5 when auto-QA needs merge semantics). Agent-only convention eval (unverifiable judgment). Deferred rule registry (creates refactor debt). Three separate infrastructure-only rounds before any analysis capability.
+
+## 2026-03-04 — M-entries written in graph schema from the start; Accumulation section deprecated
+
+**Decision:** All methodology observations (M-entries in `HOW-I-WORK-WITH-GENERATIVE-AI.md`) are written directly in graph-schema format. The "Accumulation" section (raw notes awaiting periodic curation) is deprecated. Checkpoint step 5 updated to match.
+**Why:** The raw-note-then-curate-later pattern created deferred work with no trigger, no cadence, and no definition. "Periodic curation passes" was hope, not process. Raw notes were harder to find and use than schema entries. M-entries are just as concrete as L-entries and deserve the same quality bar (L-00191: self-contained, grounded references).
+**Rejected:** Keeping Accumulation as intake with a defined curation cadence (still defers work; the cadence would be another undefined process). Writing M-entries at lower quality bar than L-entries (artificial distinction — both are observations about what works).
