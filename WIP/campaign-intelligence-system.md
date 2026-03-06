@@ -1,8 +1,9 @@
 # Campaign Intelligence System — Design Plan
 ## Eval Sidecar → Learning Loop → Predictive Guidance
 
-> Status: Design phase. No implementation started.
+> Status: Rounds 1-4 COMPLETE (2026-03-06). Rounds 5-6 blocked on real campaign data.
 > Author: Brian Fischman + Claude, 2026-03-04
+> Implementation: Rounds 1a, 1b, 2, 3, 4 merged to main. 970 tests passing. Token measurement fixed.
 > Depends on: Bash→Python conversion (COMPLETE), eval sidecar (COMPLETE), auto-QA pipeline (COMPLETE)
 
 ---
