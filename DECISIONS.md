@@ -515,3 +515,9 @@
 **Decision:** `_cleanup()` no longer tears down the QA account or wipes credentials. New `teardown_qa()` method and `--teardown` CLI flag for explicit credential wipe. Credentials persist across runs, `--resume`, and `--phase` invocations.
 **Why:** Brian identified that wiping credentials on every run (including failures) prevented manual investigation of failures (can't log in to poke around), prevented re-running individual phases (`--phase 3` has no auth), and broke `--resume` workflows. The QA account is a test utility, not a security risk — it should persist until explicitly removed.
 **Rejected:** Teardown on success only (still breaks `--phase` re-runs after a successful run). Teardown on explicit `--no-persist` flag (double-negative, confusing). No teardown capability at all (need cleanup for final end-of-campaign housekeeping).
+
+## 2026-03-05 — Repo renamed to Superloop, unforked from Adrian's repo
+
+**Decision:** Unfork from Adrian Rogowski's original auto-sdd repo on GitHub, rename to `superloop`. Local directory path unchanged (`~/auto-sdd`).
+**Why:** The project has diverged significantly from Adrian's original architecture. Brian built the reliability engineering, eval sidecar, auto-QA pipeline (Phases 0-5), learnings system, prompt methodology, and all operational infrastructure. Unforking establishes independent provenance. The name "Superloop" captures the closed-loop nature of the system.
+**Rejected:** Keeping the fork relationship (confuses provenance). Renaming local directory (too many references to update across CLAUDE.md, ONBOARDING.md, memory, agent prompts).

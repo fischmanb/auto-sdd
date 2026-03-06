@@ -764,3 +764,13 @@ M-entries (methodology observations in `HOW-I-WORK-WITH-GENERATIVE-AI.md`) must 
 - **Related:** L-00180 (same class — communication discipline)
 
 Every `git push` to origin and every `git merge` to main requires Brian's explicit "yes" in the immediately preceding message. No implicit approval, no "obvious" exceptions, no batching a push with a commit that wasn't approved. This was violated three times in one session (2026-03-05): unauthorized merge of the token report branch, direct commit+push of agent timeout fix, direct commit+push of monorepo fallback fix. Each felt "obvious" or "small." The rule exists precisely because small changes feel safe and bypass scrutiny. Brian's words: "don't push without clarity on whether you can!!!" The cost of asking is one message. The cost of violating is trust erosion.
+
+## L-00198 — "Stash" means save locally; disambiguate urgent save directives before acting
+
+- **Type:** process-rule
+- **Tags:** disambiguation, push-vs-save, destructive-default, Brian-correction
+- **Status:** active
+- **Date:** 2026-03-05
+- **Related:** L-00196 (same class — push discipline)
+
+When Brian says "stash" or "push it" during imminent context loss (compaction warning), default to the least-destructive interpretation: save locally, not push to remote. Disambiguate before acting. On 2026-03-05, "you are about to get compacted push it" was interpreted as `git push origin main` instead of "persist the work locally so it survives." A confidential IP assessment was pushed to a public repository visible to Brian's boss. The correct action was to write the file locally and confirm before any remote operation. General rule: when a directive is ambiguous between a reversible action (local save) and an irreversible action (public push), always choose reversible and confirm.

@@ -10,13 +10,13 @@
 
 Ordered by efficiency gain per complexity added:
 
-1. **Auto-QA validation against CRE lease tracker — first full run complete, fixes applied, ready for re-run.**
-   - Plan: `WIP/auto-qa-cre-validation.md` (4 rounds, updated with run results + post-run fixes)
-   - **First full run (val-20260305-223636)**: 31 min, $5.61. 14/25 pass, 3 fail, 8 blocked. All 4 fix agents failed (root-only build gate). Details in WIP.
-   - **Post-run fixes applied**: Phase 5 monorepo build gates, infra failure skip in Phase 5, credential persistence (`--teardown` explicit), configurable `AGENT_TIMEOUT` (600s), Phase 0 monorepo fallback for root package.json without build script, CRE .gitignore for agent artifacts.
-   - **QA credentials restored** in CRE (`qa-test@test.local`).
-   - **Next action**: Re-run full pipeline to validate fixes. Expect: fix agents succeed for RC-002/003/004, RC-001 (infra) skipped.
-   - **Open**: Phase 1 may have browsed API health URL instead of client URL. 8 BLOCKED from parse error may recur.
+1. **Auto-QA validation against CRE lease tracker — SECOND RUN SUCCESS. 3/3 bugs fixed autonomously.**
+   - Plan: `WIP/auto-qa-cre-validation.md` (updated with both run results + all post-run fixes)
+   - **Run 2 (val-20260306-004027)**: 36 min, $6.95. 29/32 pass, 3 fail, 0 blocked. **3/3 fix agents succeeded.** All fixes committed to CRE, builds clean.
+   - **Fixes verified live** via Chrome browser: filtered export (22 Manhattan results), 404 page renders, login page clean.
+   - Proof deck: `Brians-Notes/superloop-deck-2026-03-05.pdf`
+   - **Repo renamed to `superloop`** on GitHub (unforked from Adrian's repo). Local path unchanged (`~/auto-sdd`).
+   - **Next action**: Talk to Adrian about IP/collaboration. Run larger campaign (28-feature). Write Medium article once system is proven at scale.
 2. **Campaign intelligence system — design complete, implementation blocked on #1.**
    - Full plan: `WIP/campaign-intelligence-system.md` (pressure-tested, revised)
    - CIS value depends on auto-QA producing validated runtime signals. Build-only CIS is just a fancier eval sidecar.
