@@ -14,7 +14,7 @@
 
 Forked from [AdrianRogowski/auto-sdd](https://github.com/AdrianRogowski/auto-sdd). Brian rewrote the runtime — adding reliability, crash recovery, test suites, cost tracking, and Claude Code CLI support. The original was a concept; this is the hardened version.
 
-**Repo**: `https://github.com/fischmanb/auto-sdd`
+**Repo**: `https://github.com/fischmanb/superloop` (renamed from auto-sdd, unforked 2026-03-05)
 **Local path**: `~/auto-sdd`
 **Version**: 2.0.0
 **License**: MIT
@@ -50,7 +50,7 @@ See **`DESIGN-PRINCIPLES.md`** — project-wide constraints on grepability, grap
 - **Model logging per feature**: actual model used recorded in build summary JSON and human-readable table (Round 23).
 - **Post-run branch cleanup**: merged `auto/chained-*` and `auto/independent-*` branches auto-deleted after build summary (Round 23).
 - **NODE_ENV guard**: explicitly sets `NODE_ENV=development` before agent calls (Round 23).
-- **Test suite**: **740 pytest tests passing in ~16s.** Python test suite covers all modules: build gates, prompt builder, drift, reliability, eval sidecar, build loop, overnight runner, branch manager, and more. Bash test suites (154 assertions) are legacy — Python equivalents supersede them.
+- **Test suite**: **970 pytest tests passing in ~17s.** Python test suite covers all modules: build gates, prompt builder, drift, reliability, eval sidecar, build loop, overnight runner, branch manager, and more. Bash test suites (154 assertions) are legacy — Python equivalents supersede them.
 - **Cost tracking**: `py/auto_sdd/lib/claude_wrapper.py` logs token/cost data as JSONL.
 - **Build summary reports**: per-feature timing, test counts, token usage, model used, written to `logs/build-summary-{timestamp}.json`.
 - **Git stash hardening**: dirty worktree can't cascade failures across features.
@@ -60,14 +60,14 @@ See **`DESIGN-PRINCIPLES.md`** — project-wide constraints on grepability, grap
 
 ### What's next
 
-1. **Rerun stakd 28-feature campaign** — First real validation with sidecar feedback loop active. Use existing `stakd/.specs/vision.md` and `stakd/.specs/roadmap.md`. Run on **Sonnet 4.6** (`BUILD_MODEL=claude-sonnet-4-6`). Run build loop with eval sidecar in parallel. Data from this run informs all future decisions.
+1. **SitDeck build campaign — head-to-head comparison vs Adrian's original auto-sdd** — Same `vision.md` input (committed at repo root fc5f36d AND at `~/compstak-sitdeck/.specs/vision.md`), Adrian's 74-feature build vs Superloop. Demonstrates CIS, auto-QA, full closed loop on identical input. `~/compstak-sitdeck/` project dir must be initialized before build loop can run. Roadmap prompt in progress (multiple failed agent attempts — needs prompt following PROMPT-ENGINEERING-GUIDE.md). See `Brians-Notes/itsalive.md` for full context.
 2. **Post-campaign validation pipeline** — Multi-agent pipeline that boots the built app, browses it blind (Playwright), generates acceptance criteria from specs vs discovery, tests them, catalogs failures objectively, performs root cause analysis, and applies fixes through existing build gates. Auth-gated routes handled via QA test account (build-phase deliverable). Spec: `WIP/post-campaign-validation.md` (v0.3). Addresses the #1 gap: build loop validates features individually but never boots the full app.
 3. **Local model integration** — replace cloud API with local LM Studio on Mac Studio
 4. **Adaptive routing / parallelism** — only if data from 1-3 shows remaining sequential bottleneck justifies the complexity
 
 ### Remediation status
 
-All remediation rounds (21-37) complete. **740 Python tests passing (~16s).** See Agents.md for per-round details and git history for individual commits. This section is frozen — new work items go into ACTIVE-CONSIDERATIONS.md while active and get pruned when done.
+All remediation rounds (21-37) complete. **970 Python tests passing (~17s).** CIS Rounds 1-4 complete (vector store, pattern analysis, convention checks, runtime attribution — 165 tests total). Auto-QA proven: run 2 was 29/32 pass, 3/3 fix agents succeeded, verified live. See Agents.md for per-round details and git history for individual commits. This section is frozen — new work items go into ACTIVE-CONSIDERATIONS.md while active and get pruned when done.
 
 ### Known gaps
 
@@ -95,7 +95,7 @@ See **`ACTIVE-CONSIDERATIONS.md`** — priority stack, in-flight work, and open 
 | **INDEX.md** | One-line lookup table for the whole repo | When you need to find something |
 | **DECISIONS.md** | Append-only decision log with rationale | Before re-opening a settled question |
 | **DESIGN-PRINCIPLES.md** | Project-wide constraints: grepability, graph-readiness, relationship type schema, confidence/status enums, when to apply | Before writing prompts that produce structured output. Before designing new knowledge capture formats. |
-| **learnings/** | Learnings catalog: `core.md` (**read first — 12 curated constitutional learnings**), `failure-patterns.md`, `process-rules.md`, `empirical-findings.md`, `architectural-rationale.md`, `domain-knowledge.md`. 64 graph-format entries (L-00001–L-00130, non-contiguous). | `core.md` on every fresh onboard — no exceptions. Type files when adding/reviewing learnings or during checkpoint step 4 active scan. |
+| **learnings/** | Learnings catalog: `core.md` (**read first — 17 curated constitutional learnings**), `failure-patterns.md`, `process-rules.md`, `empirical-findings.md`, `architectural-rationale.md`, `domain-knowledge.md`. 198+ graph-format entries (L-00001–L-00198, M-00001–M-00090+, non-contiguous). | `core.md` on every fresh onboard — no exceptions. Type files when adding/reviewing learnings or during checkpoint step 4 active scan. |
 | **Agents.md** | Agent work log (Rounds 1-30), architecture reference, signal protocol, verification checklist, known gaps, process lessons | Before making ANY changes — this is the source of truth for what happened and what works |
 | **README.md** | Public-facing docs: quick start, config, file structure, what works and what breaks | For understanding the user-facing narrative |
 | **CLAUDE.md** | Instructions that Claude Code agents read automatically when invoked by the build loop | When modifying agent behavior or build prompts |
@@ -150,7 +150,7 @@ REVIEW_CLEAN / REVIEW_FIXED / REVIEW_FAILED    # Review agent
 ```bash
 cd ~/auto-sdd/py
 
-# Run full Python test suite (740 tests, ~16s)
+# Run full Python test suite (970 tests, ~17s)
 .venv/bin/pytest tests/ -q
 
 # Run with timing to catch regressions
@@ -214,7 +214,7 @@ Full details in `Agents.md`. Here's the arc:
 
 ## Process Lessons (Hard-Won)
 
-See `learnings/core.md` for the curated essentials (read on every fresh onboard) and `learnings/` type-specific files for the full catalog (64 graph-format entries, L-00001–L-00130). All process lessons, failure modes, and session discipline rules are maintained there as the single source of truth.
+See `learnings/core.md` for the curated essentials (read on every fresh onboard) and `learnings/` type-specific files for the full catalog (198+ graph-format entries, L-00001–L-00198, M-00001–M-00090+). All process lessons, failure modes, and session discipline rules are maintained there as the single source of truth.
 
 ---
 
