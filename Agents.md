@@ -1768,6 +1768,22 @@ grep -c "source.*validation.sh" scripts/*.sh  # Should be 1 (generate-mapping.sh
 - git diff --stat: only compstak-sitdeck/.specs/roadmap.md and Agents.md modified
 
 ---
+
+### Round — SitDeck Feature Stub Generation (2026-03-07)
+
+**What was asked**: Generated 44 SitDeck feature stub files from roadmap.md — one stub per widget (F-001 through F-044) with widget-specific acceptance criteria, mock data using canonical enumerations, and API readiness notes.
+
+**What was changed**: 44 new files in `compstak-sitdeck/.specs/features/` (F-001-cre-property-map.md through F-044-economic-indicators.md). Each stub follows identical structure: description, widget-specific AC, MOCK_* constants with canonical enumerations, 5+ realistic mock records using exact CSV column names, and API readiness notes.
+
+**What was NOT changed**: `compstak-sitdeck/.specs/roadmap.md`, `compstak-sitdeck/.specs/vision.md`, all scripts, all lib/, all tests/, all Python source files.
+
+**Verification**:
+- Stub count: 44
+- Widget spot check (grep for key widget names): 13 files matched (exceeds minimum 6)
+- Enum check (MOCK_MARKETS/MOCK_BUILDING_CLASSES): 44/44 files contain canonical enums
+- git diff --stat: only compstak-sitdeck/.specs/features/ (44 files) and Agents.md modified
+
+---
 ## Questions?
 
 See [ARCHITECTURE.md](./ARCHITECTURE.md) for deeper design rationale.
