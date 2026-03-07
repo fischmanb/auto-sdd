@@ -439,11 +439,111 @@ A sidebar panel (similar to Widget Library) for managing saved collections:
 
 The platform is built on **real CompStak data exports** (not mock data), stored in `_shared-csv-data/`:
 
-| Dataset | File | Rows | Size | Key Columns |
-|---------|------|------|------|-------------|
-| Lease Comps | `LeaseSearch_2025-2-24_1336.csv` | 4.1M | 902 MB | starting_rent, effective_rent, TI, free_rent, lease_term, space_type, tenant, landlord, market, submarket, lat/lon, execution_date |
-| Property Records | `PropertySearch_2025-3-17_1924.csv` | 3.4M | 734 MB | property_size, year_built, building_class, property_type, rent_estimates, market, submarket, lat/lon |
-| Sales Comps | `SalesSearch_2025-3-17_1903.csv` | 2.9M | 1.1 GB | price, price_psf, cap_rate, NOI, buyers, sellers, sale_date, market, submarket |
+| Dataset | File | Rows | Size |
+|---------|------|------|------|
+| Lease Comps | `snowflake-full-leases-2026-03-04.csv` | ~4.1M | ~900 MB |
+| Sales Comps | `snowflake-full-sales-2026-03-04.csv` | ~2.9M | ~1.1 GB |
+| Property Records | `snowflake-full-properties-2025-03-17.csv` | 3.4M | ~730 MB |
+
+### Lease Comps — Exact Column Names (122 columns)
+
+```
+Id, Property Id, Tenant ID, Tenant Name, Street Address, City, State, Zip Code,
+Market, Submarket, Floor(s) Occupied, Suite, Space Type, Space Subtype,
+Transaction Type, Sublease, Sublessor, Transaction SQFT, Total Transaction SQFT,
+Transaction Quarter, Execution Date, Commencement Date, Expiration Date,
+Lease Term, Starting Rent, Adjusted Starting Rent, Net Effective Rent,
+Adjusted Effective Rent, Current Rent, Asking Rent, Average Rent, Blended Rent,
+Lease Type, Rent Schedule, Rent Bump Percent, Rent Bump Dollar, Rent Bump Year,
+Free Rent, Free Rent Type, Work Type, TI Value / Work Value, Concessions Notes,
+Comments, Current Landlord, Landlord Ticker Symbol, Landlord Brokerage Firms,
+Landlord Brokers, Tenant Brokerage Firms, Tenant Brokers, Tenant Industry,
+Tenant HQ Street Address, Tenant HQ City, Tenant HQ State, Tenant HQ Zip Code,
+Tenant HQ Country, Tenant Employees, Tenant Revenue, Tenant Revenue Currency,
+Tenant Phone Number, Tenant Website, Tenant Status, Tenant Parent Name,
+Tenant Ownership, Tenant Ticker Symbol, Tenant SIC Code, Tenant SIC Description,
+Tenant NAICS Code, Tenant NAICS Description, Building Name, Property Type,
+Property Subtype, Building Class, Building Size, Number of Floors, Year Built,
+Year Renovated, Lot Size, Occupancy Rate, Load Factor, Parking Ratio,
+Parking Lot Type, Parking Notes, Office Portion, Office Portion Rent, Sprinkler,
+Clear Height, Doors, Loading Docks, Rail, Amps, Volts, Elevators, Retail Anchor,
+Renewal Options, Operating Expenses Type, Operating Expense, Operating Expense Notes,
+Selling Basement, Vented Space, Corner Unit, Street Frontage, Percentage Rent,
+Pro Rata Percent, Annual Taxes, Asking Rent (Gross Annual), Starting Rent (Gross Annual),
+Retail Notes, Days On Market, Country, Geo Point, Cross Streets, Date Created,
+Last Updated, Trepp Real ID, Relocated From, Renewal of Prior Lease,
+Limited Detail Comps, Grocery Anchored, Single Tenant Net Lease,
+SQ FT Expiring In Twelve Months, SQ FT Expiring In Five Years,
+Property Average Transaction Size
+```
+
+**Coordinates:** `Geo Point` column — format is `"lat,lon"` as a single comma-separated string (e.g., `"40.7128,-74.0060"`). Must be split on parse.
+
+### Sales Comps — Exact Column Names (94 columns)
+
+```
+ID, Sales Master Id, Property Id, Street Address, City, State, Zip Code,
+Market, Submarket, Floor(s) Occupied, Suite, Transaction SQFT, Building Size,
+Lot Size, APN, Number Of Buildings, Sale Quarter, Sale Date, Days On Market,
+Sale Type, Total Sale Price, Sale Price (PSF), Total Asking Price, Asking Price,
+Buyer, Recorded Buyer, True Buyer, Buyer Type, Seller, Recorded Seller,
+True Seller, Seller Type, Occupancy Rate, Cap Rate, Cap Rate Notes, Total NOI,
+NOI, Total Operating Expense, Operating Expense, Operating Expense Notes,
+Financing Info, Lender, Interest Type, Interest, Comments, Document Type,
+Deed Doc #, Record Date, Seller Rep Companies, Seller Rep, Buyer Rep Companies,
+Buyer Rep, Property Rights, Proposed Use, Multi Tenant, Include Businesses,
+Building Name, Property Type, Property Subtype, Building Class, Number of Floors,
+Year Built, Year Renovated, FAR, Percent Improved, Load Factor, Parking Ratio,
+Parking Lot Type, Parking Notes, Elevators, Office Portion, Sprinkler,
+Clear Height, Doors, Loading Docks, Rail, Amps, Volts, Retail Anchor,
+Number Of Units, Selling Basement, Corner Unit, Street Frontage, Country,
+Geo Point, Date Created, Date Updated, Data Source, Zoning,
+Property Market Starting Rent, Property Market Effective Rent,
+Property Average Transaction Size, First Seen, Trepp Real ID
+```
+
+**Coordinates:** Same as leases — `Geo Point` is `"lat,lon"` single string.
+**Note:** `Sale Type` is a free-text field (not enumerated) — do not filter on it programmatically.
+
+### Property Records — Exact Column Names (29 columns)
+
+```
+ID, LINK, ADDRESS, CITY, STATE, ZIPCODE, COUNTY, MARKET, SUBMARKET,
+LATITUDE, LONGITUDE, PROPERTY_NAME, LANDLORD, PROPERTY_SIZE, PARKING_RATIO,
+YEAR_BUILT, YEAR_RENOVATED, LOT_SIZE, LOADING_DOCKS_COUNT, GROUND_LVL_DOORS_COUNT,
+FLOOR_AREA_RATIO, FLOORS, CEILING_HEIGHT, BUILDING_CLASS, PROPERTY_TYPE,
+PROPERTY_SUBTYPE, PROPERTY_MARKET_EFFECTIVE_RENT_ESTIMATE,
+PROPERTY_MARKET_STARTING_RENT_ESTIMATE, DATE_CREATED
+```
+
+**Coordinates:** `LATITUDE` and `LONGITUDE` are **separate numeric columns** (unlike leases/sales which use a single `Geo Point` string). `LINK` = CompStak Exchange URL for the property listing.
+
+### Controlled Enumerations
+
+These are the exact values present in the data — use these for filter dropdowns and query conditions.
+
+**Building Class** (all three datasets): `A`, `B`, `C`
+
+**Space Type** (leases): `Flex/R&D`, `Industrial`, `Land`, `Office`, `Other`, `Retail`
+
+**Lease Type** (leases): `Full Service`, `Gross`, `Industrial Gross`, `Modified Gross`, `NN`, `NNN`, `Net`, `Net of Electric`
+
+**Transaction Type** (leases): `Early Renewal`, `Expansion`, `Extension`, `Extension/Expansion`, `New Lease`, `Relet`, `Renewal`, `Renewal/Contraction`, `Renewal/Expansion`, `Restructure`
+
+**Property Type** (properties + sales): `Hotel`, `Industrial`, `Land`, `Mixed-Use`, `Multi-Family`, `Office`, `Other`, `Retail`
+
+**Markets** (properties — 35 markets, superset of lease/sales markets):
+`Atlanta`, `Austin`, `Baltimore`, `Bay Area`, `California - Other`, `Chicago Metro`,
+`Colorado - Other`, `Dallas - Ft. Worth`, `Denver`, `Georgia - Other`, `Houston`,
+`Illinois - Other`, `Los Angeles - Orange - Inland`, `Maryland - Other`,
+`Milwaukee Metro`, `Minneapolis - St. Paul`, `Minnesota - Other`,
+`New Jersey - North and Central`, `New Jersey - Other`, `New York - Other`,
+`New York City`, `Norfolk`, `Philadelphia - Central PA - DE - So. NJ`, `Richmond`,
+`Sacramento - Central Valley`, `San Antonio`, `San Diego`, `San Francisco`,
+`Seattle`, `St. Louis Metro`, `Texas - Other`, `Virginia - Other`,
+`Washington, DC`, `Westchester and CT`, `Wisconsin - Other`
+
+Sales dataset covers a broader geography (~100 markets including Sunbelt and Midwest cities not in leases/properties).
 
 ### Why DuckDB (Analytical) + SQLite (Transactional)
 
