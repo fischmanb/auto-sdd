@@ -185,9 +185,14 @@ load_sdd_config() {
     local config_file="$PROJECT_DIR/.sdd-config/project.yaml"
     [ -f "$config_file" ] || return 0
     # Read each key: value pair. Only set env vars that are not already set.
-    while IFS=': ' read -r key value; do
+    while IFS= read -r _raw_line; do
         # Skip comments and blank lines
-        [[ "$key" =~ ^#.*$ || -z "$key" ]] && continue
+        [[ "$_raw_line" =~ ^[[:space:]]*# ]] && continue
+        [[ -z "${_raw_line// }" ]] && continue
+        # Split on first colon only
+        key="${_raw_line%%:*}"
+        value="${_raw_line#*:}"
+        key="${key// /}"  # trim spaces from key only
         # Strip inline comments from value
         value="${value%%#*}"
         # Strip leading/trailing whitespace only (not internal spaces)
