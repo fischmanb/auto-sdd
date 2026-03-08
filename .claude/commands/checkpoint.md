@@ -28,6 +28,8 @@ Single command to ensure all context management files are current. Prevents cont
 - If none → skip
 
 ### 4. Learnings
+> **Note:** If running `!wrap`, steps 4 and 5 are executed as Phase 1 (`!learn`) before the checkpoint begins. Skip both steps here and proceed to step 6.
+
 - **Default assumption: something to capture.** Find reasons to skip, not reasons to include. A scan that finds zero candidates in a session with agent completions, corrections, or system changes is evidence of the scan failing. (L-00116)
 - **Read build agent candidates first**: Check `logs/learning-candidates.txt`. If it exists and is non-empty, read it. Each line is a `LEARNING_CANDIDATE:` signal emitted by a build agent during a prior campaign run. These are raw flags — one line each — that the agent couldn't promote itself. Review each for promotion to a full learning entry. After processing, move the file to `logs/learning-candidates-processed/learning-candidates-{DATE}.txt` (create dir if needed). This is the Human | Agent | External Memory pipeline: agents flag, humans promote.
 - Active scan — review the session for learnable moments. Do not rely on recall; check each category:
@@ -43,6 +45,8 @@ Single command to ensure all context management files are current. Prevents cont
 - **Behavioral compliance check**: After scanning, review `learnings/core.md`. For each core learning: did this session comply? If violation found, capture it as a new learning. If all complied: state "Core compliance: all [N] core learnings followed this session." 30-second scan, not deep audit.
 - **Propagation check**: If any learning or protocol change was made, run `/verify-propagation`. This mechanically checks: core.md membership (L-00118), count drift via `/verify-learnings-counts` (L-00115), ONBOARDING.md/ACTIVE-CONSIDERATIONS.md staleness, and convention file references including CLAUDE.md (L-00125). (L-00114)
 ### 5. Methodology Signals
+> **Note:** If running `!wrap`, this step is covered by `!learn` in Phase 1. Skip and proceed to step 6.
+
 - Scan session for operator-level insights: preferences, principles, reasoning patterns, workflow decisions, distinctions Brian drew, corrections that reveal generalizable observations
 - Bias toward capture — a false positive costs 5 seconds to delete, a false negative is gone
 - If any found: write as graph-schema M-entries directly in `HOW-I-WORK-WITH-GENERATIVE-AI.md` (above the deprecated Accumulation section). Use the next sequential M-XXXXX ID.
@@ -87,3 +91,4 @@ If any answer is no — fix it before responding.
 - `/checkpoint` — full checklist
 - `/checkpoint --dry` — report what would be flushed/flagged without writing
 - `checkpoint` in chat — same checklist, chat session executes it
+- `!wrap` — **preferred end-of-session command**: runs `!learn` first, then checkpoint (steps 4+5 skipped), then writes `.handoff.md` for the next session. Use this instead of running `!learn` + `!checkpoint` separately.
