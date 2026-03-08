@@ -870,6 +870,19 @@ Tags: Desktop-Commander, compaction, context-cache, sdd-scratch, file-stash, onb
 Confidence: high
 Status: active
 Date: 2026-03-08
-Related: L-00211 (related_to), L-00130 (related_to)
+Related: L-00211 (related_to), L-00130 (related_to), L-00213 (related_to)
 
 When filesystem access is available, files are the authoritative source. In-context knowledge is a lossy cache: compaction drops state, memories lag behind writes, and long sessions drift from file reality. The rule: the moment tool access is established or re-established, read the relevant protocol files and stash key findings to /tmp/sdd-scratch.md before any other work. A read without a stash is discarded the moment the next tool call executes. This applies on session start, after compaction events, after a sequence of prompt-only exchanges, and after any gap where file state may have advanced without context reflecting it. The compaction boundary — not elapsed time — is what invalidates context. When in doubt, read. Stashing is not optional.
+
+---
+
+## L-00213 — Learnings body must be the prevention rule maximally generalized, not an incident description
+ID: L-00213
+Type: process_rule
+Tags: extract-learnings.md, learnings-body, rule-authoring, generalization, knowledge-capture
+Confidence: high
+Status: active
+Date: 2026-03-08
+Related: L-00163 (related_to), L-00212 (instance_of)
+
+A learnings body that describes what happened — the incident, the sequence, the context — is malformed. The body must be the rule that prevents the failure in the broadest possible set of future cases. L-00163 requires a concrete countermeasure; this extends it: the countermeasure must generalize across cases, not just fix the instance that prompted it. Test: read only the body. Does it tell a future instance what to do in any situation where this failure mode could occur? Or does it describe a past situation? If the latter, rewrite it. The incident that surfaced the rule belongs in a comment or Related field at most — not in the body.

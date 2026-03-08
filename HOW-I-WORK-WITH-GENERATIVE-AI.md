@@ -1061,6 +1061,19 @@ Brian treats "I didn't read the relevant file" and "I didn't know the file exist
 
 ---
 
+## M-00093
+
+- **Type:** principle
+- **Tags:** corrections, learnings-quality, systemic-thinking, knowledge-capture, malformed-entry, rule-authoring
+- **Confidence:** high
+- **Status:** active
+- **Date:** 2026-03-08
+- **Related:** L-00213 (related_to), M-00091 (related_to)
+
+When Brian corrects a specific artifact, he diagnoses the systemic implication, not just the local error. When L-00212's body was incident-descriptive rather than rule-prescriptive, his response was "the body of that rule is wrong and that means the learnings system itself is malformed" — he moved immediately from the instance to the corpus. This is consistent across corrections: a bad tag isn't just a bad tag, it's evidence the tagging convention is broken; a missed file read isn't just a mistake, it's evidence the protocol doesn't enforce reading. Brian treats every correction as a signal about the system that produced the error, not just the error itself. Implication: when Brian corrects something, the first question is not "fix this instance?" but "what systemic encoding prevents the next instance?"
+
+---
+
 ## Accumulation (DEPRECATED — see L-00194)
 
 > **Process change (2026-03-04):** New methodology observations go directly into graph-schema M-entries above. This section is a backlog of raw captures that predate the change. Clear by converting to schema entries or discarding. Do NOT add new raw entries here.
