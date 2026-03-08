@@ -1048,6 +1048,19 @@ Learnings tags must be concrete and searchable — the actual flags, filenames, 
 
 ---
 
+## M-00092
+
+- **Type:** principle
+- **Tags:** !wrap, HANDOFF-PROTOCOL.md, .specs, read-first, protocol-design, due-diligence
+- **Confidence:** high
+- **Status:** active
+- **Date:** 2026-03-08
+- **Related:** L-00210 (related_to), L-00211 (related_to)
+
+Brian treats "I didn't read the relevant file" and "I didn't know the file existed" as the same failure. When Claude designed !wrap from context alone and missed the handoff steps, the correction was immediate. Brian's standard: if a file exists that could inform a design decision, not reading it is a due-diligence failure regardless of intent. Read-first is the default, not an optional step.
+
+---
+
 ## Accumulation (DEPRECATED — see L-00194)
 
 > **Process change (2026-03-04):** New methodology observations go directly into graph-schema M-entries above. This section is a backlog of raw captures that predate the change. Clear by converting to schema entries or discarding. Do NOT add new raw entries here.

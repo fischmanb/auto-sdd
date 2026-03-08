@@ -835,3 +835,28 @@ Date: 2026-03-08T00:00:00-05:00
 Related: L-00207 (related_to)
 
 `max_features: 44` was written into `.sdd-config/project.yaml` to match the current pending feature count. This is wrong in two ways: (1) the count goes stale the moment a feature is added or completed, silently capping future campaigns at an arbitrary number with no warning; (2) `MAX_FEATURES` is a runtime cap ("only build N features today"), not a project property — it belongs at launch time, not in version-controlled config. The correct behavior when `MAX_FEATURES` is unset is to build all pending features, which the build loop derives at runtime from the roadmap. General rule: never hardcode a count that is derivable from a source of truth. Config files declare policies (how to build, what model to use, how many retries); they do not snapshot counts that change as the project evolves.
+
+
+---
+
+## L-00210
+Type: process-rule
+Tags: !wrap, !learn, checkpoint, extract-learnings.md, checkpoint.md, compound-command, HANDOFF-PROTOCOL.md, .specs
+Confidence: high
+Status: active
+Date: 2026-03-08
+Related: M-00092 (same session)
+
+Before designing any command that may integrate existing protocols, read every protocol file it subsumes.
+
+---
+
+## L-00211
+Type: process-rule
+Tags: in-context-inference, compaction, .onboarding-state, memory, repo-files, read-first, incomplete-knowledge, design
+Confidence: high
+Status: active
+Date: 2026-03-08
+Related: L-00210 (related_to)
+
+Logic in user chats must never be built from in-context inference without consideration for what is in the repo or memory on the subject, as the session could be operating on incomplete knowledge. The fix is always to read first, especially after compactions or repeated prompts. The constituent files are the spec. Also stash files as needed, to preserve calls.
