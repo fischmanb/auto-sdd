@@ -552,3 +552,15 @@
 **Decision:** Implement knowledge_store.py (write path via eval sidecar extension) before spec_preprocessor.py (read path). Ship write path first, read path second.
 **Why:** A preprocessor with an empty knowledge base is a no-op. Getting data accumulating first means the read path launches with real signal, not synthetic examples. Both paths are independent — write path adds zero latency (async sidecar), read path is a pre-build hook. The write path is also simpler: structured extraction → SQLite writes → embedding calls. The read path requires BFS + semantic + BM25 merge + synthesis call and is more complex to test without real data.
 **Alternatives rejected:** Read path first (nothing to read). Both simultaneously (overcomplicates first agent prompt). Synthetic seeding for read path validation (delays real signal).
+
+## 2026-03-08 — MAX_FEATURES unset means build all pending features
+
+**Decision:** `MAX_FEATURES` env var defaults to `None` in build_loop.py, resolving to `len(features)` at runtime. Absent = no cap.
+**Why:** `MAX_FEATURES` is a runtime limiter ("only build N features this session"), not a project property. A hardcoded default (was 25) silently caps campaigns. Encoding it in project.yaml is wrong for the same reason — it goes stale the moment a feature is added or completed. The correct behavior when unset is to build all pending features, derived from the roadmap at runtime.
+**Alternatives rejected:** Default of 999 (magic number masking absence). Default of 25 (arbitrary, silently caps). Hardcode in project.yaml (stale, wrong layer per L-00209).
+
+## 2026-03-08 — L-00012 demoted from core.md
+
+**Decision:** L-00012 (client→server import chain) removed from core.md, status set to `deprecated` in failure-patterns.md.
+**Why:** Entry is Next.js/stakd-specific. Core.md is for project-wide learnings applicable across all campaigns. At 18 entries (threshold 15), a stakd-specific entry was the clearest demotion candidate. Reinstatement condition: if the pattern recurs across non-Next.js campaigns.
+**Alternatives rejected:** Keep in core with a scope annotation (clutters core for non-Next.js work). Move to domain-knowledge.md (pattern is a failure mode, not domain knowledge).
