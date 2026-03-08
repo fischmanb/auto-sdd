@@ -304,6 +304,7 @@ cd "$PROJECT_DIR"
 # Override with LOGS_DIR env var if needed.
 LOGS_DIR="${LOGS_DIR:-$SCRIPT_DIR/../logs/$(basename "$PROJECT_DIR")}"
 LOGS_DIR="$(mkdir -p "$LOGS_DIR" && cd "$LOGS_DIR" && pwd)"
+EVAL_OUTPUT_DIR="${EVAL_OUTPUT_DIR:-$LOGS_DIR/evals}"
 BUILD_LOG="$LOGS_DIR/build-$(date '+%Y%m%d-%H%M%S').log"
 export COST_LOG_FILE="$LOGS_DIR/cost-log.jsonl"
 exec > >(tee -a "$BUILD_LOG") 2>&1
