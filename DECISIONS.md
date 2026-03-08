@@ -564,3 +564,9 @@
 **Decision:** L-00012 (client→server import chain) removed from core.md, status set to `deprecated` in failure-patterns.md.
 **Why:** Entry is Next.js/stakd-specific. Core.md is for project-wide learnings applicable across all campaigns. At 18 entries (threshold 15), a stakd-specific entry was the clearest demotion candidate. Reinstatement condition: if the pattern recurs across non-Next.js campaigns.
 **Alternatives rejected:** Keep in core with a scope annotation (clutters core for non-Next.js work). Move to domain-knowledge.md (pattern is a failure mode, not domain knowledge).
+
+## 2026-03-08 — Re-detect build cmd after agent, resolve SPEC_FILE against project_dir
+
+**Decision:** Two surgical fixes to build_loop.py post-agent gate logic.
+**Why:** (1) Pre-agent build cmd detection returns "" for F-0 because next.config.ts doesn't exist yet — agent creates it. Moving detection to post-agent ensures the first feature that introduces the build system is gated correctly. (2) SPEC_FILE signal paths are project-relative; resolving against cwd (py/) always fails, silently skipping all drift checks.
+**Alternatives rejected:** BUILD_CHECK_CMD env override (workaround, not fix). Absolute path requirement in agent prompt (shifts burden to agent, fragile).
