@@ -41,14 +41,6 @@ Agents have been observed to work around failures instead of stopping. When bloc
 
 ---
 
-## L-00012 — Client→server import chain (most common build failure)
-**Source:** `failure-patterns.md`
-**Why core:** Most common post-campaign build failure. Any session touching stakd or Next.js needs this.
-
-Client components transitively importing server-only modules. A `"use client"` component imports an intermediate file that imports the database layer. Webpack bundles the entire chain into the client bundle, which fails. Fix: break the chain. Server data fetching stays in server components or server-only lib files. Client components receive data via props.
-
----
-
 ## L-00016 — Verification gates on every prompt
 **Source:** `process-rules.md`
 **Why core:** Direct consequence of L-00001. The operational discipline that makes agent output trustworthy.

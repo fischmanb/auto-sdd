@@ -140,8 +140,9 @@ Agents have been observed to work around failures instead of stopping. Round 9: 
 Type: failure_pattern
 Tags: nextjs, server-client-boundary, webpack, import-chain
 Confidence: high
-Status: active
+Status: deprecated
 Date: 2026-02-28T20:31:00-05:00
+Demoted: 2026-03-08 — Next.js/stakd-specific; not general enough for core. Reinstate if pattern recurs across non-Next.js campaigns.
 Related: L-00028 (related_to)
 
 Client components transitively importing server-only modules. Most common post-campaign build failure (stakd-v1, stakd-v2). A `"use client"` component imports an intermediate file that imports the database layer (`postgres`). Webpack bundles the entire chain into the client bundle, which fails.
