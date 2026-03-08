@@ -129,7 +129,10 @@ def _parse_signal(signal_name: str, output: str) -> str:
     return last_value
 
 
-def _validate_required_signals(build_result: str) -> bool:
+def _validate_required_signals(
+    build_result: str,
+    project_dir: Path | None = None,
+) -> bool:
     """Return True if FEATURE_BUILT and SPEC_FILE signals are present."""
     feature_name = _parse_signal("FEATURE_BUILT", build_result)
     spec_file = _parse_signal("SPEC_FILE", build_result)
@@ -144,8 +147,14 @@ def _validate_required_signals(build_result: str) -> bool:
         )
         return False
 
-    if not Path(spec_file).exists():
-        logger.warning("SPEC_FILE does not exist on disk: %s", spec_file)
+    # Resolve relative paths against project_dir so they don't resolve
+    # against the loop's cwd (py/) which is different from the project root.
+    resolved = Path(spec_file)
+    if not resolved.is_absolute() and project_dir is not None:
+        resolved = project_dir / resolved
+
+    if not resolved.exists():
+        logger.warning("SPEC_FILE does not exist on disk: %s", resolved)
         return False
 
     return True
@@ -829,12 +838,6 @@ class BuildLoop:
                 )
                 continue
 
-            # Re-detect build/test commands (project structure changes as features land)
-            self.build_cmd = detect_build_check(self.project_dir, _env_str("BUILD_CHECK_CMD", "") or None)
-            self.test_cmd = detect_test_check(self.project_dir, _env_str("TEST_CHECK_CMD", "") or None)
-            self.build_config.build_cmd = self.build_cmd
-            self.build_config.test_cmd = self.test_cmd
-
             feature_start = int(time.time())
 
             # ── CIS: create feature vector ──────────────────────────────
@@ -989,6 +992,14 @@ class BuildLoop:
                 except Exception:
                     logger.exception("Agent invocation failed")
                     build_result = ""
+
+                # Re-detect build/test commands AFTER agent runs — project
+                # structure may have changed (e.g., F-0 creates next.config.ts
+                # so detection before the agent returns empty string).
+                self.build_cmd = detect_build_check(self.project_dir, _env_str("BUILD_CHECK_CMD", "") or None)
+                self.test_cmd = detect_test_check(self.project_dir, _env_str("TEST_CHECK_CMD", "") or None)
+                self.build_config.build_cmd = self.build_cmd
+                self.build_config.test_cmd = self.test_cmd
 
                 # Check for credit exhaustion
                 if _is_credit_exhaustion(build_result):
@@ -1280,7 +1291,7 @@ class BuildLoop:
 
         # Gate 4: Drift check
         drift_ok = True
-        if _validate_required_signals(build_result):
+        if _validate_required_signals(build_result, gate_dir):
             drift_targets = extract_drift_targets(
                 build_result, gate_dir
             )
