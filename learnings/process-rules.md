@@ -938,3 +938,29 @@ Date: 2026-03-08
 Related: L-00216 (related_to)
 
 When an agent emits a relative `SPEC_FILE` path (e.g., `.specs/features/infrastructure/F-000-project-setup.feature.md`), the loop must resolve it against `project_dir`, not the process working directory. The loop runs from `py/` — a relative path resolves to `py/.specs/...` which does not exist, causing `_validate_required_signals` to return False and silently skip drift checks for every feature. Fix: `(project_dir / spec_file).exists()` when the path is not absolute and `project_dir` is known.
+
+---
+
+## L-00216 — Build command re-detection must run after the agent, not before
+ID: L-00216
+Type: process_rule
+Tags: detect_build_check, build_loop.py, next.config.ts, build_cmd, re-detection, F-0
+Confidence: high
+Status: active
+Date: 2026-03-08
+Related: L-00012 (related_to)
+
+Re-detect build/test commands immediately after the agent returns, not before it runs. Pre-agent detection reads the filesystem before the agent has created any new files — scaffolding features (e.g., F-0) create the very config files (next.config.ts, package.json) that enable detection. Running detection before the agent means the first feature that introduces the build system runs with no build gate. Fix: move detect_build_check/detect_test_check calls to the line immediately after build_result is captured, before any gate logic.
+
+---
+
+## L-00217 — SPEC_FILE signal paths must be resolved against project_dir, not loop cwd
+ID: L-00217
+Type: process_rule
+Tags: SPEC_FILE, _validate_required_signals, build_loop.py, project_dir, relative-path, drift-check
+Confidence: high
+Status: active
+Date: 2026-03-08
+Related: L-00214 (related_to)
+
+When validating agent-emitted signals that reference file paths (SPEC_FILE, SOURCE_FILES), resolve relative paths against project_dir, not the Python process cwd. The build loop runs from ~/auto-sdd/py/ but agents emit paths relative to the project root (e.g., .specs/features/infrastructure/F-000.feature.md). Path.exists() on an unresolved relative path silently fails, causing drift checks to be skipped for every feature. Fix: in _validate_required_signals, resolve against project_dir before calling .exists(). Extend this pattern to any future signal that emits a project-relative path.
