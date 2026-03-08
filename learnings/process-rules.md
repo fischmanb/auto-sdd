@@ -912,3 +912,29 @@ Date: 2026-03-08
 Related: L-00212 (related_to)
 
 When the operator has a terminal open and reports a process is running, that report is authoritative over indirect signals. A build loop suspended on a 1800s agent subprocess shows no new log file, no build_loop pid (it handed off to the claude subprocess), and no new git commits — all of which read as "not running" from indirect inspection. Express uncertainty about what the process is doing, not whether it exists. Corollary: indirect signals (pgrep, log recency, git log) are valid when the operator has no direct visibility; they are not valid as a rebuttal to an operator's direct observation.
+
+---
+
+## L-00216 — Build command re-detection must run after the agent, not before
+ID: L-00216
+Type: process_rule
+Tags: detect_build_check, build_loop.py, build_cmd, next.config.ts, F-0, scaffold-features, re-detection
+Confidence: high
+Status: active
+Date: 2026-03-08
+Related: L-00012 (related_to)
+
+Re-detecting build/test commands before the agent runs is wrong for scaffold features that create the config files detection depends on. A feature like F-0 (Project Setup) creates `next.config.ts` — if `detect_build_check` runs before the agent, it finds nothing and returns `""`, and the build gate is skipped for that feature. Re-detection must always happen after `build_result` is captured, so the post-build gates see the project structure the agent actually produced.
+
+---
+
+## L-00217 — SPEC_FILE agent signal must be resolved against project_dir, not loop cwd
+ID: L-00217
+Type: process_rule
+Tags: SPEC_FILE, _validate_required_signals, build_loop.py, drift.py, project_dir, cwd, path-resolution
+Confidence: high
+Status: active
+Date: 2026-03-08
+Related: L-00216 (related_to)
+
+When an agent emits a relative `SPEC_FILE` path (e.g., `.specs/features/infrastructure/F-000-project-setup.feature.md`), the loop must resolve it against `project_dir`, not the process working directory. The loop runs from `py/` — a relative path resolves to `py/.specs/...` which does not exist, causing `_validate_required_signals` to return False and silently skip drift checks for every feature. Fix: `(project_dir / spec_file).exists()` when the path is not absolute and `project_dir` is known.
