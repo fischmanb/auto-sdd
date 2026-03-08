@@ -190,7 +190,19 @@ def detect_lint_check(project_dir: Path) -> str:
     Returns:
         Command string, or empty string if none detected.
     """
-    # ESLint legacy config files
+    # package.json lint script takes precedence — the project declares how it lints itself.
+    # This generalizes across any ecosystem without enumerating tool-specific config filenames.
+    pkg = project_dir / "package.json"
+    if pkg.exists():
+        try:
+            import json as _json
+            data = _json.loads(pkg.read_text())
+            if "lint" in data.get("scripts", {}):
+                return "npm run lint"
+        except (OSError, ValueError):
+            pass
+
+    # ESLint legacy config files — fallback for projects without a lint script
     eslint_legacy = [
         ".eslintrc.js",
         ".eslintrc.json",
@@ -214,8 +226,7 @@ def detect_lint_check(project_dir: Path) -> str:
         if (project_dir / name).exists():
             return "npx eslint . --max-warnings=0"
 
-    # ESLint via package.json
-    pkg = project_dir / "package.json"
+    # ESLint via package.json eslintConfig field
     if pkg.exists():
         try:
             text = pkg.read_text()

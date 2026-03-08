@@ -137,6 +137,28 @@ class TestDetectTestCheck:
 
 
 class TestDetectLintCheck:
+    def test_package_json_lint_script_takes_precedence(self, tmp_path: Path) -> None:
+        """package.json lint script wins over config file detection."""
+        import json as _json
+        pkg = {"scripts": {"lint": "next lint", "build": "next build"}}
+        (tmp_path / "package.json").write_text(_json.dumps(pkg))
+        assert detect_lint_check(tmp_path) == "npm run lint"
+
+    def test_package_json_lint_script_no_eslintrc_needed(self, tmp_path: Path) -> None:
+        """Works even when no ESLint config file exists (e.g. Next.js 15 flat config)."""
+        import json as _json
+        pkg = {"scripts": {"lint": "next lint"}}
+        (tmp_path / "package.json").write_text(_json.dumps(pkg))
+        assert detect_lint_check(tmp_path) == "npm run lint"
+
+    def test_package_json_no_lint_script_falls_back(self, tmp_path: Path) -> None:
+        """Falls back to config file detection when no lint script declared."""
+        import json as _json
+        pkg = {"scripts": {"build": "tsc"}}
+        (tmp_path / "package.json").write_text(_json.dumps(pkg))
+        (tmp_path / ".eslintrc.js").touch()
+        assert "eslint" in detect_lint_check(tmp_path)
+
     def test_eslintrc_js(self, tmp_path: Path) -> None:
         (tmp_path / ".eslintrc.js").touch()
         assert "eslint" in detect_lint_check(tmp_path)

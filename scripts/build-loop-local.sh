@@ -602,7 +602,13 @@ check_dead_exports() {
 # Always returns 0 (non-blocking, warn-only).
 
 detect_lint_check() {
-    # ESLint (legacy config files)
+    # Package.json lint script takes precedence — the project declares how it lints itself.
+    # This generalizes across any ecosystem (Next.js, Vite, Rust, Go, Python, etc.)
+    # without enumerating tool-specific config filenames.
+    if [ -f "package.json" ] && grep -qE '"lint"\s*:' package.json 2>/dev/null; then
+        echo "npm run lint"; return
+    fi
+    # ESLint (legacy config files) — fallback for projects without a lint script
     if [ -f ".eslintrc.js" ] || [ -f ".eslintrc.json" ] || [ -f ".eslintrc.yml" ] || \
        [ -f ".eslintrc.yaml" ] || [ -f ".eslintrc.cjs" ] || [ -f ".eslintrc.mjs" ]; then
         echo "npx eslint . --max-warnings=0"; return
@@ -611,7 +617,7 @@ detect_lint_check() {
     if [ -f "eslint.config.js" ] || [ -f "eslint.config.mjs" ] || [ -f "eslint.config.cjs" ] || [ -f "eslint.config.ts" ]; then
         echo "npx eslint . --max-warnings=0"; return
     fi
-    # ESLint via package.json
+    # ESLint via package.json eslintConfig field
     if [ -f "package.json" ] && grep -qE '"eslintConfig"' package.json 2>/dev/null; then
         echo "npx eslint . --max-warnings=0"; return
     fi
