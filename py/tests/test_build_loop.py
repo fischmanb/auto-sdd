@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import json
 import os
+import stat
 import subprocess
 from pathlib import Path
 from typing import Any
@@ -33,6 +34,7 @@ from auto_sdd.scripts.build_loop import (
     _parse_signal,
     _parse_token_usage,
     _PROTECT_DIRS,
+    _PROTECT_ROOT_GLOBS,
     _protect_repo_tree,
     _REPO_ROOT,
     _restore_repo_tree,
@@ -1509,3 +1511,39 @@ class TestProtectRestoreRepoTree:
         mock_run.side_effect = OSError("permission denied")
         result = _protect_repo_tree(tmp_path)
         assert result is False
+
+    def test_protect_makes_root_md_files_readonly(self, tmp_path: Path) -> None:
+        """_protect_repo_tree protects root-level .md files."""
+        readme = tmp_path / "README.md"
+        readme.write_text("hello")
+        assert readme.stat().st_mode & stat.S_IWUSR
+
+        _protect_repo_tree(tmp_path)
+
+        mode = readme.stat().st_mode
+        assert not (mode & stat.S_IWUSR), "owner write bit should be cleared"
+        assert not (mode & stat.S_IWGRP), "group write bit should be cleared"
+        assert not (mode & stat.S_IWOTH), "other write bit should be cleared"
+
+    def test_restore_makes_root_md_files_writable(self, tmp_path: Path) -> None:
+        """_restore_repo_tree restores root-level .md files."""
+        readme = tmp_path / "README.md"
+        readme.write_text("hello")
+
+        _protect_repo_tree(tmp_path)
+        assert not (readme.stat().st_mode & stat.S_IWUSR)
+
+        _restore_repo_tree(tmp_path)
+        assert readme.stat().st_mode & stat.S_IWUSR
+
+    def test_protect_handles_gitignore_and_version(self, tmp_path: Path) -> None:
+        """_protect_repo_tree handles .gitignore and VERSION files."""
+        gitignore = tmp_path / ".gitignore"
+        version = tmp_path / "VERSION"
+        gitignore.write_text("node_modules\n")
+        version.write_text("1.0.0\n")
+
+        _protect_repo_tree(tmp_path)
+
+        assert not (gitignore.stat().st_mode & stat.S_IWUSR)
+        assert not (version.stat().st_mode & stat.S_IWUSR)

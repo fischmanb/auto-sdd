@@ -17,3 +17,4 @@
 {"timestamp":"2026-03-07T18:55:55Z","activity_type":"sitdeck-roadmap-gen","estimated_tokens_pre":12000,"active_tokens":365,"cumulative_tokens":1227535}
 {"timestamp":"2026-03-09T03:31:38Z","activity_type":"project-isolation-contract","estimated_tokens_pre":60000,"active_tokens":435,"cumulative_tokens":2364961}
 {"timestamp":"2026-03-09T03:58:29Z","activity_type":"fix-contamination-check","estimated_tokens_pre":55000,"active_tokens":2368,"cumulative_tokens":2884422}
+{"timestamp":"2026-03-09T04:08:36Z","activity_type":"protect-root-files","estimated_tokens_pre":40000,"active_tokens":3704,"cumulative_tokens":1886200}

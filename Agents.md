@@ -1880,6 +1880,22 @@ grep -c "source.*validation.sh" scripts/*.sh  # Should be 1 (generate-mapping.sh
 
 **Verification**: All tests pass. git diff --stat shows only allowed files.
 
+### Round — Protect Root-Level Files + Document Learnings Timing (2026-03-09)
+
+**What was asked**: Close two gaps in project isolation: (1) root-level files (*.md, .gitignore, VERSION, etc.) were not chmod-protected during agent execution; (2) the timing dependency between learnings/ protection and write_learning() calls was undocumented.
+
+**What changed**:
+* `py/auto_sdd/scripts/build_loop.py`:
+   * Added `_PROTECT_ROOT_GLOBS` — glob patterns for root-level files to protect
+   * Updated `_protect_repo_tree()` to chmod root-level files read-only alongside directories
+   * Updated `_restore_repo_tree()` to restore root-level file write permissions
+   * Added timing dependency comment in the finally block documenting learnings/pending.md write ordering
+* `py/tests/test_build_loop.py` — 3 new tests: root .md protection, restore, .gitignore + VERSION coverage
+
+**What was NOT changed**: No other modules, no prompt_builder changes, no documentation.
+
+**Verification**: All tests pass. git diff --stat shows only allowed files.
+
 ## Questions?
 
 See [ARCHITECTURE.md](./ARCHITECTURE.md) for deeper design rationale.
