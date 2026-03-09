@@ -376,6 +376,99 @@ def build_feature_prompt(
     return result, injections
 
 
+
+# ── Fix-in-place prompt ──────────────────────────────────────────────────────
+
+
+def build_fix_prompt(
+    feature_id: int,
+    feature_name: str,
+    project_dir: Path,
+    config: BuildConfig,
+    *,
+    gate_name: str = "",
+    build_output: str = "",
+    test_output: str = "",
+) -> str:
+    """Construct a fix-in-place prompt after gates failed on committed code.
+
+    Unlike the retry prompt, this does NOT reset the working tree.  The
+    agent's code is still on disk and committed — its job is to diagnose
+    what broke and fix it without rewriting from scratch.
+
+    Args:
+        feature_id: Numeric feature ID.
+        feature_name: Human-readable feature name.
+        project_dir: Project root.
+        config: Build configuration.
+        gate_name: Which gate failed (e.g. "test", "build").
+        build_output: Build check output (last 100 lines).
+        test_output: Test check output (last 200 lines).
+
+    Returns:
+        The complete fix prompt string.
+    """
+    resolved_spec = _resolve_spec_file(project_dir, feature_name)
+    if resolved_spec is not None:
+        spec_signal = f"SPEC_FILE: {resolved_spec}"
+    else:
+        spec_signal = "SPEC_FILE: {path to the .feature.md file}"
+
+    parts: list[str] = [
+        f"Feature #{feature_id} ({feature_name}) was built and committed, "
+        f"but the post-build {gate_name or 'verification'} gate FAILED.\n",
+        "Your code is still on disk. Do NOT rewrite from scratch.",
+        "Your job is to DIAGNOSE and FIX the specific failures.\n",
+        "Steps:",
+        '1. Run `git log --oneline -3` and `git diff HEAD~1` to see what was changed',
+        "2. Read the failure output below carefully",
+    ]
+
+    if config.test_cmd and (gate_name == "test" or test_output):
+        parts.append(f"3. Run the test suite: `{config.test_cmd}`")
+        parts.append("4. Fix ONLY what is broken — do not refactor or rewrite unrelated code")
+    elif config.build_cmd and (gate_name == "build" or build_output):
+        parts.append(f"3. Run the build: `{config.build_cmd}`")
+        parts.append("4. Fix ONLY the build errors — do not refactor or rewrite unrelated code")
+    else:
+        parts.append("3. Fix ONLY what is broken — do not refactor or rewrite unrelated code")
+
+    parts.extend([
+        "5. Commit your fix with message: \"fix: {what you fixed}\"",
+        "6. Verify the fix by re-running the failing command\n",
+        "IMPORTANT:",
+        "- This is a TARGETED FIX, not a rebuild. Change as few lines as possible.",
+        "- If you find the approach is fundamentally wrong and cannot be fixed ",
+        "  with targeted changes, output: BUILD_FAILED: {explanation of why "
+        "  a fix is not possible and what approach should be tried instead}\n",
+    ])
+
+    if build_output:
+        parts.append(
+            f"\nBUILD CHECK FAILURE OUTPUT (last 100 lines):\n{build_output}"
+        )
+
+    if test_output:
+        parts.append(
+            f"\nTEST FAILURE OUTPUT (last 200 lines):\n{test_output}"
+        )
+
+    parts.extend([
+        "\n═══════════════════════════════════════════════════════════",
+        "CRITICAL — REQUIRED OUTPUT SIGNAL:",
+        "Your FINAL output lines MUST include exactly:",
+        f"FEATURE_BUILT: {feature_name}",
+        spec_signal,
+        "SOURCE_FILES: {comma-separated paths to source files}\n",
+        "The build loop uses the FEATURE_BUILT signal to detect success.",
+        "If you omit it, your successful fix will be marked as FAILED.",
+        "If the fix truly failed, output: BUILD_FAILED: {reason}",
+        "═══════════════════════════════════════════════════════════",
+    ])
+
+    return "\n".join(parts)
+
+
 # ── Retry prompt ─────────────────────────────────────────────────────────────
 
 
@@ -387,8 +480,13 @@ def build_retry_prompt(
     *,
     build_output: str = "",
     test_output: str = "",
+    prior_attempts: list[dict[str, str]] | None = None,
 ) -> str:
     """Construct the retry prompt for a failed feature build.
+
+    The working tree has been reset to the branch start point.  This is
+    a fresh build, but with failure context from prior attempts so the
+    agent can avoid the same mistakes.
 
     Args:
         feature_id: Numeric feature ID.
@@ -397,6 +495,9 @@ def build_retry_prompt(
         config: Build configuration.
         build_output: Last build failure output (last 50 lines).
         test_output: Last test failure output (last 80 lines).
+        prior_attempts: List of dicts with keys ``attempt``, ``failure_mode``,
+            ``summary`` describing what each prior attempt tried and why it
+            failed.  Injected as an "approaches that failed" section.
 
     Returns:
         The complete retry prompt string.
@@ -441,6 +542,21 @@ def build_retry_prompt(
     if test_output:
         parts.append(
             f"\nTEST SUITE FAILURE OUTPUT (last 80 lines):\n{test_output}"
+        )
+
+    if prior_attempts:
+        parts.append(
+            "\n── APPROACHES THAT FAILED (do NOT repeat these) ──────────"
+        )
+        for pa in prior_attempts:
+            attempt_num = pa.get("attempt", "?")
+            failure_mode = pa.get("failure_mode", "unknown")
+            summary = pa.get("summary", "no details")
+            parts.append(
+                f"Attempt {attempt_num} ({failure_mode}): {summary}"
+            )
+        parts.append(
+            "── Use a DIFFERENT approach to avoid these failures ──────\n"
         )
 
     parts.extend([

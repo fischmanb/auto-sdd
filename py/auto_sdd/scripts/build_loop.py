@@ -88,6 +88,7 @@ from auto_sdd.lib.learnings_writer import write_learning
 from auto_sdd.lib.prompt_builder import (
     BuildConfig,
     build_feature_prompt,
+    build_fix_prompt,
     build_retry_prompt,
     show_preflight_summary,
 )
@@ -585,6 +586,13 @@ class BuildLoop:
         # Agent timeout (seconds)
         self.agent_timeout = _env_int("AGENT_TIMEOUT", 1800)
 
+        # Gate failure tracking — populated by _run_post_build_gates
+        # so the retry loop can pass failure details to fix/retry prompts.
+        self._last_gate_name: str = ""
+        self._last_gate_build_output: str = ""
+        self._last_gate_test_output: str = ""
+
+
         # Paths
         logs_dir_str = _env_str("LOGS_DIR", "")
         if logs_dir_str:
@@ -1079,6 +1087,7 @@ class BuildLoop:
             last_build_output = ""
             last_test_output = ""
             failed_attempt_outputs: list[str] = []  # full output from each failed attempt
+            prior_attempt_summaries: list[dict[str, str]] = []  # for informed retry prompt
 
             for attempt in range(self.max_retries + 1):
                 if attempt > 0:
@@ -1089,7 +1098,10 @@ class BuildLoop:
                         self.min_retry_delay,
                     )
                     time.sleep(self.min_retry_delay)
-                    # Reset to starting point for clean retry
+
+                # ── Stage 1 (attempt 1): fix-in-place — code still on disk ──
+                # ── Stage 2 (attempt 2+): informed fresh retry — git reset ──
+                if attempt >= 2:
                     subprocess.run(
                         ["git", "reset", "--hard", branch_start_commit],
                         capture_output=True,
@@ -1116,6 +1128,7 @@ class BuildLoop:
                 # Build the prompt
                 injections_received: list[str] = []
                 if attempt == 0:
+                    # ── Initial build ────────────────────────────────────
                     prompt, injections_received = build_feature_prompt(
                         feature.id,
                         feature.name,
@@ -1124,7 +1137,20 @@ class BuildLoop:
                         mistake_tracker=self.mistake_tracker,
                     )
                     model = self.build_model or self.agent_model or None
+                elif attempt == 1:
+                    # ── Fix attempt — code on disk, diagnose & fix ───────
+                    prompt = build_fix_prompt(
+                        feature.id,
+                        feature.name,
+                        self.project_dir,
+                        self.build_config,
+                        gate_name=self._last_gate_name,
+                        build_output=self._last_gate_build_output,
+                        test_output=self._last_gate_test_output or last_test_output,
+                    )
+                    model = self.retry_model or self.build_model or self.agent_model or None
                 else:
+                    # ── Informed fresh retry — reset done, new approach ──
                     prompt = build_retry_prompt(
                         feature.id,
                         feature.name,
@@ -1132,6 +1158,7 @@ class BuildLoop:
                         self.build_config,
                         build_output=last_build_output,
                         test_output=last_test_output,
+                        prior_attempts=prior_attempt_summaries,
                     )
                     model = self.retry_model or self.build_model or self.agent_model or None
 
@@ -1139,7 +1166,7 @@ class BuildLoop:
                 self._print_progress(
                     loop_limit,
                     feature_name=feature.name,
-                    phase="invoking agent" if attempt == 0 else f"retry #{attempt} — invoking agent",
+                    phase="invoking agent" if attempt == 0 else (f"fix attempt — invoking agent" if attempt == 1 else f"retry #{attempt} — invoking agent"),
                     attempt=attempt + 1,
                     max_attempts=self.max_retries + 1,
                     model=model or "default",
@@ -1308,7 +1335,17 @@ class BuildLoop:
                         # Gates failed — will retry
                         failed_attempt_outputs.append(build_result)
                         last_build_output = build_result[-2000:]
-                        last_test_output = ""
+                        last_test_output = self._last_gate_test_output or ""
+                        # Build structured summary for informed retry
+                        prior_attempt_summaries.append({
+                            "attempt": str(attempt + 1),
+                            "failure_mode": self._last_gate_name or "unknown",
+                            "summary": (
+                                self._last_gate_test_output[:500]
+                                or self._last_gate_build_output[:500]
+                                or build_result[-500:]
+                            ),
+                        })
 
                 # ── Signal fallback: drift-clean output ──────────────────
                 if not feature_done and "FEATURE_BUILT" not in build_result:
@@ -1401,6 +1438,13 @@ class BuildLoop:
                 if "BUILD_FAILED" in build_result:
                     reason = _parse_signal("BUILD_FAILED", build_result)
                     logger.warning("Build failed: %s", reason)
+                    if not feature_done:
+                        failed_attempt_outputs.append(build_result)
+                        prior_attempt_summaries.append({
+                            "attempt": str(attempt + 1),
+                            "failure_mode": "BUILD_FAILED",
+                            "summary": reason or build_result[-500:],
+                        })
 
                 last_build_output = build_result[-2000:]
 
@@ -1524,6 +1568,11 @@ class BuildLoop:
         """
         gate_dir = project_dir or self.project_dir
 
+        # Reset gate failure tracking
+        self._last_gate_name = ""
+        self._last_gate_build_output = ""
+        self._last_gate_test_output = ""
+
         # Gate 0: HEAD must have advanced (agent must have committed)
         if branch_start_commit:
             head_now = _get_head(gate_dir)
@@ -1557,6 +1606,8 @@ class BuildLoop:
             logger.warning(
                 "Agent said FEATURE_BUILT but build check failed"
             )
+            self._last_gate_name = "build"
+            self._last_gate_build_output = build_ok.output[-3000:]
             return False
 
         # Gate 3: Test check
@@ -1566,6 +1617,8 @@ class BuildLoop:
                 logger.warning(
                     "Agent said FEATURE_BUILT but tests failed"
                 )
+                self._last_gate_name = "test"
+                self._last_gate_test_output = test_result.output[-6000:]
                 return False
 
         # Gate 4: Drift check
