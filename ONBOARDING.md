@@ -94,6 +94,7 @@ See **`ACTIVE-CONSIDERATIONS.md`** — priority stack, in-flight work, and open 
 |------|-----------------|--------------|
 | **ONBOARDING.md** (this file) | Full project context for a fresh chat | Always read first |
 | **ACTIVE-CONSIDERATIONS.md** | Priority stack, in-flight work, open questions | After ONBOARDING.md on fresh onboard; interval checks reconcile here |
+| **docs/system/architecture-summary.md** | Compact system architecture: pipeline flow, modules, gates, retry, signals, trust model (~80 lines) | Every fresh onboard — required before modifying Python code |
 | **INDEX.md** | One-line lookup table for the whole repo | When you need to find something |
 | **DECISIONS.md** | Append-only decision log with rationale | Before re-opening a settled question |
 | **DESIGN-PRINCIPLES.md** | Project-wide constraints: grepability, graph-readiness, relationship type schema, confidence/status enums, when to apply | Before writing prompts that produce structured output. Before designing new knowledge capture formats. |
@@ -365,6 +366,7 @@ A JSON state file at `~/auto-sdd/.onboarding-state` tracks update status:
 **Fresh onboard (state file missing or `last_check_ts` > 24h stale)**:
 - Full read of ONBOARDING.md. This is the only case where the whole file gets read.
 - Read `ACTIVE-CONSIDERATIONS.md` — priority stack and in-flight work.
+- Read `docs/system/architecture-summary.md` — compact system architecture reference (~80 lines). How the build pipeline, modules, gates, retry, and signals connect. Required context before modifying any Python code.
 - Check for `.handoff.md` at repo root (ONLY on the very first prompt of a fresh chat — never mid-session). If it exists, read it for session-specific continuity from the retiring chat, absorb the context, then move it to `archive/handoffs/handoff-{DATE}.md` (create dir if needed). Never delete handoffs. See `.specs/HANDOFF-PROTOCOL.md`.
 - Read `learnings/core.md` — the curated constitutional learnings. These hard-won failure modes repeat if not internalized at session start. (When core.md is empty, read `.specs/learnings/agent-operations.md` as fallback.)
 - **Stash findings to `/tmp/sdd-scratch.md`** — after reading protocol files, write key findings (active priorities, pending captures, handoff context, core learning titles) to `/tmp/sdd-scratch.md` before any other work. A read without a stash is discarded the moment the next tool call executes. This is not optional. (L-00212)

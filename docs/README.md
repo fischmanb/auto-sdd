@@ -24,6 +24,7 @@
 docs/
 ├── README.md                          ← YOU ARE HERE
 ├── system/                            # How the system works
+│   ├── architecture-summary.md        # Compact reference (~80 lines) — pipeline, modules, gates, retry, signals
 │   ├── architecture.md                # System 1 (orchestration) + System 2 (archived local LLM)
 │   ├── design-principles.md           # Grepability, graph-readiness, relationship schema, enums
 │   ├── signal-protocol.md             # Agent signal format (FEATURE_BUILT, BUILD_FAILED, etc.)
@@ -81,6 +82,7 @@ Canonical writes still happen at root; docs/ copies are refreshed at checkpoint 
 ## Quick lookups
 
 **"What env vars does the build loop accept?"** → `system/configuration.md`
+**"How does the system work?"** → `system/architecture-summary.md`
 **"How does retry work?"** → `operations/retry-strategy.md`
 **"What signals do agents emit?"** → `system/signal-protocol.md`
 **"What failed before and why?"** → `knowledge/learnings/failure-patterns.md`
