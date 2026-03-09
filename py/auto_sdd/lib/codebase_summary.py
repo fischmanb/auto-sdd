@@ -11,6 +11,7 @@ Public API:
 from __future__ import annotations
 
 import logging
+import os
 import subprocess
 from pathlib import Path
 
@@ -20,6 +21,7 @@ logger = logging.getLogger(__name__)
 _EXCLUDED_DIRS: frozenset[str] = frozenset({
     "node_modules", ".git", "dist", "build", ".next",
     "__pycache__", "target", ".build-worktrees", "venv", ".venv",
+    ".auto-sdd-cache", ".sdd-config", ".sdd-state", ".specs",
 })
 
 _FILE_TREE_CAP: int = 500
@@ -131,7 +133,7 @@ def _call_agent(project_dir: Path, file_tree: str) -> str:
     prompt = _AGENT_PROMPT_TEMPLATE.format(file_tree=file_tree)
     result = run_claude(
         ["-p", "--dangerously-skip-permissions", prompt],
-        timeout=120,
+        timeout=int(os.environ.get("SUMMARY_TIMEOUT", "300")),
     )
     return result.output
 
