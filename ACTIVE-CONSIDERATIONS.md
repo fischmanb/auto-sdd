@@ -23,7 +23,7 @@ Ordered by efficiency gain per complexity added:
    - Plan: `WIP/auto-qa-cre-validation.md`
 4. **Seed data & distribution** — Blocked on stable vector schema.
 5. **Extract errors.py/signals.py/state.py from reliability.py** — Low urgency.
-6. **Local model integration** — Not started.
+6. **Local model integration — GPT-OSS target** — Best coding performance per GB active RAM. Move off cloud API entirely. Not started.
 7. **Adaptive routing** — Deprioritized.
 
 ### Knowledge graph build intelligence — DESIGNED, NOT STARTED
@@ -41,6 +41,7 @@ Ordered by efficiency gain per complexity added:
 
 
 - **docs/ directory restructure (2026-03-09)**: Single organized entry point at docs/README.md — system/, operations/, guides/, knowledge/, plans/, history/. 5 new files, 29 total. de0d5d7.
+- **Superloop HTML deck on GitHub Pages**: Self-contained presentation at https://fischmanb.github.io/superloop/interactive/superloop-deck.html. Slide 3 is interactive 12-step closed loop stepper. Replaces PPTX. Source at docs/interactive/superloop-deck.html.
 
 ### Completed (archive — remove when no longer useful for context)
 

@@ -259,6 +259,8 @@ _EXPECTED_WRITE_PATTERNS: frozenset[str] = frozenset({
     "general-estimates.jsonl",
     ".onboarding-state",
     ".prompt-stash.json",
+    "ACTIVE-CONSIDERATIONS.md",
+    "Agents.md",
 })
 
 _PROTECT_DIRS: tuple[str, ...] = (
