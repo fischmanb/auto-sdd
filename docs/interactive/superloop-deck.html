@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Superloop — Autonomous Software Development</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #020617; color: #F8FAFC; font-family: Calibri, 'Segoe UI', sans-serif; overflow: hidden; height: 100vh; }
+  .deck { position: relative; width: 100vw; height: 100vh; }
+  .slide { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: center; padding: 60px 80px; opacity: 0; pointer-events: none; transition: opacity 0.4s ease; }
+  .slide.active { opacity: 1; pointer-events: auto; }
+  h1 { font-family: 'Trebuchet MS', sans-serif; font-size: 52px; font-weight: bold; margin-bottom: 8px; }
+  h2 { font-family: 'Trebuchet MS', sans-serif; font-size: 36px; font-weight: bold; margin-bottom: 16px; }
+  .subtitle { color: #94A3B8; font-size: 20px; font-style: italic; margin-bottom: 32px; }
+  .muted { color: #94A3B8; }
+  .accent { color: #06B6D4; }
+  .green { color: #10B981; }
+  .amber { color: #F59E0B; }
+
+  /* Navigation */
+  .nav { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 12px; z-index: 100; }
+  .nav-dots { display: flex; gap: 6px; }
+  .nav-dot { width: 10px; height: 10px; border-radius: 50%; background: #334155; cursor: pointer; transition: all 0.3s; }
+  .nav-dot.active { background: #06B6D4; width: 20px; border-radius: 5px; }
+  .nav-dot.past { background: #0891B2; }
+  .page-num { color: #64748B; font-size: 13px; position: fixed; bottom: 24px; right: 40px; }
+
+  /* Cards */
+  .card { background: #1E293B; border-radius: 8px; padding: 20px 24px; position: relative; }
+  .card-accent { position: absolute; left: 0; top: 0; bottom: 0; width: 5px; border-radius: 8px 0 0 8px; }
+  .card h3 { font-size: 18px; font-weight: bold; margin-bottom: 6px; }
+  .card p { color: #94A3B8; font-size: 14px; line-height: 1.5; }
+
+  /* Stats */
+  .stats { display: flex; gap: 20px; margin: 32px 0; }
+  .stat { background: #1E293B; border-radius: 8px; padding: 16px 24px; text-align: center; flex: 1; }
+  .stat-num { font-size: 44px; font-weight: bold; }
+  .stat-label { color: #94A3B8; font-size: 13px; margin-top: 4px; }
+
+  /* Grid layouts */
+  .grid-2x2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+  .grid-2x3 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+
+  /* Table */
+  .tbl { width: 100%; border-collapse: collapse; font-size: 15px; }
+  .tbl th { background: #334155; color: #F8FAFC; padding: 10px 14px; text-align: left; font-weight: bold; }
+  .tbl td { background: #1E293B; padding: 10px 14px; border-bottom: 1px solid #334155; }
+  .tbl .feat-green { color: #10B981; font-weight: bold; }
+  .tbl .feat-cyan { color: #06B6D4; font-weight: bold; }
+
+  /* Code block */
+  .code-box { background: #1E293B; border-radius: 8px; padding: 20px; font-family: Consolas, monospace; font-size: 14px; line-height: 1.7; }
+  .code-muted { color: #94A3B8; }
+  .code-cyan { color: #06B6D4; }
+  .code-green { color: #10B981; }
+  .code-white { color: #F8FAFC; }
+
+  /* Roadmap */
+  .roadmap-item { display: flex; align-items: flex-start; gap: 16px; padding: 18px 0; border-bottom: 1px solid #1E293B; }
+  .roadmap-item:last-child { border-bottom: none; }
+  .phase-badge { font-size: 11px; font-weight: bold; padding: 4px 12px; border-radius: 4px; white-space: nowrap; min-width: 60px; text-align: center; }
+
+  /* Closed loop stepper */
+  .loop-wrap { flex: 1; display: flex; flex-direction: column; }
+  .loop-svg { flex: 1; }
+  .loop-controls { display: flex; align-items: center; gap: 12px; padding: 12px 0; }
+  .loop-dots { display: flex; gap: 5px; flex: 1; justify-content: center; }
+  .loop-dot { width: 8px; height: 8px; border-radius: 4px; background: #334155; cursor: pointer; transition: all 0.3s; }
+  .loop-dot.active { background: #06B6D4; width: 18px; }
+  .loop-dot.past { background: #0891B2; }
+  .loop-btn { background: #334155; color: #F8FAFC; border: none; border-radius: 6px; padding: 7px 18px; font-size: 13px; font-weight: bold; cursor: pointer; }
+  .loop-btn.primary { background: #06B6D4; color: #020617; }
+  .loop-btn:disabled { opacity: 0.3; cursor: default; }
+  .loop-title { color: #F8FAFC; font-size: 17px; font-weight: bold; }
+  .loop-desc { color: #94A3B8; font-size: 13px; line-height: 1.5; margin-top: 4px; }
+  .indev-badge { background: #F59E0B; color: #020617; font-size: 10px; font-weight: bold; padding: 2px 7px; border-radius: 3px; margin-left: 8px; vertical-align: middle; }
+</style>
+</head>
+<body>
+<div class="deck" id="deck"></div>
+<div class="nav"><div class="nav-dots" id="nav-dots"></div></div>
+<div class="page-num" id="page-num"></div>
+
+<script>
+const C = {bg:"#020617",card:"#1E293B",accent:"#06B6D4",accentDk:"#0891B2",green:"#10B981",amber:"#F59E0B",white:"#F8FAFC",muted:"#94A3B8",subtle:"#334155"};
+let currentSlide = 0;
+const totalSlides = 8;
+
+// ═══════════════════════════════════════════════════════
+// SLIDE DATA
+// ═══════════════════════════════════════════════════════
+
+function buildSlides() {
+  const deck = document.getElementById('deck');
+  deck.innerHTML = '';
+
+  // ── SLIDE 1: TITLE ──
+  addSlide(deck, `
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+      <div style="flex:1;">
+        <h1 style="font-size:56px;">/superloop</h1>
+        <div style="margin-top:16px;">
+          <span class="accent" style="font-size:22px;">autonomous software development</span><br>
+          <span class="muted" style="font-size:19px;">with a compounding closed loop</span>
+        </div>
+        <div class="stats" style="margin-top:48px;">
+          <div class="stat"><div class="stat-num accent">1,026</div><div class="stat-label">passing tests</div></div>
+          <div class="stat"><div class="stat-num green">226+</div><div class="stat-label">graph-schema learnings</div></div>
+          <div class="stat"><div class="stat-num amber">37+</div><div class="stat-label">features built (active campaign)</div></div>
+          <div class="stat"><div class="stat-num accent">4</div><div class="stat-label">campaigns completed</div></div>
+        </div>
+        <div class="muted" style="margin-top:40px;font-size:14px;">Brian Fischman · March 2026</div>
+      </div>
+      <div class="code-box" style="width:340px;margin-left:40px;margin-top:20px;">
+        <span class="code-muted">$ cd ~/auto-sdd/py</span><br>
+        <span class="code-cyan">$ python -m<br>auto_sdd.scripts.build_loop</span><br><br>
+        <span class="code-green">▸ Parsing roadmap.md...</span><br>
+        <span class="code-green">▸ 7 features pending (topo sorted)</span><br>
+        <span class="code-white">▸ Building: Income Projection</span><br>
+        <span class="code-cyan">&nbsp;&nbsp;FEATURE_BUILT: Income Projection</span><br>
+        <span class="code-green">&nbsp;&nbsp;✓ build check passed</span><br>
+        <span class="code-green">&nbsp;&nbsp;✓ 612 tests passing</span>
+      </div>
+    </div>
+  `);
+
+  // ── SLIDE 2: WHAT IS SUPERLOOP ──
+  addSlide(deck, `
+    <h2>What is Superloop?</h2>
+    <p class="muted" style="font-size:15px;max-width:900px;line-height:1.6;margin-bottom:28px;">
+      A Python build loop that orchestrates AI agents to autonomously implement software features — end to end, from spec to merged code. Each feature gets a fresh agent context. The orchestrator handles sequencing, retry, and quality gates.
+    </p>
+    <div class="grid-2x2">
+      ${makeCard('Spec-driven','Roadmap → feature specs → agent prompt. Every build is fully defined before the agent runs. No improvisation.',C.accent)}
+      ${makeCard('Closed loop','Build check → test gate → drift check → eval sidecar → learnings. Each layer catches what the prior one missed.',C.green)}
+      ${makeCard('Hardened','Two-stage retry, crash recovery, project isolation (3-layer), signal protocol, file locking. 1,026 tests.',C.amber)}
+      ${makeCard('Self-improving','226+ graph-schema learnings compound across campaigns. Eval findings feed subsequent build prompts automatically.',C.accent)}
+    </div>
+  `);
+
+  // ── SLIDE 3: CLOSED LOOP (interactive stepper) ──
+  addSlide(deck, `<div class="loop-wrap" id="loop-container"></div>`, true);
+
+  // ── SLIDE 4: CAMPAIGN RESULTS ──
+  addSlide(deck, `
+    <h2>Campaign results</h2>
+    <p class="muted" style="font-size:14px;margin-bottom:20px;">The system has been validated across multiple projects, stacks, and models.</p>
+    <table class="tbl" style="margin-bottom:28px;">
+      <tr><th>Campaign</th><th>Stack</th><th>Features</th><th>Tests</th><th>Throughput</th></tr>
+      <tr><td class="feat-cyan">CRE Analytics (active)</td><td class="muted">Next.js 15 + DuckDB + Mapbox</td><td><b>37+/49</b></td><td>599</td><td>~4 feat/hr</td></tr>
+      <tr><td>Stakd v2 (Sonnet)</td><td class="muted">Next.js + TypeScript + Vite</td><td class="feat-green">28/28</td><td class="muted">—</td><td>4.0 feat/hr</td></tr>
+      <tr><td>Stakd v3 (Haiku)</td><td class="muted">Next.js + TypeScript + Vite</td><td>11 (partial)</td><td class="muted">—</td><td>3.8 feat/hr</td></tr>
+      <tr><td>Lease Comp Tracker</td><td class="muted">React + Vite + Express + SQLite</td><td class="feat-green">3/3</td><td>19</td><td>31 min total</td></tr>
+    </table>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+      ${makeCard('Key finding: model speed is not the bottleneck','Haiku generates tokens 2× faster than Sonnet. Throughput is nearly identical (3.8 vs 4.0 feat/hr). npm install, TypeScript compilation, and test execution dominate wall time — not LLM generation.',C.amber)}
+      ${makeCard('Zero feature failures across completed campaigns','Stakd v2: 28/28. Lease Comp Tracker: 3/3. CRE Analytics: 37+ and counting with 0 failures. Two-stage retry, mechanical gates, and eval sidecar feedback make the difference.',C.green)}
+    </div>
+  `);
+
+  // ── SLIDE 5: RELIABILITY ENGINEERING ──
+  addSlide(deck, `
+    <h2>Reliability engineering</h2>
+    <p class="muted" style="font-size:14px;margin-bottom:20px;">What makes autonomous builds actually work at scale</p>
+    <div class="grid-2x3">
+      ${makeCard('Signal protocol','Agents emit grep-parseable signals (FEATURE_BUILT, BUILD_FAILED). No JSON, no eval. Parser is strict — misformatted signal = build failure, not silent skip.',C.accent)}
+      ${makeCard('Crash recovery + resume','Campaign state written after every commit. --resume restores exact position. Caffeinate prevents sleep. Credit exhaustion halts immediately.',C.green)}
+      ${makeCard('Eval sidecar + feedback loop','Async sidecar classifies mistakes per feature. Findings injected into subsequent build prompts. Repeated mistakes tracked and escalated.',C.amber)}
+      ${makeCard('Onboarding protocol','Every session reads .onboarding-state → ONBOARDING.md → core learnings. Interval checks at ≥4 prompts. Zero tribal knowledge loss across sessions.',C.accent)}
+      ${makeCard('Codebase summary injection','Agent-generated project summary cached on git tree hash. Components, types, imports injected per build. Prevents redeclaration across features.',C.green)}
+      ${makeCard('Token estimation + calibration','Estimated vs actual logged to JSONL. Graduated blend calibrates future estimates. Feeds scope decisions — when to split prompts.',C.amber)}
+    </div>
+  `);
+
+  // ── SLIDE 6: KNOWLEDGE PROBLEM ──
+  addSlide(deck, `
+    <h2>The knowledge compounding problem</h2>
+    <div style="display:flex;gap:24px;margin-top:20px;">
+      <div class="card" style="flex:1;padding:28px;">
+        <h3 style="color:#EF4444;text-align:center;font-size:20px;margin-bottom:20px;">NOW (reactive)</h3>
+        ${['Each build agent starts with zero project memory','Mistakes repeat across campaigns (DuckDB init, signal format, import boundaries)','Eval sidecar catches errors AFTER they happen','Learnings corpus is passive — fed into prompts but not queried','Knowledge in flat markdown, not queryable graph structure'].map(t=>`<p style="color:#94A3B8;font-size:14px;margin-bottom:14px;">✗ &nbsp;${t}</p>`).join('')}
+      </div>
+      <div style="display:flex;align-items:center;font-size:32px;color:#06B6D4;">→</div>
+      <div class="card" style="flex:1;padding:28px;">
+        <h3 style="color:#10B981;text-align:center;font-size:20px;margin-bottom:20px;">PLANNED (prescriptive)</h3>
+        ${['Knowledge graph queried BEFORE each feature build','Synthesis call: given prior outcomes, here\'s the best approach','BFS on dependency chain + semantic + BM25 retrieval','Write path is async — zero critical path impact','Compounds: campaigns → technology patterns → principles'].map(t=>`<p style="color:#94A3B8;font-size:14px;margin-bottom:14px;">✓ &nbsp;${t}</p>`).join('')}
+      </div>
+    </div>
+  `);
+
+  // ── SLIDE 7: KNOWLEDGE GRAPH ARCHITECTURE ──
+  addSlide(deck, `
+    <h2 style="font-size:32px;">Planned: knowledge graph architecture</h2>
+    <div style="display:flex;gap:20px;margin-top:20px;">
+      <div class="card" style="flex:1;padding:24px;">
+        <h3 class="accent" style="margin-bottom:16px;">Node taxonomy</h3>
+        ${[{t:'universal',d:'software engineering principles',c:C.accent},{t:'framework',d:'Next.js, tRPC, DuckDB patterns',c:C.green},{t:'technology',d:'implementation details, gotchas',c:C.amber},{t:'instance',d:'project / feature observations',c:C.muted},{t:'mistake',d:'classified failures + resolutions',c:'#EF4444'}].map(n=>`<div style="margin-bottom:10px;"><span style="display:inline-block;width:10px;height:10px;background:${n.c};border-radius:2px;margin-right:8px;vertical-align:middle;"></span><b>${n.t}</b><br><span style="color:#94A3B8;font-size:12px;margin-left:18px;">${n.d}</span></div>`).join('')}
+        <p style="font-size:11px;color:#64748B;font-style:italic;margin-top:12px;">Edge types: instance_of · generalizes_to · requires · conflicts_with · supersedes · caused_by</p>
+      </div>
+      <div class="card" style="flex:1;padding:24px;">
+        <h3 class="accent" style="margin-bottom:16px;">Query at build time</h3>
+        ${['1. Embed feature spec','2. BFS: dependency chain → node IDs','3. Semantic similarity (embeddings)','4. BM25 keyword pass via FTS5','5. Merge + rank results','6. Synthesis call → prescriptive plan','<span class="green">7. Inject into spec as Build Intelligence</span>'].map(s=>`<p style="color:#94A3B8;font-size:14px;margin-bottom:8px;">${s}</p>`).join('')}
+      </div>
+      <div class="card" style="flex:1;padding:24px;">
+        <h3 class="accent" style="margin-bottom:16px;">Write path (async)</h3>
+        <div style="text-align:center;line-height:2;font-size:14px;">
+          <b>eval sidecar</b><br><span class="muted">↓</span><br>
+          <b>feature_outcomes</b><br><span class="muted">↓</span><br>
+          <b class="accent">knowledge.db</b><br><br>
+          <span class="muted" style="font-size:13px;">SQLite + FTS5<br>Anthropic embeddings API</span>
+        </div>
+      </div>
+    </div>
+    <div class="card" style="margin-top:20px;padding:16px 24px;">
+      <p style="font-size:13px;"><b>Current state:</b> <span class="muted">226+ L-series learnings + 95+ M-series methodology entries in flat markdown. Graph schema enforced (IDs, typed edges, confidence, status). Migration to SQLite graph is format conversion, not knowledge extraction.</span></p>
+    </div>
+  `);
+
+  // ── SLIDE 8: ROADMAP ──
+  addSlide(deck, `
+    <h2>Where it's going</h2>
+    <div style="margin-top:24px;">
+      ${[
+        {p:'Next',t:'Knowledge graph write path',d:'knowledge_store.py + extended eval sidecar. Accumulate structured data before building the read path.',c:C.accent},
+        {p:'Next',t:'Local execution on GPT-OSS',d:'Move build loop to local hardware. GPT-OSS delivers the best coding performance per GB of active RAM — eliminates API dependency and rate limits entirely.',c:C.accent},
+        {p:'Next',t:'spec_preprocessor.py',d:'Pre-build hook: BFS + semantic + BM25 + synthesis. Inject prescriptive intelligence into specs before the agent sees them.',c:C.accent},
+        {p:'Future',t:'Multi-agent parallelism',d:'Independent features run concurrently. Infrastructure tasks (npm install, tsc) dominate wall time — this is the unlock.',c:C.amber},
+        {p:'Long-term',t:'SFT / fine-tuning',d:'feature_outcomes + graph nodes already in training format. Deferred until 100+ campaign corpus. Graph IS the training data.',c:C.muted},
+      ].map(r => `
+        <div class="roadmap-item">
+          <div class="phase-badge" style="background:${r.c}22;color:${r.c};">${r.p}</div>
+          <div style="flex:1;"><b style="font-size:17px;">${r.t}</b></div>
+          <div style="flex:2;color:#94A3B8;font-size:14px;">${r.d}</div>
+        </div>
+      `).join('')}
+    </div>
+  `);
+}
+
+// ═══════════════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════════════
+function addSlide(deck, html, isLoop) {
+  const div = document.createElement('div');
+  div.className = 'slide';
+  div.innerHTML = html;
+  if (isLoop) div.dataset.loop = '1';
+  deck.appendChild(div);
+}
+
+function makeCard(title, body, accentColor) {
+  return `<div class="card" style="overflow:hidden;">
+    <div class="card-accent" style="background:${accentColor};"></div>
+    <h3 style="padding-left:8px;">${title}</h3>
+    <p style="padding-left:8px;">${body}</p>
+  </div>`;
+}
+
+// ═══════════════════════════════════════════════════════
+// CLOSED LOOP STEPPER (Slide 3)
+// ═══════════════════════════════════════════════════════
+const PHASES = [
+  {title:"1. Spec → Prompt Builder",desc:"The build loop reads roadmap.md, topo-sorts features by dependency, and picks the next pending one. It constructs a prompt from the feature spec. After the first feature is built, a codebase summary and learnings from prior builds are also injected.",boxes:["prompt"],arrows:[]},
+  {title:"2. Build Agent implements the feature",desc:"A fresh agent session receives the prompt in an isolated context window. It reads the codebase, writes code, runs commands, and commits. Zero memory of prior features — only what the prompt injected. Currently Claude Code; moving to local GPT-OSS.",boxes:["prompt","agent"],arrows:["prompt-agent"]},
+  {title:"3. Build Gates verify mechanically",desc:"The orchestrator validates the agent's output with machine checks only — agent self-assessment is discarded. Seven gates: HEAD advanced, tree clean, contamination check, tsc/build, tests (599 passing), dead exports, lint.",boxes:["agent","gates"],arrows:["agent-gates"]},
+  {title:"3R. On failure → two-stage retry",desc:"If any gate fails: Attempt 1 keeps code on disk, injects the exact failure stderr. Attempt 2+ does git reset --hard and rebuilds from scratch with all prior failure context.",boxes:["agent","gates"],arrows:["agent-gates","retry"]},
+  {title:"4. Drift Check",desc:"A separate fresh agent compares the feature spec against the actual committed code. Did the builder implement what was specified? Catches scope drift, missing requirements, hallucinated features.",boxes:["gates","drift"],arrows:["gates-drift"]},
+  {title:"5. Auto-QA validates at runtime",desc:"The app is booted, browsed via Playwright, tested against acceptance criteria generated from specs. Failures are cataloged, root-caused, and fix agents are dispatched.",boxes:["drift","qa"],arrows:["drift-qa"]},
+  {title:"6. Git Commit → advance to next feature",desc:"Feature is committed. Resume state is written. The loop advances to the next feature in the topo-sorted queue. This repeats for every feature.",boxes:["qa","commit","prompt"],arrows:["qa-commit","next-feature"]},
+  {title:"7. Eval Sidecar (async, per commit)",desc:"After each commit, the eval sidecar wakes up asynchronously — never blocks the build. It classifies the feature: framework compliance, scope assessment, integration quality.",boxes:["commit","eval"],arrows:["commit-eval"]},
+  {title:"8. Findings → Learnings Corpus",desc:"Eval findings are written to the learnings corpus — 226+ graph-schema entries with typed edges, IDs, confidence scores.",boxes:["eval","learnings"],arrows:["commit-eval","eval-learnings"]},
+  {title:"9. Feedback loop → next build",desc:"On the NEXT feature build, the learnings corpus and codebase summary are injected back into the prompt. Past mistakes prevent future repetition. This is the first feedback loop.",boxes:["learnings","codebase","prompt"],arrows:["learnings-prompt","codebase-prompt"]},
+  {title:"10. Knowledge Graph",desc:"Structured learnings flow into a SQLite knowledge graph with FTS5 and embeddings. Makes the corpus queryable.",boxes:["learnings","kg","promo"],arrows:["learnings-kg"],inDev:true},
+  {title:"11. The full loop closes",desc:"spec_preprocessor.py queries the knowledge graph BEFORE each build: BFS + semantic + BM25 + synthesis. The output is injected into the feature spec before the agent sees it. The system teaches itself.",boxes:["kg","preproc","promo","prompt","learnings"],arrows:["learnings-kg","kg-preproc","preproc-promo","return-path"],inDev:true},
+];
+
+const B={prompt:{x:60,y:55,w:130,h:50,l:"Prompt\nBuilder",c:C.accentDk},agent:{x:222,y:55,w:130,h:50,l:"Build\nAgent",c:C.green},gates:{x:384,y:55,w:130,h:50,l:"Build\nGates",c:C.amber},drift:{x:546,y:55,w:130,h:50,l:"Drift\nCheck",c:C.accent},qa:{x:708,y:55,w:130,h:50,l:"Auto-QA",c:C.green},commit:{x:870,y:55,w:130,h:50,l:"Git\nCommit",c:C.green},eval:{x:60,y:210,w:250,h:50,l:"Eval Sidecar",c:C.amber},learnings:{x:350,y:210,w:200,h:50,l:"Learnings\n(226+)",c:C.accent},codebase:{x:590,y:210,w:220,h:50,l:"Codebase\nSummary",c:C.accentDk},kg:{x:100,y:340,w:230,h:50,l:"Knowledge\nGraph",c:C.accent},preproc:{x:380,y:340,w:260,h:50,l:"spec_\npreprocessor",c:C.accent},promo:{x:690,y:340,w:170,h:50,l:"Promotion\nJob",c:C.muted}};
+
+const A={"prompt-agent":{d:"M190,80 L222,80",c:C.accentDk},"agent-gates":{d:"M352,80 L384,80",c:C.green},"gates-drift":{d:"M514,80 L546,80",c:C.amber},"drift-qa":{d:"M676,80 L708,80",c:C.accent},"qa-commit":{d:"M838,80 L870,80",c:C.green},"retry":{d:"M449,105 L449,130 L287,130 L287,105",c:C.amber},"commit-eval":{d:"M935,105 L935,175 L310,175 L310,210",c:C.muted},"eval-learnings":{d:"M310,235 L350,235",c:C.amber},"learnings-prompt":{d:"M450,210 L450,165 L125,165 L125,105",c:C.accent,da:true},"codebase-prompt":{d:"M700,210 L700,155 L155,155 L155,105",c:C.accentDk,da:true},"learnings-kg":{d:"M450,260 L450,290 L215,290 L215,340",c:C.accent},"kg-preproc":{d:"M330,365 L380,365",c:C.accent},"preproc-promo":{d:"M640,365 L690,365",c:C.muted},"return-path":{d:"M380,365 L30,365 L30,80 L60,80",c:C.accent,w:4},"next-feature":{d:"M1000,80 L1020,80 L1020,38 L125,38 L125,55",c:C.green,da:true}};
+
+const FLOW_LABELS={"retry":{x:300,y:143,t:"fix-in-place or git reset + prior failures",c:C.amber},"commit-eval":{x:630,y:172,t:"committed code triggers eval",c:C.muted},"eval-learnings":{x:314,y:228,t:"findings",c:C.amber},"learnings-prompt":{x:260,y:160,t:"past mistakes + patterns",c:C.accent},"codebase-prompt":{x:380,y:150,t:"component map + type exports",c:C.accentDk},"learnings-kg":{x:330,y:286,t:"structured entries",c:C.accent},"kg-preproc":{x:337,y:358,t:"query",c:C.accent},"next-feature":{x:450,y:33,t:"repeats for each feature in the topo-sorted queue",c:C.green,anchor:"middle"},"return-path":{x:16,y:230,t:"intelligence feeds back into specs",c:C.accent,rot:true}};
+
+let loopStep = 0;
+
+function renderLoop() {
+  const ct = document.getElementById('loop-container');
+  if (!ct) return;
+  const ph = PHASES[loopStep];
+  const litB = new Set(ph.boxes);
+  const litA = new Set(ph.arrows);
+  const isDev = ["kg","preproc","promo"];
+  const colors = [...new Set(Object.values(A).map(a=>a.c))];
+
+  let svg = `<svg viewBox="0 0 1040 410" style="width:100%;flex:1;">`;
+  svg += '<defs>' + colors.map(c=>`<marker id="ah${c.replace('#','')}" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0,0 8,3 0,6" fill="${c}"/></marker>`).join('') + '</defs>';
+
+  // Section labels
+  svg += `<text x="60" y="47" fill="${C.subtle}" font-size="9" font-style="italic" font-family="Calibri,sans-serif">per feature (topo-sorted)</text>`;
+  svg += `<text x="60" y="200" fill="${C.subtle}" font-size="9" font-style="italic">async intelligence — per commit, never blocks</text>`;
+  svg += `<text x="100" y="332" fill="${C.subtle}" font-size="9" font-style="italic">knowledge compounding — closes the loop</text>`;
+
+  // Arrows
+  for (const [id,a] of Object.entries(A)) {
+    const lit = litA.has(id);
+    svg += `<path d="${a.d}" fill="none" stroke="${a.c}" stroke-width="${a.w||2.5}" stroke-linejoin="round" stroke-linecap="round" ${a.da?'stroke-dasharray="6,4"':''} marker-end="url(#ah${a.c.replace('#','')})" style="transition:opacity 0.4s;opacity:${lit?1:0.06}"/>`;
+  }
+
+  // Boxes
+  for (const [id,b] of Object.entries(B)) {
+    const lit = litB.has(id);
+    const lines = b.l.split('\n');
+    svg += `<g style="transition:opacity 0.4s;opacity:${lit?1:0.12}">`;
+    svg += `<rect x="${b.x}" y="${b.y}" width="${b.w}" height="${b.h}" rx="5" fill="${C.card}" stroke="${lit?b.c:'transparent'}" stroke-width="1.5"/>`;
+    svg += `<rect x="${b.x}" y="${b.y+b.h-4}" width="${b.w}" height="4" rx="2" fill="${b.c}" opacity="${lit?1:0.3}"/>`;
+    lines.forEach((l,i) => {
+      svg += `<text x="${b.x+b.w/2}" y="${b.y+b.h/2+(i-(lines.length-1)/2)*14+1}" text-anchor="middle" dominant-baseline="middle" fill="${lit?C.white:C.subtle}" font-size="12" font-weight="bold" font-family="Calibri,sans-serif">${l}</text>`;
+    });
+    if (isDev.includes(id) && lit) {
+      svg += `<rect x="${b.x+b.w-36}" y="${b.y-5}" width="34" height="12" rx="2" fill="${C.amber}"/>`;
+      svg += `<text x="${b.x+b.w-19}" y="${b.y+2}" text-anchor="middle" dominant-baseline="middle" fill="${C.bg}" font-size="7" font-weight="bold">In Dev</text>`;
+    }
+    svg += '</g>';
+  }
+
+  // Flow labels
+  for (const [id,fl] of Object.entries(FLOW_LABELS)) {
+    if (!litA.has(id)) continue;
+    if (fl.rot) {
+      svg += `<text x="${fl.x}" y="${fl.y}" fill="${fl.c}" font-size="10" font-style="italic" font-weight="bold" transform="rotate(-90,${fl.x},${fl.y})" text-anchor="middle">${fl.t}</text>`;
+    } else {
+      svg += `<text x="${fl.x}" y="${fl.y}" fill="${fl.c}" font-size="9" font-style="italic" ${fl.anchor?'text-anchor="'+fl.anchor+'"':''}>${fl.t}</text>`;
+    }
+  }
+
+  // Retry badge
+  if (litA.has('retry')) {
+    svg += `<circle cx="368" cy="124" r="10" fill="${C.amber}"/>`;
+    svg += `<text x="368" y="127" text-anchor="middle" dominant-baseline="middle" fill="${C.bg}" font-size="9" font-weight="bold">R</text>`;
+  }
+
+  svg += '</svg>';
+
+  // Controls
+  let html = svg;
+  html += '<div class="loop-controls">';
+  html += `<button class="loop-btn" onclick="loopNav(-1)" ${loopStep===0?'disabled':''}>← Back</button>`;
+  html += '<div class="loop-dots">';
+  for (let i=0;i<PHASES.length;i++) {
+    const cls = i===loopStep?'active':i<loopStep?'past':'';
+    html += `<div class="loop-dot ${cls}" onclick="loopGo(${i})"></div>`;
+  }
+  html += '</div>';
+  html += `<button class="loop-btn${loopStep<PHASES.length-1?' primary':''}" onclick="loopNav(1)" ${loopStep>=PHASES.length-1?'disabled':''}>Next →</button>`;
+  html += '</div>';
+  html += `<div style="min-height:60px;"><div class="loop-title">${ph.title}${ph.inDev?'<span class="indev-badge">In Dev</span>':''}</div><div class="loop-desc">${ph.desc}</div></div>`;
+
+  ct.innerHTML = html;
+}
+
+function loopNav(dir) { loopStep = Math.max(0, Math.min(PHASES.length-1, loopStep+dir)); renderLoop(); }
+function loopGo(i) { loopStep = i; renderLoop(); }
+
+// ═══════════════════════════════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════════════════════════════
+function goSlide(n) {
+  currentSlide = Math.max(0, Math.min(totalSlides-1, n));
+  const slides = document.querySelectorAll('.slide');
+  slides.forEach((s,i) => s.classList.toggle('active', i===currentSlide));
+
+  // Render loop when entering slide 3
+  if (currentSlide === 2) setTimeout(renderLoop, 50);
+
+  // Update nav dots
+  const dots = document.getElementById('nav-dots');
+  dots.innerHTML = '';
+  for (let i=0;i<totalSlides;i++) {
+    const d = document.createElement('div');
+    d.className = 'nav-dot' + (i===currentSlide?' active':'') + (i<currentSlide?' past':'');
+    d.onclick = () => goSlide(i);
+    dots.appendChild(d);
+  }
+  document.getElementById('page-num').textContent = (currentSlide+1) + ' / ' + totalSlides;
+}
+
+document.addEventListener('keydown', (e) => {
+  // On the loop slide, arrow keys control the stepper unless at boundaries
+  if (currentSlide === 2) {
+    if (e.key === 'ArrowRight' || e.key === ' ') {
+      if (loopStep < PHASES.length - 1) { e.preventDefault(); loopNav(1); return; }
+    }
+    if (e.key === 'ArrowLeft') {
+      if (loopStep > 0) { e.preventDefault(); loopNav(-1); return; }
+    }
+  }
+  if (e.key === 'ArrowRight' || e.key === ' ') goSlide(currentSlide + 1);
+  if (e.key === 'ArrowLeft') goSlide(currentSlide - 1);
+});
+
+// INIT
+buildSlides();
+goSlide(0);
+</script>
+</body>
+</html>
