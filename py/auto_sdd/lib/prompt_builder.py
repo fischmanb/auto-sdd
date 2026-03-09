@@ -342,6 +342,19 @@ def build_feature_prompt(
             "SPEC_FILE: {path to the .feature.md file you created/updated}"
         )
 
+    # ── FILESYSTEM BOUNDARY directive ────────────────────────────────────
+    parts.extend([
+        "═══════════════════════════════════════════════════════════",
+        "FILESYSTEM BOUNDARY — ENFORCED BY POST-BUILD AUDIT",
+        f"All file operations MUST stay within: {project_dir}",
+        "Do NOT read, write, or modify files outside this directory.",
+        "Do NOT access ~/.bashrc, ~/.profile, /etc, /tmp, or any path",
+        "outside the project root. The build loop runs a contamination",
+        "audit after your build and will REJECT the result if any file",
+        "outside the project directory was modified.",
+        "═══════════════════════════════════════════════════════════\n",
+    ])
+
     parts.extend([
         "After completion, output EXACTLY these signals (each on its own line):",
         f"FEATURE_BUILT: {feature_name}",

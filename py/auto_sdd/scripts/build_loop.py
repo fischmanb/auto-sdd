@@ -191,6 +191,60 @@ def _parse_token_usage(output: str) -> int | None:
     return None
 
 
+def _check_contamination(
+    project_dir: Path,
+    branch_start_commit: str,
+) -> list[str]:
+    """Check whether the agent modified files outside the project directory.
+
+    Compares ``branch_start_commit..HEAD`` and returns a list of file paths
+    whose resolved location falls outside *project_dir*.  An empty list
+    means no contamination was detected.
+    """
+    if not branch_start_commit:
+        return []
+
+    resolved_root = project_dir.resolve()
+
+    try:
+        result = subprocess.run(
+            ["git", "diff", "--name-only", branch_start_commit, "HEAD"],
+            capture_output=True,
+            text=True,
+            cwd=str(project_dir),
+            timeout=30,
+        )
+        if result.returncode != 0:
+            logger.warning(
+                "Contamination check: git diff failed (rc=%d)",
+                result.returncode,
+            )
+            return []
+    except (subprocess.TimeoutExpired, OSError):
+        logger.warning("Contamination check: git diff timed out or errored")
+        return []
+
+    contaminated: list[str] = []
+    for line in result.stdout.strip().splitlines():
+        path = line.strip()
+        if not path:
+            continue
+        full = (project_dir / path).resolve()
+        try:
+            full.relative_to(resolved_root)
+        except ValueError:
+            contaminated.append(path)
+
+    if contaminated:
+        logger.warning(
+            "CONTAMINATION DETECTED: %d file(s) outside project root: %s",
+            len(contaminated),
+            ", ".join(contaminated),
+        )
+
+    return contaminated
+
+
 # Dependency directories to auto-detect for git clean exclusions.
 _DEP_DIRS = ("node_modules", "venv", ".venv", "target", "vendor")
 
@@ -1355,6 +1409,16 @@ class BuildLoop:
         if not check_working_tree_clean(gate_dir):
             logger.warning(
                 "Agent said FEATURE_BUILT but left uncommitted changes"
+            )
+            return False
+
+        # Gate 1.5: Contamination check — files outside project root
+        contaminated = _check_contamination(gate_dir, branch_start_commit)
+        if contaminated:
+            logger.warning(
+                "Agent said FEATURE_BUILT but modified files outside "
+                "project root: %s",
+                ", ".join(contaminated),
             )
             return False
 

@@ -1846,6 +1846,24 @@ grep -c "source.*validation.sh" scripts/*.sh  # Should be 1 (generate-mapping.sh
 
 **Verification**: git diff --stat shows only WIP/project-isolation-contract.md and Agents.md.
 
+### Round N: Enforce Project Isolation (branch: claude/add-type-checking-tests-Obnl6)
+
+**What was asked**: Implement project isolation enforcement — inject a FILESYSTEM BOUNDARY directive into the build agent prompt and add a post-agent contamination audit to the build loop.
+
+**What actually changed**:
+- `py/auto_sdd/lib/prompt_builder.py`: Added FILESYSTEM BOUNDARY directive block to `build_feature_prompt()` that tells the agent to stay within `project_dir` and warns of post-build contamination audit.
+- `py/auto_sdd/scripts/build_loop.py`: Added `_check_contamination()` function that runs `git diff --name-only` between branch start commit and HEAD, checks each path resolves within project root. Called as Gate 1.5 in `_run_post_build_gates()`.
+- `py/tests/test_prompt_builder.py`: Added `TestFilesystemBoundaryDirective` class (3 tests).
+- `py/tests/test_build_loop.py`: Added `TestCheckContamination` class (6 tests), added `_check_contamination` import.
+
+**What was NOT changed**: No changes to retry prompt, no changes to branch manager, no changes to drift checking, no changes to any other module.
+
+**Verification**:
+- `pytest tests/test_prompt_builder.py tests/test_build_loop.py -v`: 131 passed
+- `mypy --strict auto_sdd/lib/prompt_builder.py auto_sdd/scripts/build_loop.py`: Success, no issues
+- `grep -n "FILESYSTEM BOUNDARY" py/auto_sdd/lib/prompt_builder.py`: Returns 2 lines
+- `grep -n "_check_contamination" py/auto_sdd/scripts/build_loop.py`: Returns definition + call site
+
 ## Questions?
 
 See [ARCHITECTURE.md](./ARCHITECTURE.md) for deeper design rationale.

@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import json
 import os
+import subprocess
 from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock, patch, PropertyMock
@@ -24,6 +25,7 @@ from auto_sdd.lib.reliability import DriftPair, Feature, ResumeState
 from auto_sdd.scripts.build_loop import (
     BuildLoop,
     FeatureRecord,
+    _check_contamination,
     _detect_dep_excludes,
     _format_duration,
     _parse_signal,
@@ -1342,3 +1344,58 @@ class TestPatternAnalysisWiring:
             )
         # Loop state should be intact
         assert loop.loop_built == 1
+
+
+# ── _check_contamination ────────────────────────────────────────────────────
+
+
+class TestCheckContamination:
+    """Tests for the post-agent contamination audit."""
+
+    def test_empty_start_commit_returns_empty(self, tmp_path: Path) -> None:
+        assert _check_contamination(tmp_path, "") == []
+
+    @patch("auto_sdd.scripts.build_loop.subprocess.run")
+    def test_no_contamination_for_in_project_files(
+        self, mock_run: MagicMock, tmp_path: Path
+    ) -> None:
+        mock_run.return_value = MagicMock(
+            returncode=0, stdout="src/app.ts\npackage.json\n"
+        )
+        result = _check_contamination(tmp_path, "abc123")
+        assert result == []
+
+    @patch("auto_sdd.scripts.build_loop.subprocess.run")
+    def test_detects_path_traversal(
+        self, mock_run: MagicMock, tmp_path: Path
+    ) -> None:
+        mock_run.return_value = MagicMock(
+            returncode=0, stdout="src/app.ts\n../../etc/passwd\n"
+        )
+        result = _check_contamination(tmp_path, "abc123")
+        assert len(result) == 1
+        assert "../../etc/passwd" in result
+
+    @patch("auto_sdd.scripts.build_loop.subprocess.run")
+    def test_returns_empty_on_git_failure(
+        self, mock_run: MagicMock, tmp_path: Path
+    ) -> None:
+        mock_run.return_value = MagicMock(returncode=128, stdout="")
+        result = _check_contamination(tmp_path, "abc123")
+        assert result == []
+
+    @patch("auto_sdd.scripts.build_loop.subprocess.run")
+    def test_returns_empty_on_timeout(
+        self, mock_run: MagicMock, tmp_path: Path
+    ) -> None:
+        mock_run.side_effect = subprocess.TimeoutExpired(cmd="git", timeout=30)
+        result = _check_contamination(tmp_path, "abc123")
+        assert result == []
+
+    @patch("auto_sdd.scripts.build_loop.subprocess.run")
+    def test_empty_diff_output(
+        self, mock_run: MagicMock, tmp_path: Path
+    ) -> None:
+        mock_run.return_value = MagicMock(returncode=0, stdout="")
+        result = _check_contamination(tmp_path, "abc123")
+        assert result == []

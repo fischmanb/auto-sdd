@@ -703,3 +703,53 @@ class TestRiskContextInjection:
         config = BuildConfig(project_dir=tmp_path, eval_output_dir=eval_dir)
         result = _read_risk_context(tmp_path, config)
         assert result == "from-eval-dir"
+
+
+# ── FILESYSTEM BOUNDARY directive ──────────────────────────────────────────
+
+
+class TestFilesystemBoundaryDirective:
+    """The build prompt must include a FILESYSTEM BOUNDARY directive that
+    tells the agent to stay within the project directory."""
+
+    @patch("auto_sdd.lib.prompt_builder.generate_codebase_summary")
+    @patch("auto_sdd.lib.prompt_builder.read_latest_eval_feedback")
+    def test_contains_filesystem_boundary(
+        self,
+        mock_feedback: MagicMock,
+        mock_summary: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        mock_summary.return_value = ""
+        mock_feedback.return_value = ""
+        config = BuildConfig(project_dir=tmp_path)
+        prompt, _ = build_feature_prompt(1, "Auth", tmp_path, config)
+        assert "FILESYSTEM BOUNDARY" in prompt
+
+    @patch("auto_sdd.lib.prompt_builder.generate_codebase_summary")
+    @patch("auto_sdd.lib.prompt_builder.read_latest_eval_feedback")
+    def test_boundary_includes_project_dir(
+        self,
+        mock_feedback: MagicMock,
+        mock_summary: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        mock_summary.return_value = ""
+        mock_feedback.return_value = ""
+        config = BuildConfig(project_dir=tmp_path)
+        prompt, _ = build_feature_prompt(1, "Auth", tmp_path, config)
+        assert str(tmp_path) in prompt
+
+    @patch("auto_sdd.lib.prompt_builder.generate_codebase_summary")
+    @patch("auto_sdd.lib.prompt_builder.read_latest_eval_feedback")
+    def test_boundary_mentions_contamination_audit(
+        self,
+        mock_feedback: MagicMock,
+        mock_summary: MagicMock,
+        tmp_path: Path,
+    ) -> None:
+        mock_summary.return_value = ""
+        mock_feedback.return_value = ""
+        config = BuildConfig(project_dir=tmp_path)
+        prompt, _ = build_feature_prompt(1, "Auth", tmp_path, config)
+        assert "contamination" in prompt.lower()
