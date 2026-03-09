@@ -259,6 +259,15 @@ _PROTECT_DIRS: tuple[str, ...] = (
     "py/", "scripts/", "lib/", "tests/", ".claude/", "learnings/", "WIP/",
 )
 
+# Root-level files to protect. Matched by glob against repo root.
+# These are outside _PROTECT_DIRS but agents could still write to them.
+_PROTECT_ROOT_GLOBS: tuple[str, ...] = (
+    "*.md",
+    ".gitignore",
+    ".env.local.example",
+    "VERSION",
+)
+
 
 def _check_repo_contamination(
     repo_root: Path, allowlist: frozenset[str]
@@ -315,6 +324,11 @@ def _protect_repo_tree(repo_root: Path) -> bool:
                     timeout=10,
                     capture_output=True,
                 )
+        # Protect root-level files (not inside any protected directory)
+        for pattern in _PROTECT_ROOT_GLOBS:
+            for f in repo_root.glob(pattern):
+                if f.is_file():
+                    f.chmod(f.stat().st_mode & ~0o222)  # remove write for all
         return True
     except Exception:
         logger.warning("Failed to apply write protection to repo tree")
@@ -332,6 +346,11 @@ def _restore_repo_tree(repo_root: Path) -> None:
                     timeout=10,
                     capture_output=True,
                 )
+        # Restore root-level files
+        for pattern in _PROTECT_ROOT_GLOBS:
+            for f in repo_root.glob(pattern):
+                if f.is_file():
+                    f.chmod(f.stat().st_mode | 0o200)  # restore owner write
     except Exception:
         logger.warning("Failed to restore write permissions on repo tree")
 
@@ -1150,6 +1169,11 @@ class BuildLoop:
                 finally:
                     if protected:
                         _restore_repo_tree(_REPO_ROOT)
+                        # TIMING DEPENDENCY: learnings/pending.md is written by
+                        # write_learning() calls later in this method (via
+                        # _record_build_result). learnings/ is in _PROTECT_DIRS,
+                        # so writes MUST happen after restore. Do not move
+                        # write_learning() calls above this point.
 
                     # ── Repo contamination audit (runs on ALL outcomes) ──
                     repo_contaminated = _check_repo_contamination(
