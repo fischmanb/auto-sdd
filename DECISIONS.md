@@ -582,3 +582,10 @@
 **Decision:** `CONTAMINATION_MODE=warn` as default. Post-agent `_check_repo_contamination()` logs warnings but does not fail features. `CONTAMINATION_MODE=fail` available when ready.
 **Why:** Three enforcement layers deployed in one session (prompt boundary, chmod protection, post-agent audit). Need real-world validation before hard-failing builds on contamination detection. False positives from pre-existing dirty state could block legitimate campaigns.
 **Alternatives rejected:** Hard fail as default (too aggressive before validation). No enforcement (unacceptable given prior contamination history).
+
+
+## 2026-03-09 — Two-stage retry: fix-in-place before informed fresh retry
+
+**Decision:** Retry attempts now use a two-stage strategy instead of always resetting. Attempt 1 keeps the agent's code on disk and sends a fix-in-place prompt (`build_fix_prompt`). Attempt 2+ resets the tree and sends an enhanced retry prompt with structured failure context from all prior attempts (`prior_attempts` parameter on `build_retry_prompt`).
+**Why:** The old always-reset approach discarded 90%-correct implementations when the failure was a small test issue. The agent then rebuilt from scratch with only error hints, often making entirely different (not better) mistakes. Fix-in-place preserves working code and tells the agent to diagnose and patch. The fresh retry (attempt 2+) is still available as an escape when the fix agent determines the approach is fundamentally wrong — and now it carries structured "approaches that failed" context so the new attempt avoids repeating the same mistakes.
+**Alternatives rejected:** Fix-only (no fresh retry) — some approaches are fundamentally wrong and can't be patched. Always-reset with better error context only — still wastes the working implementation on fixable failures. Interactive human triage between stages — adds latency, defeats autonomous loop.

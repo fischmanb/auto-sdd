@@ -1906,6 +1906,68 @@ grep -c "source.*validation.sh" scripts/*.sh  # Should be 1 (generate-mapping.sh
 
 **Verification**: All 8 new tests pass. All 158 existing tests pass. mypy --strict passes. git diff --stat shows only test_integration_pipeline.py and Agents.md.
 
+### Round — Codebase Summary Fix + Two-Stage Retry System (2026-03-09)
+
+**Context**: Chat session (claude.ai + Desktop Commander). System integrity verification via SitDeck build campaign continuation.
+
+**What was asked**: Two issues identified and fixed during session:
+1. Codebase summary agent timing out at 120s for large projects (observed during live SitDeck build attempt)
+2. Retry logic too blunt — always hard-resets and rebuilds from scratch, losing the agent's prior work even when the issue is a small test failure
+
+#### Change 1: Codebase summary timeout fix (63edac4)
+
+**Problem**: The codebase summary agent timed out at 120s for SitDeck (36 features, ~200 real files). Cache invalidates every feature build (keyed on git tree hash), so the agent runs fresh each time. The file tree sent to the summary agent included all 34 `.auto-sdd-cache/` files and `.specs/` metadata — noise that inflated the prompt without aiding structural analysis.
+
+**What changed** (`py/auto_sdd/lib/codebase_summary.py`):
+- Added `.auto-sdd-cache`, `.sdd-config`, `.sdd-state`, `.specs` to `_EXCLUDED_DIRS` — agent only sees application code, not SDD metadata
+- `import os` added for env var access
+- Timeout now configurable: `int(os.environ.get("SUMMARY_TIMEOUT", "300"))` — default bumped from 120s to 300s
+
+**Verification**: 27/27 codebase_summary tests pass. 1025/1026 full suite pass (1 pre-existing failure unrelated).
+
+#### Change 2: Two-stage retry system (8533639)
+
+**Problem**: When post-build gates failed (tests, build check), the retry loop always did `git reset --hard` back to branch start and invoked `build_retry_prompt` — which told the agent "the previous attempt failed" with the last 50 lines of build output and 80 lines of test output, but gave it a clean codebase. The agent had to rebuild from scratch with only error hints. This wastes the 90%-correct implementation from attempt 1 and often leads to entirely different (not better) mistakes.
+
+**Design — two-stage retry**:
+
+| Attempt | Git state | Prompt | Strategy |
+|---------|-----------|--------|----------|
+| 0 | Clean branch | `build_feature_prompt` | Full build from spec |
+| 1 | Code stays on disk | `build_fix_prompt` (NEW) | "Your code is committed. Tests/build failed. Diagnose and fix. Don't rewrite." |
+| 2+ | `git reset --hard` | `build_retry_prompt` (ENHANCED) | "Fresh start. Here's what failed before — avoid these approaches." |
+
+**What changed** (`py/auto_sdd/lib/prompt_builder.py`):
+- New `build_fix_prompt()` function (~93 lines) — targeted fix prompt. Tells the agent its code is on disk, injects gate failure output (up to 200 lines test, 100 lines build), instructs to run `git log`/`git diff HEAD~1` to understand state. Explicitly says "change as few lines as possible." Escape hatch: if approach is fundamentally broken, output `BUILD_FAILED` with explanation.
+- Enhanced `build_retry_prompt()` — new `prior_attempts` parameter (list of dicts with `attempt`, `failure_mode`, `summary`). Injects an "APPROACHES THAT FAILED (do NOT repeat these)" section before the signal block.
+
+**What changed** (`py/auto_sdd/scripts/build_loop.py`):
+- Import `build_fix_prompt` alongside existing `build_retry_prompt`
+- Three instance vars on `BuildLoop` for gate failure tracking: `_last_gate_name`, `_last_gate_build_output`, `_last_gate_test_output`
+- `_run_post_build_gates()` populates gate failure vars when returning `False` — build gate captures last 3000 chars, test gate captures last 6000 chars
+- Retry loop restructured:
+  - `attempt == 0`: unchanged (`build_feature_prompt`)
+  - `attempt == 1`: NO git reset. Calls `build_fix_prompt` with gate failure details.
+  - `attempt >= 2`: git reset + git clean (as before). Calls `build_retry_prompt` with `prior_attempts` populated from all earlier failures.
+- `prior_attempt_summaries` list tracks structured failure context across attempts (gate name, failure mode, summary of output)
+- `BUILD_FAILED` path also populates `prior_attempt_summaries` for informed retries
+- Progress message distinguishes "fix attempt" vs "retry #N"
+
+**What was NOT changed**: No changes to branch manager, drift checking, eval sidecar, codebase summary (beyond Change 1), overnight runner, or any other module. No changes to the prompt engineering guide. No test files modified (existing tests still pass — they mock at the `run_claude` level so the new prompt selection is transparent).
+
+**Verification**:
+- `pytest tests/test_build_loop.py tests/test_prompt_builder.py -v`: 142 passed
+- `pytest tests/ -q`: 1025 passed, 1 failed (pre-existing `test_contamination_check_clean_repo` — tripped by session artifacts, not this change)
+- Imports verified: `from auto_sdd.scripts.build_loop import BuildLoop; from auto_sdd.lib.prompt_builder import build_fix_prompt, build_retry_prompt` — OK
+- Not yet validated in a live build (needs next campaign run)
+
+**Commits**: `63edac4` (codebase summary), `8533639` (two-stage retry). Both on main, pushed to origin.
+
+**Other session activity**:
+- Absorbed `.handoff.md` from prior session, archived to `archive/handoffs/handoff-2026-03-09.md`
+- Attempted live single-feature build from chat session — learned Brian runs all builds in Terminal himself. Process rule captured.
+- Flushed pending captures to ACTIVE-CONSIDERATIONS.md
+
 ## Questions?
 
 See [ARCHITECTURE.md](./ARCHITECTURE.md) for deeper design rationale.
