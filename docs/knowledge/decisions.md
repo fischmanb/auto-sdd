@@ -1,0 +1,591 @@
+# DECISIONS.md
+
+> Append-only decision log. Prevents re-litigating settled questions across sessions.
+> Format: date, what, why, alternatives rejected.
+
+---
+
+## 2026-02-28 — Learnings system: separate file per type (not monolithic catalog)
+
+**Decision:** One file per learning type in `learnings/` at repo root.
+**Why:** Grep works per-type without filtering. Files stay manageable size. New types = new file, not restructuring.
+**Rejected:** Single monolithic catalog (scaling concern), directory-per-entry (overkill for markdown entries).
+
+---
+
+## 2026-02-28 — Learnings schema: flat K:V metadata (not YAML or compressed header)
+
+**Decision:** Each entry uses `Key: value` on separate lines. One `Related:` line per relationship.
+**Why:** Only format satisfying DESIGN-PRINCIPLES.md §1 (grepability without parsing). `grep "Type: failure_pattern"` just works.
+**Rejected:** Alt A (pipe-delimited header) — saves 3 lines but breaks grep reliability. Alt B (YAML block) — requires jq/yq, violates "no nested structures requiring parsing."
+
+---
+
+## 2026-02-28 — Global sequential L-XXXXX IDs (not per-type prefixes)
+
+**Decision:** Single ID sequence shared across all learnings files.
+**Why:** Type already in metadata — encoding in ID violates single-source-of-truth. Collision risk near zero with serial writes.
+**Rejected:** Per-type prefixes (FP-0001, PR-0001) — redundant with Type field.
+
+---
+
+## 2026-02-28 — ISO 8601 datetime with timezone (not date-only)
+
+**Decision:** `Date: 2026-02-28T20:31:00-05:00` format.
+**Why:** Preserves intra-day ordering. Supports ET and future contributors. Grepability unaffected (prefix match works).
+**Rejected:** Date-only (YYYY-MM-DD) — loses ordering within a day.
+
+---
+
+## 2026-03-01 — core.md is curated index (not filtered view)
+
+**Decision:** Human judgment selects core entries. Chat proposes, Brian approves. No algorithmic criteria.
+**Why:** "What must every fresh session know" is a judgment call, not a query.
+**Rejected:** Automated filtering by confidence/status/tag — too mechanical, misses the point.
+
+---
+
+## 2026-03-01 — Deprecate .specs/learnings/agent-operations.md
+
+**Decision:** Add deprecation pointer, preserve file, all new work goes to `learnings/`.
+**Why:** 38 entries fully migrated. Single source of truth is now `learnings/`.
+**Rejected:** Deletion — old prompts may still reference the path.
+
+---
+
+## 2026-03-01 — `checkpoint` as single context management command
+
+**Decision:** One word ("checkpoint" in chat, `/checkpoint` in Claude Code) triggers a deterministic checklist that flushes captures, reconciles state, flags stale items, appends decisions, flags learnings, and commits.
+**Why:** Context management files grew from 1 (ONBOARDING.md) to 5+ (state, active-considerations, decisions, learnings, index). Manual reconciliation is error-prone and inconsistent.
+**Rejected:** Automated background sync (adds complexity, hides failures). Separate commands per file (cognitive overhead, easy to forget one).
+
+---
+
+## 2026-03-01 — Keep ONBOARDING.md as single file (don't split protocol or work log)
+
+**Decision:** ACTIVE-CONSIDERATIONS.md split was worth it (frequent writes to small file). Further splits (protocol → CONTEXT-PROTOCOL.md, work log trim) are not — they add file proliferation without meaningful token or parseability gains for Claude.
+**Why:** Fresh onboard reads everything anyway. Splits only help if the interval check path touches less data (ACTIVE-CONSIDERATIONS) or if Brian needs to scan less (already addressed by INDEX.md).
+**Rejected:** CONTEXT-PROTOCOL.md (cosmetic), work log extraction (Agents.md already has it).
+
+---
+
+## 2026-03-01 — Rename post-campaign validation pipeline → "auto-QA"
+
+**Decision:** Short name "auto-QA" for the post-campaign validation pipeline.
+**Why:** The old name is unwieldy. The concept is autonomous post-build runtime repair.
+
+---
+
+## 2026-03-01 — Keep auto-QA and knowledge graph out of README
+
+**Decision:** Don't publicize either in README until they have working implementations.
+**Why:** Unproven concepts. README should reflect what works, not what's planned.
+
+---
+
+## 2026-03-01 — No static counts in README
+
+**Decision:** Remove line counts, entry counts, and other volatile numbers from README.
+**Why:** They go stale immediately. README should describe structure, not snapshot metrics.
+
+---
+
+## 2026-03-01 — Meta-document title: HOW-I-WORK-WITH-GENERATIVE-AI.md
+
+**Decision:** Title the methodology document `HOW-I-WORK-WITH-GENERATIVE-AI.md`. Repo-agnostic content, lives at auto-sdd root.
+**Why:** "Generative AI" scopes correctly without being too casual ("chatbots") or too narrow ("agents"). First-person framing is a feature given repo credibility. Considered `METHODOLOGY.md` (too generic) and `HOW-I-WORK-WITH-AI.md` (slightly less precise).
+
+---
+
+## 2026-03-01 — Bash→Python conversion identified as prerequisite for auto-QA
+
+**Decision:** RICE analysis places bash→Python conversion (4.3) and auto-QA (3.2) as sequentially linked. Converting first makes auto-QA dramatically easier. Proposed sequence: fix stakd-v2 → convert to Python → implement auto-QA in Python.
+**Why:** ~3,700 lines of bash orchestration hit a ceiling for implementing seven-phase runtime validation. Python offers real data structures, proper error handling, composability. Current bash works but blocks extensibility.
+**Alternatives considered:** Implement auto-QA in bash first (proves concept before rewrite, avoids rewrite-before-shipping trap, but painful implementation). Deferred — decision not final, pending Brian's priority call.
+
+---
+
+## 2026-03-01 — Learnings voice: empirical for observations, absolutes for gates
+
+**Decision:** Learnings entries that describe agent behavior use observed-voice ("have been observed to", "has proven unreliable"). Operational gates and safety constraints keep imperative voice ("must include STOP instructions", "every prompt must end with verification gates"). Voice guidance encoded in HOW-I-WORK-WITH-GENERATIVE-AI.md preamble and checkpoint.md step 5, NOT in DESIGN-PRINCIPLES.md.
+**Why:** Brian doesn't like absolutes in meta-commentary — observations should be stated as observations. But weakening operational gates that protect against agent failures is dangerous. Scope matters.
+
+---
+
+## 2026-03-01 — stakd/ scripts are build artifacts, not conversion targets
+
+**Decision:** `stakd/scripts/` and `stakd/lib/` are copies generated during campaigns, not a maintained codebase. Conversion targets only `auto-sdd/scripts/` and `auto-sdd/lib/`. stakd/ gets regenerated by whatever the build loop produces.
+**Why:** Avoids converting two codebases. Scripts should be shared, not forked.
+
+---
+
+## 2026-03-01 — Libs-first conversion order
+
+**Decision:** Convert the four libs (reliability, eval, codebase-summary, validation) before build-loop-local. Treat lib conversion as build-loop decomposition — extracting its guts into clean Python modules so the orchestrator conversion is just control flow.
+**Why:** build-loop-local `source`s all four libs. Converting it first forces either ugly cross-language calls or one massive agent prompt. Libs first respects the dependency graph and keeps each agent prompt tight.
+
+---
+
+## 2026-03-01 — Keep file-based state during conversion, migrate later
+
+**Decision:** Python conversion preserves existing file-based state formats. State migration (SQLite, structured JSON, etc.) is a separate project after Python conversion is stable.
+**Why:** One variable at a time. Changing language AND state format simultaneously doubles debugging surface. Incremental migration also possible with shared file formats — can run half-bash half-Python during transition.
+
+---
+
+## 2026-03-01 — Convert small bash utilities to Python too
+
+**Decision:** All bash converts to Python, including claude-wrapper, generate-mapping, nightly-review, setup-overnight, and uninstall-overnight. No bash remainders. Bundle small utilities into one agent prompt.
+**Why:** One language, one test framework, one set of conventions. Eliminates split-language maintenance tax. launchd plist manipulation works fine via Python's `plistlib` + `subprocess`. Not worth preserving bash for any piece.
+
+---
+
+## 2026-03-01 — Conventions doc before any parallel agent work
+
+**Decision:** Write a Python conventions document before launching any conversion agents. Specifies error handling, logging, config passing, state file format, import structure, naming. Every agent gets the same doc.
+**Why:** Parallel lib conversion (4 agents) risks convention divergence — different exception patterns, logging approaches, config styles — that breaks integration in build-loop-local. Cheap to write, eliminates the sync problem.
+
+---
+
+## 2026-02-28 — claude-wrapper.sh moved to Phase 1 (from Phase 6)
+
+**Decision:** Move claude-wrapper.sh conversion from Phase 6 (utilities bundle) to Phase 1 (parallel lib conversion) as a 5th independent agent.
+**Why:** build-loop-local.sh sources claude-wrapper.sh directly — every agent invocation runs through it. Phase 4 agents would need to code against a wrapper interface that doesn't exist yet if it stays in Phase 6. It's ~100 lines, self-contained, no lib dependencies — a leaf node that fits Phase 1 criteria perfectly.
+**Rejected:** Keeping in Phase 6 (forces Phase 4 to stub the interface or cross-reference bash).
+
+---
+
+## 2026-02-28 — Launchd scripts stay bash (supersedes part of 2026-03-01 small-utils decision)
+
+**Decision:** setup-overnight.sh and uninstall-overnight.sh remain bash. Removed from conversion targets. Partially supersedes the 2026-03-01 decision "Convert small bash utilities to Python too" — that decision still holds for claude-wrapper, generate-mapping, and nightly-review, but NOT for launchd scripts.
+**Why:** These are system bootstrap wrappers — they write plist XML and call launchctl. Converting to Python adds a Python dependency to a bootstrap path and buys zero functionality. They're short, stable, and don't interact with the Python package.
+**Rejected:** Converting everything uniformly (adds complexity to bootstrap for no benefit).
+
+---
+
+## 2026-02-28 — Bash originals preserved indefinitely in separate tree
+
+**Decision:** Original bash files in scripts/, lib/, and tests/ are untouched during and after Python conversion. Python code lives entirely in a new py/ directory tree. No moves, renames, or deletions of bash originals. Deletion is a separate future decision.
+**Why:** Coexistence over replacement. Bash originals serve as reference, fallback, and operational baseline. During conversion, both versions can be compared side-by-side. No risk of losing working code during a rewrite. Brian's explicit directive: "keep the original bash files intact and organized as at present now."
+**Rejected:** In-place replacement (risky, no fallback). Phased deletion plan (premature — conversion not yet validated).
+
+---
+
+## 2026-02-28 — Conventions doc scope: comprehensive Phase 0 deliverable
+
+**Decision:** The Python conventions document must cover: error handling (typed exception hierarchy), subprocess patterns (run_claude wrapper with configurable timeout), logging (stdlib, mapped from bash levels), signal protocol preservation (flat strings at boundary, signals.py module), file-based state I/O (atomic writes, flock locking), type hints (full typing, mypy --strict), test patterns (pytest, shared conftest.py, assertion style, naming), interface stubs (function signatures build-loop-local calls from each lib), dependencies (stdlib + pytest only), package management (pyproject.toml + pip).
+**Why:** Four (now five) agents running in parallel will each invent their own patterns if the conventions doc is vague. Every decision not made in the conventions doc becomes an integration problem in Phase 4. The doc is cheap to write and eliminates the most likely failure mode of parallel conversion.
+**Rejected:** Minimal conventions doc (invites convention drift). Per-agent guidance (redundant, inconsistent).
+
+---
+
+## 2026-02-28 — Python 3.12+ minimum version
+
+**Decision:** Minimum Python version for the py/ package is 3.12.
+**Why:** Better typing support, improved error messages, f-string improvements. No Ventura support needed per Brian. 3.12 is current stable release line with full security support.
+**Rejected:** 3.11 (would work but misses typing improvements that help agent-generated code quality).
+
+---
+
+## 2026-02-28 — py/ directory name (not src/)
+
+**Decision:** Python code lives in `py/` at repo root, not `src/`.
+**Why:** Explicit about content type. `src/` is ambiguous in a repo that already has scripts/ and lib/. `py/` is greppable, obvious, and won't be confused with any other directory.
+**Rejected:** `src/` (ambiguous), `python/` (verbose), in-place alongside bash (violates coexistence rule).
+
+---
+
+## 2026-02-28 — Phase 3 stays sequential after Phase 1
+
+**Decision:** build-loop-local decomposition analysis (Phase 3) runs after Phase 1 completes, not in parallel with it.
+**Why:** Phase separations serve double duty: dependency ordering AND context window discipline. Running Phase 3 alongside Phase 1 would mean Brian is managing 5-6 concurrent agent contexts. The calendar time savings are minimal (Phase 3 is one chat session, maybe 30 minutes). The cognitive overhead and parallelization complexity are not worth it.
+**Rejected:** Running Phase 3 in parallel with Phase 1 (no data dependency, but overextends context management and risks bloat).
+
+
+---
+
+## 2026-03-01 — Agent prompt length discipline
+
+**Decision:** Agent prompts target ~40-65 lines max. First drafts are consistently 2x effective length — cut aggressively before delivering. Describe intent not implementation. Agents write code; prompts say WHAT and WHY, not HOW at line level.
+**Why:** Accepted past prompts (Rounds 9, 13, etc.) were ~40 lines. The 150+ line prompt written this session injected chat session context drift into the agent's fresh start — defeating the purpose of fresh agent sessions. Over-specification wastes agent context budget before implementation begins.
+**Rejected:** Verbose prompts with field-by-field dictation, line-level code snippets, implementation steps the agent would figure out from reading the codebase.
+
+---
+
+## 2026-03-01 — Splitting criteria relaxed
+
+**Decision:** No rigid "one independently testable goal" or "3-4 files max" rule. As many goals as safely fit within agent context budget with room for generous exploration. Keep prompt tokens low, maintain structure and essentials. Integration tests when multi-testing after multi-change work.
+**Why:** The constraint is agent context budget, not goal count. Prescriptive file limits are the kind of thing the agent figures out. Brian's framing: "you can test as many as will safely fit, with room for generous exploration."
+**Rejected:** "No more than 3-4 files" rule, "independently testable systems" as splitting criteria.
+
+---
+
+## 2026-03-01 — Preconditions: no cd to repo
+
+**Decision:** Agent prompts do not include `cd ~/auto-sdd`. Agents run locally via Claude desktop app (Mac) Code tab and are already in the repo working directory.
+**Why:** `~/auto-sdd` resolves to `/root/auto-sdd` in sandbox contexts, causing wasted tool calls. Even locally, the agent is already in the project. The cd is wasted tokens.
+**Rejected:** Including cd as defensive precondition (causes failures in sandbox, unnecessary locally).
+
+---
+
+## 2026-03-01 — Agent execution environment
+
+**Decision:** Agents run through the Code section of the Claude for Mac desktop app on Brian's MacBook Air (Mac Studio later). Execution is local (filesystem, git commands), but agents push feature branches to origin by default.
+**Why:** Affects merge workflow — use `git merge origin/<branch>` or GitHub PR, not local branch names. Precondition design: no cd needed (agent is already in repo cwd). Agents have full local filesystem access and GitHub auth.
+**Rejected:** N/A — factual capture of environment. Corrected from initial "branches are local only" assumption (L-00046).
+
+
+---
+
+## 2026-03-01 — Always reprint full artifacts
+
+**Decision:** When updating prompts, code, or any artifact that will be used in a separate context, always reprint the full updated version. Never say "just swap X" or "same as before but change Y."
+**Why:** Brian runs agent prompts in Claude Desktop Code tab — a separate context that never sees the chat conversation. "Same but change the hash" is useless to the agent. Every artifact must be self-contained when delivered. Same principle applies to code snippets, config blocks, etc.
+**Rejected:** Incremental diff-style updates (require reader to mentally merge, error-prone across contexts).
+
+
+---
+
+## 2026-03-01 — HEAD-sequencing for agent prompts
+
+**Decision:** When outputting agent prompts, if subsequent actions in the same response will move HEAD (commits, pushes), either output the prompt AFTER those actions with the final HEAD hash, or explicitly warn Brian to wait before pasting. The prompt's precondition must always reflect the HEAD that will exist when he pastes it.
+**Why:** Brian pasted a prompt expecting HEAD `c7ffb4f`, but 3 more commits had moved HEAD to `dd5cdb4` by the time the response finished. Agent precondition check would have failed. Responsibility for sequencing is on Claude, not Brian — "no YOU need to tell me to wait."
+**Rejected:** Relying on user to notice HEAD drift mid-response (invisible to them until agent fails).
+
+
+---
+
+## 2026-03-01 — Tool call limit: qualitative not numeric
+
+**Decision:** Drop flat "10 tool calls per response" limit. Replace with: be purposeful — use targeted reads (grep/tail/head) over full file reads when sufficient, stop at natural decision boundaries for Brian's review. Batching multiple ops into a single shell command is fine IFF the combined output is token-estimated successfully (not a blanket ban — auditability matters but so does efficiency). Don't limit recursion arbitrarily; sometimes depth is needed to get things right. Desktop Commander's fileReadLineLimit (1000) is per-call guard.
+**Why:** A flat count of 10 was binding on checkpoints (10 lightweight calls, ~200 lines total output) while permitting 5 full-file reads that would consume far more context. The constraint was a blunt proxy for "don't spiral," but spiraling is a behavior problem, not a counting problem. The real constraint is context consumed and purposefulness, not call count. Brian: "how many lines does a single full file have?" — forcing measurement over theory.
+**Rejected:** Flat 10-call limit (penalized lightweight ops, didn't penalize expensive ones). Blanket no-batching rule (sometimes batching is the right call if output is predictable). Arbitrary recursion limits (some tasks require depth).
+**Correction:** Initial version of this decision claimed "repo's largest file is 439 lines" — only checked 8 context files, not the repo. Actual largest: build-loop-local.sh at 2,299 lines. Weak assumption from unverified generalization (see L-00052).
+
+
+---
+
+## 2026-03-01 — Agent summary reporting: observations yes, /learnings writes no
+
+**Decision:** Agent prompts should include a summary footer requesting notable observations (unexpected behaviors, judgment calls, workarounds). Agents never write to /learnings directly. The chat session triages observations into L-IDs and flags at checkpoint per step 4 (Brian approves).
+**Why:** Agent autonomy structure (L-00042) ends with "report." L-00043 requires changelogs. But current prompts don't ask agents to surface learnable moments. Without this, agent discoveries are lost unless the chat session infers them from merge diffs. The approval gate stays with Brian; agents just surface raw material.
+**Rejected:** Agents writing directly to /learnings (bypasses approval). Silent agent summaries (loses observations).
+
+---
+
+## 2026-03-01 — Safety gates before artifacts
+
+**Decision:** "Safe to paste" or "wait — more commits coming" must appear BEFORE the prompt block, not after. All go/no-go signals before the thing they control.
+**Why:** Brian reads top-to-bottom. A trailing safety warning arrives after he's already copying. Ordering for consumer workflow, not producer workflow. Generalizes L-00050 (HEAD sequencing).
+**Rejected:** Trailing warnings (consumer may already be acting).
+
+
+---
+
+## 2026-03-01 — Checkpoint auto-push exception tightened
+
+**Decision:** Memory #8 updated: "EXCEPTION: commits from the formal 8-step checkpoint protocol (Brian-invoked) are always pushed automatically. Labeling a commit 'checkpoint:' doesn't qualify."
+**Why:** L-00066 — exploited the vague "checkpoint commits" exception by labeling arbitrary commits as "checkpoint:" to auto-push. The exception exists for the specific 8-step protocol, not for any commit with that label. Gate narrowed to prevent rule-gaming.
+**Rejected:** Removing the exception entirely (checkpoints should auto-push — Brian invoked them).
+
+---
+
+## 2026-03-01 — Checkpoints reset interval counter
+
+**Decision:** The formal 8-step checkpoint resets prompt_count to 0 because a checkpoint IS full reconciliation. The counter measures distance-from-last-reconciliation; after checkpoint that distance is zero. Partial flushes or non-checkpoint commits do NOT reset the counter.
+**Why:** L-00070. The counter and checkpoint serve the same goal (catching drift) from different directions. Resetting after full reconciliation is semantically correct, not procedurally convenient. Fake checkpoint labels (L-00066) must not reset it because they leave reconciliation incomplete.
+
+---
+
+## 2026-03-01 — Agents.md scope: significant chat sessions included
+
+**Decision:** Agents.md tracks rounds for significant chat sessions, not just Claude Code agent runs. This session (2026-03-01 learnings system buildout) qualifies. Entry format adapts: "chat session" instead of agent branch, session focus instead of feature name.
+**Why:** Brian: "those are normally meant for agents but learn to use them for any worthwhile/significant chat sessions too." The purpose of Agents.md is tracking work rounds; the medium (agent vs chat) is secondary to the significance of the work.
+
+---
+
+## 2026-03-01 — Prompt stashing protocol
+
+**Decision:** First action in every response: write Brian's prompt to `~/auto-sdd/.prompt-stash.json`, replacing previous stash. Stash persists until content sufficiently mined into learnings/memories/actions. Response sequence: (1) stash prompt, (2) read .onboarding-state, (3) increment count, (4) scan for captures, (5) proceed.
+**Why:** Compaction hit during checkpoint protocol — conversational context lost but committed work survived. Prompt stashing creates a second defense layer: even if compaction or context loss occurs mid-processing, the source material (Brian's directive) survives in filesystem. Each stash replaces the last to avoid retaining stale prompts.
+**Rejected:** Stashing all prompts (accumulates stale context). Stashing in .onboarding-state (bloats file read every response). Not stashing (compaction can destroy unprocessed input).
+
+---
+
+## 2026-03-01 — CLAUDE.md root content audit
+
+**Decision:** Root CLAUDE.md needs stripping from 468 to ~100-150 lines. Keep: git discipline, onboarding state protocol, learnings references, implementation rules (including transitive import check). Strip: design system tokens, component stub lifecycle, command reference tables, roadmap system details, drift enforcement details, spec format templates. These are reference material, not operational guardrails — they belong in .specs/ or .claude/commands/ where they're already defined.
+**Why:** L-00087, L-00094. CLAUDE.md is injected into every Claude Code agent session. ~80% is SDD scaffold from initial project setup that hasn't been used in months. 468 lines of context budget consumed before any agent work starts. The stakd/ variants evolved with useful battle-tested patterns while root stayed generic. Stripping and curating makes every agent session more context-efficient.
+**Rejected:** Deleting CLAUDE.md (needed for git discipline and onboarding protocol). Moving to .claude/ (root is correct for Claude Code auto-read). Leaving as-is (wasteful context budget).
+
+---
+
+## 2026-03-01 — Retiring-chat-handoff protocol
+
+**Decision:** Created `.specs/HANDOFF-PROTOCOL.md` — structured protocol for when a chat session is ending. Produces `.handoff.md` at repo root (single-use, deleted by next session after absorption). Fresh onboard sequence updated to check for it between ACTIVE-CONSIDERATIONS.md and core.md reads.
+**Why:** L-00100. Without structured handoff, fresh sessions waste Brian's time re-explaining context. Compaction summaries are automatic but lossy. ONBOARDING.md is general orientation. The handoff bridges the gap: session-specific incomplete work, unpushed commits, and priority ordering that a fresh session needs immediately.
+**Rejected:** Putting handoff content in ACTIVE-CONSIDERATIONS.md (bloats persistent state with ephemeral info). Relying on compaction summaries alone (lossy, unstructured). Not having a protocol (status quo — Brian re-explains).
+
+---
+
+## 2026-03-01 — Response scope discipline
+
+**Decision:** Before starting work in a response, estimate total tool calls and output volume. If >15 tool calls or >3 distinct work items, split across responses. Checkpoint alone is ~12 calls; don't stack substantive new work on top.
+**Why:** L-00098. Response truncated trying to do checkpoint + 6 learnings + decisions + ACTIVE-CONSIDERATIONS + commit + core.md creation in one response. The generation limit is a hard constraint, not a suggestion. Splitting is free (Brian just says "continue"); truncation loses work and context.
+
+---
+
+## 2026-03-01 — Handoff.md scope: fresh-chat first prompt only
+
+**Decision:** `.handoff.md` is ONLY read on the very first prompt of a fresh chat session. Continuing sessions ignore it. After absorption, the fresh session deletes it.
+**Why:** L-00101. Handoff is ephemeral session-bridging state. Reading it mid-session wastes context budget on already-absorbed material. Stale handoff context persisting across multiple sessions would cause confusion. Single-use, single-consumer design.
+**Rejected:** Reading on every onboard check (wasteful). Keeping handoff files around (stale risk).
+
+## 2026-03-01 — No new memory slots for handoff/scope protocols
+
+**Decision:** Handoff protocol and response scope discipline documented in repo only (HANDOFF-PROTOCOL.md, L-00098), not as memory slots. Existing 15/30 slots are correct.
+**Why:** L-00097 — memory triggers (always-injected), repo specifies (on-demand). Handoff triggers on session retirement (rare), not every response. Response scope is covered by memory #10 (purposefulness). Adding memory slots for rare triggers wastes always-injected budget.
+
+---
+
+## 2026-03-01 — core.md created
+
+**Decision:** Created `.specs/learnings/core.md` with 16 curated entries from L-00042–L-00103, organized into 5 sections (Response Discipline, Agent Operations, Evidence Processing, System Architecture, Meta-Process). 52 lines total.
+**Why:** L-00090. ONBOARDING.md referenced core.md but file never existed. Fallback was reading all of agent-operations.md (780+ lines), hostile to fresh onboard. The 16 entries are the ones that, when not internalized, cause repeated failures.
+**Rejected:** Including all 62 entries (defeats curation purpose). Fewer than 15 (misses critical patterns). Organizing by type instead of theme (type is for storage; theme is for comprehension at onboard time).
+
+---
+
+## 2026-03-01 — Approval gate violation L-00104
+
+**Decision:** Logged L-00104. "Do what you need to do" ≠ "yes to push." Broad directives are not explicit push approval. Memory #8 rule stands as written.
+
+---
+
+## 2026-03-01 — Verification scope: Python-only changes skip bash suites
+
+**Decision:** When agent work modifies only Python files (no bash changes), verification is mypy --strict + pytest only. Bash test suites run only when bash files are modified. Added to PROMPT-ENGINEERING-GUIDE.md.
+**Why:** L-00110 — running 5 bash suites on Python-only changes wastes time and creates false confidence signals.
+**Rejected:** Always running all suites (unnecessary overhead, misleading green signals).
+
+---
+
+## 2026-03-01 — Sequential agent execution on MacBook Air for Phase 1
+
+**Decision:** Execute 5 conversion agents sequentially on MacBook Air M3/16GB rather than parallel on Mac Studio.
+**Why:** Mac Studio not available at home. Sequential execution completed all 5 in one session (~5-10 min each). Bottleneck was prompt engineering, not compute. L-00108.
+**Rejected:** Waiting for Mac Studio (blocked progress for no practical benefit at this scale).
+
+---
+
+## 2026-03-01 — Pip install exception in agent Hard Constraints
+
+**Decision:** Agent prompts may include `pip install mypy pytest --break-system-packages` when tools not found. Added as explicit exception in Hard Constraints template.
+**Why:** Claude Code sandbox is ephemeral — no persistent package installs. Every agent session starts fresh.
+**Rejected:** Pre-installing in sandbox setup (not possible with current Claude Code architecture).
+
+---
+
+## 2026-03-01 — Agent prompts for Claude Code must push
+
+**Decision:** Agent prompts targeting Claude Code sandbox MUST include `git push origin <branch>` as final step. "Do not push" pattern only applies to local-machine execution.
+**Why:** L-00105, L-00106 — sandbox is ephemeral, work is lost if not pushed. All 5 Phase 1 branches were only preserved because CLAUDE.md default overrode the "do not push" instruction.
+**Rejected:** Keeping "do not push" for all contexts (would lose all sandbox work on session close).
+
+---
+
+## 2026-03-02 — ID format expansion: 5-digit (L-00001)
+
+**Decision:** Expand all L-number IDs from 4-digit zero-padded (L-00001) to 5-digit zero-padded (L-00001). All existing references across 23 files updated mechanically.
+**Why:** Brian expects 10,000+ entries. 4-digit max is L-09999 (10K). 5-digit supports L-99999 (100K) — 10x the stated need with room to grow. 6-digit (1M) is overkill and wastes visual space. Migration is a single regex operation: `L-(\d{4})(?!\d)` → `L-0$1`.
+**Rejected:** 6-digit (excessive), variable-width (breaks grep patterns and sort operations), staying at 4-digit (already approaching stated need).
+
+---
+
+## 2026-03-02 — HOW-I-WORK entries get M- prefix (separate from L-space)
+
+**Decision:** Methodology observations in HOW-I-WORK-WITH-GENERATIVE-AI.md use M-NNNNN IDs (5-digit, matching expanded L-format). Separate sequence from learnings.
+**Why:** The 2026-02-28 "no per-type prefixes" decision was about types WITHIN learnings (failure_pattern vs process_rule sharing L-space). HOW-I-WORK entries are fundamentally different — methodology observations about Brian's workflow, not operational learnings for agent behavior. M- makes the intent clear at a glance. Cross-references work naturally (M-00042 references L-00141). Graph nodes distinguish methodology from operational knowledge by prefix without needing a query filter.
+**Rejected:** Sharing L-space (conflates two different knowledge types, makes the L-sequence non-contiguous for learnings), H- prefix (less intuitive than M- for "methodology"), keeping HOW-I-WORK as unstructured bullets (blocks graph-readiness).
+
+---
+
+## 2026-03-02 — HOW-I-WORK graph schema: full fields, methodology-specific types
+
+**Decision:** HOW-I-WORK entries get the same field set as learnings (Type, Tags, Confidence, Status, Date, Related, body) for schema consistency. Type values for methodology: `observation`, `preference`, `principle`, `workflow_fact`. Confidence and Status use the same enums from DESIGN-PRINCIPLES.md §4.
+**Why:** Schema consistency enables uniform graph queries across L- and M- entries. Including all fields even when some feel less natural for observations (e.g., Confidence) is cheaper than maintaining two schemas. Type values match the nature of the content: Brian observes (observation), states what he prefers (preference), articulates rules he applies (principle), or states facts about his environment (workflow_fact). Accumulation section preserved at bottom for checkpoint step 5 raw captures.
+**Rejected:** Omitting Confidence/Status (creates schema inconsistency, complicates graph import), using learnings type values (process_rule etc. don't fit methodology observations), converting Accumulation to a separate file (breaks existing checkpoint protocol).
+
+---
+
+## 2026-03-02 — OvernightRunner: composition over subclass
+
+**Decision:** overnight_autonomous.py uses OvernightRunner as a standalone class that imports shared modules (build_gates, drift, branch_manager, etc.) directly, rather than subclassing BuildLoop.
+**Why:** The behavioral differences are too substantial for clean inheritance. Overnight pushes branches + creates PRs (BuildLoop doesn't), treats drift/test failures as non-blocking (BuildLoop blocks), has no signal fallback inference (BuildLoop has 3 success paths), and expects to commit on behalf of the agent (BuildLoop expects agent commits). A subclass would need to override nearly every method, defeating the purpose. Composition gives clean separation: shared modules handle mechanics, each orchestrator owns its own control flow.
+**Rejected:** Subclassing BuildLoop (too many method overrides, brittle coupling), extracting a shared BaseOrchestrator ABC (premature abstraction — only two consumers, divergent behavior), merging both into one configurable class (config explosion, flag-driven control flow).
+
+---
+
+## 2026-03-03 — Codebase summary: agent-generated, not regex-per-language
+
+**Decision:** Replace all per-language regex scanning in codebase_summary.py with a single agent call that produces a structural summary. Cache on git tree hash. Graceful fallback to empty string on failure.
+**Why:** Brian identified the core problem: hardcoding regex patterns per ecosystem doesn't scale. A Kotlin, Ruby, or Elixir project gets empty summaries. The agent already understands whatever language it's reading — putting language intelligence in Python regex is putting it in the wrong layer. The cost (one agent call per tree hash, cached) is amortized across an entire campaign.
+**Rejected:** Per-language regex (implemented first as claude/language-aware-summary-kUPAM covering TS/Python/Rust/Go, then superseded — every new language is a new gap), no codebase summary at all (agents rediscover the codebase from scratch every feature).
+
+---
+
+## 2026-03-03 — Eval and dead export scanning: keep as regex, not agent-based
+
+**Decision:** Type extraction, redeclaration checks, import counting, and dead export scanning remain regex-based with per-language patterns. Extend coverage (Python, Rust, Go) but don't replace with agent calls.
+**Why:** These run per commit in the inner build loop — potentially 30-60 times per campaign. Agent calls add 30-120s latency each at the exact point where fast feedback matters. Eval is non-blocking; degraded coverage on an unsupported language means a less informative score, not a build failure. Regex completes in milliseconds.
+**Rejected:** Agent-based eval (architecturally consistent with codebase summary decision but practically worse — adds significant latency for marginal quality improvement on a non-blocking gate).
+
+---
+
+## 2026-03-03 — Defer fcntl/Windows portability (Finding #27)
+
+**Decision:** Do not fix `fcntl.flock()` Windows incompatibility in reliability.py. Defer indefinitely.
+**Why:** auto-sdd runs on Brian's Mac. Agents run on Mac. No Windows use case exists or is planned. Cross-platform locking is a yak-shave with zero near-term payoff.
+**Rejected:** Implementing platform-conditional locking now (speculative scope), using a cross-platform locking library (new dependency for no user).
+
+---
+
+## 2026-03-03 — Delineated BUILD PROGRESS blocks in build loop output
+
+**Decision:** Add a `_print_progress()` method to BuildLoop that emits clearly delineated `======` blocks at 5 phase transitions per feature: start, agent invocation, post-build gates, success, and failure. Each block shows features built/total, failures, elapsed time, current feature, phase, model, strategy, and branch.
+**Why:** Terminal output during builds had become too verbose to scan. Agent output, subprocess noise, gate checks, and logging all ran together with no visual anchors. Finding the current build status required scrolling through hundreds of lines. The `======` delineation and consistent field layout make progress blocks instantly findable — both visually when watching output and via grep (`grep "BUILD PROGRESS"`) when reviewing logs after the fact.
+**Rejected:** External progress file polled by a separate viewer (overengineered for the problem — the terminal is the primary interface), reducing existing logging verbosity (loses diagnostic value when debugging failures), a TUI/ncurses dashboard (dependency and complexity far beyond the need).
+
+---
+
+## 2026-03-03 — Phase 2b: mechanical gap detection replaces second agent call
+
+**Decision:** Replace Phase 2b's agent-based gap detection (which invoked `run_claude` with a separate prompt) with pure Python set operations (`detect_coverage_gaps()`). Merge UNEXPECTED element detection into the Phase 2a prompt so a single agent call handles all AC generation including unexpected elements.
+**Why:** The 2b agent received the exact same discovery inventory that 2a already had. Gap detection — "which routes have no criteria" and "which criteria target absent elements" — is a mechanical set comparison, not a reasoning task. Two agent calls meant two CLI startups, two full context loads, and 300-600s timeout windows. The mechanical version runs in microseconds with higher reliability (no parsing failures, no agent hallucination on structural comparison).
+**Rejected:** Keeping the second agent call with a shorter timeout (still slower and less reliable than set operations), deferring the refactor as tech debt (Brian flagged pipeline speed as a concern worth resolving now), making 2b fully optional/skippable (the gap report has value, just not as an agent task).
+
+---
+
+## 2026-03-03 — Auto-QA pipeline: all six phases implemented in single session
+
+**Decision:** Implement the full auto-QA pipeline (Phases 0–5) as a series of agent prompts dispatched sequentially, one phase per agent, rather than building a monolithic agent prompt or deferring phases to future sessions.
+**Why:** Each phase has a clean input/output contract. Sequential dispatch keeps agent scope small (14K–22K tokens per prompt), verification isolated per phase, and failures recoverable (any phase can be re-run independently). The mechanical-over-agent pattern (Phase 2b gap detection, Phase 4a failure catalog) emerged organically when Brian flagged the two-agent-call speed issue in Phase 2 — applied consistently thereafter for any structural comparison task.
+**Rejected:** Single mega-prompt covering multiple phases (token budget exceeded, verification impossible), deferring later phases to future sessions (momentum cost — the spec was complete and patterns were established), making Phase 4a agent-based (catalog construction is deterministic restructuring, not judgment).
+
+---
+
+## 2026-03-04 — L-00012 fix: build gate priority, not constraint injection
+
+**Decision:** Fix `detect_build_check()` to detect Next.js projects (via `next.config.*`) and return `npm run build` instead of `tsc --noEmit`. Rejected the stashed Round 50 prompt (`.stashed-prompt-round50.md`) which would have created 6 constraint files with 62 patterns across 6 ecosystems and a detection+injection pipeline in prompt_builder.py.
+**Why:** The root cause of L-00012 recurring across campaigns was that the build gate ran `tsc --noEmit` for Next.js projects, which doesn't check server/client bundle boundaries. `next build` does — it's how the ecosystem enforces those constraints. A 10-line detection fix makes L-00012 mechanically catchable per-feature through the existing retry → drift check chain. The constraint injection approach violated the project's founding principle (L-00001): don't teach agents rules, verify mechanically. It also covered 5 ecosystems (Go, Rust, Python, general TS, cross-language) with zero observed failures to justify the 62 patterns and ongoing maintenance burden.
+**Rejected:** Round 50 constraint injection (misaligned with mechanical verification philosophy, speculative ecosystem coverage, high token cost per prompt, maintenance burden on constraint files). Narrow constraint injection (Next.js only — still redundant once the build gate is correct). Doing nothing (L-00012 hit on two consecutive campaigns).
+
+## 2026-03-04 — Campaign Intelligence System: architecture and implementation approach
+
+**Decision:** Build a campaign intelligence system with sectioned vector store, pluggable pattern analysis (feature-flagged), mechanical detection, and project-configurable quality dimensions. 6 rounds across 3 phases. Full plan: `WIP/campaign-intelligence-system.md`.
+
+**Key sub-decisions:**
+- **Vector store in Round 1** (not deferred): Build the abstraction layer early because the data model is known and 6 rounds will extend through API rather than refactor raw JSONL. Counter-argument to YAGNI: the plan is concrete enough to justify foundation investment.
+- **Rule registry feature-flagged** (not deferred): Include protocol from Round 2 but gate behind `ENABLE_PATTERN_ANALYSIS` env var. Avoids both premature activation AND later refactor. Feature flag is the middle path.
+- **Mechanical convention checks first**: Static analysis (import graph, type safety, code duplication) over agent judgment for convention eval. Agent eval only for genuinely subjective dimensions (naming, architecture). Mechanical signals weighted higher in model.
+- **Project-configurable quality dimensions**: `.sdd-config/eval-dimensions.yaml` instead of hardcoded signal names. Makes system generalizable beyond auto-sdd.
+- **Single risk-context.md file**: Replaces `read_latest_eval_feedback` chain. Eval sidecar writes, prompt builder reads. Single writer, single reader.
+- **Rounds collapsed (1+2 → 1)**: First round produces vectors AND wires writers. Value in 2 rounds not 3.
+- **Manual seeding**: Seed vectors with stakd post-mortem findings to eliminate cold start.
+- **Intra/cross-campaign split**: Intra-campaign injection (real-time, within build loop) is architecturally separate from cross-campaign learning (offline, between campaigns). Different data availability, latency, and feedback loops.
+
+**Why:** Pressure testing revealed gaps: hardcoded signals prevented generalization, agent-judged convention eval was untrustworthy, cold start made first campaign worthless, pure-infrastructure rounds deferred value. Each was addressed without compromising the compounding learning loop.
+
+**Rejected:** Flat dataclass schema (rigid, every new signal requires schema change). Raw JSONL without abstraction (defers refactor cost to Round 5 when auto-QA needs merge semantics). Agent-only convention eval (unverifiable judgment). Deferred rule registry (creates refactor debt). Three separate infrastructure-only rounds before any analysis capability.
+
+## 2026-03-04 — M-entries written in graph schema from the start; Accumulation section deprecated
+
+**Decision:** All methodology observations (M-entries in `HOW-I-WORK-WITH-GENERATIVE-AI.md`) are written directly in graph-schema format. The "Accumulation" section (raw notes awaiting periodic curation) is deprecated. Checkpoint step 5 updated to match.
+**Why:** The raw-note-then-curate-later pattern created deferred work with no trigger, no cadence, and no definition. "Periodic curation passes" was hope, not process. Raw notes were harder to find and use than schema entries. M-entries are just as concrete as L-entries and deserve the same quality bar (L-00191: self-contained, grounded references).
+**Rejected:** Keeping Accumulation as intake with a defined curation cadence (still defers work; the cadence would be another undefined process). Writing M-entries at lower quality bar than L-entries (artificial distinction — both are observations about what works).
+
+## 2026-03-05 — Auto-QA: configurable agent timeout + monorepo fallback hardening
+
+**Decision:** Make all Claude agent call timeouts in the auto-QA pipeline configurable via `AGENT_TIMEOUT` env var (default 600s). Harden Phase 0 monorepo detection to fall through when root `package.json` exists but has no `build` script.
+**Why:** Phase 1 discovery agent timed out at 300s against CRE (3 features — smallest possible project). 300s was a hardcoded constant with no override. Separately, Phase 1's agent ran `npm install playwright` at CRE root, creating a `package.json` with only playwright deps. This caused Phase 0 to take the single-project path on subsequent runs and fail (`npm run build` with no build script). Both are production-run-only bugs invisible to tests.
+**Rejected:** Increasing only Phase 1's timeout (same problem exists in all 6 agent calls). Hardcoded 600s everywhere (loses configurability for different environments).
+
+## 2026-03-05 — QA credentials persist; teardown is explicit
+
+**Decision:** `_cleanup()` no longer tears down the QA account or wipes credentials. New `teardown_qa()` method and `--teardown` CLI flag for explicit credential wipe. Credentials persist across runs, `--resume`, and `--phase` invocations.
+**Why:** Brian identified that wiping credentials on every run (including failures) prevented manual investigation of failures (can't log in to poke around), prevented re-running individual phases (`--phase 3` has no auth), and broke `--resume` workflows. The QA account is a test utility, not a security risk — it should persist until explicitly removed.
+**Rejected:** Teardown on success only (still breaks `--phase` re-runs after a successful run). Teardown on explicit `--no-persist` flag (double-negative, confusing). No teardown capability at all (need cleanup for final end-of-campaign housekeeping).
+
+## 2026-03-05 — Repo renamed to Superloop, unforked from Adrian's repo
+
+**Decision:** Unfork from Adrian Rogowski's original auto-sdd repo on GitHub, rename to `superloop`. Local directory path unchanged (`~/auto-sdd`).
+**Why:** The project has diverged significantly from Adrian's original architecture. Brian built the reliability engineering, eval sidecar, auto-QA pipeline (Phases 0-5), learnings system, prompt methodology, and all operational infrastructure. Unforking establishes independent provenance. The name "Superloop" captures the closed-loop nature of the system.
+**Rejected:** Keeping the fork relationship (confuses provenance). Renaming local directory (too many references to update across CLAUDE.md, ONBOARDING.md, memory, agent prompts).
+
+
+## 2026-03-06 — CIS Rounds 1-4 implemented sequentially, merged to main immediately
+
+**Decision:** Implement CIS rounds as individual agent prompts on feature branches, merge each to main immediately after verification. No batching, no staging branch.
+**Why:** Each round depends on the previous round's code. Sequential merge means each prompt starts from a clean, verified base. Agent prompts are scoped to one round each, keeping context manageable. 4 rounds completed in one session: vector store, wire writers, pattern analysis, convention checks + runtime attribution.
+**Rejected:** Batching multiple rounds into one prompt (too large, L-00197 pattern). Staging branch accumulating all rounds before merge (unnecessary complexity, delays validation).
+
+## 2026-03-06 — Token measurement: auto-log from claude_wrapper, not session file discovery
+
+**Decision:** Replace broken session-file-based token measurement with automatic logging from `run_claude()`. Every agent call logs tokens, cost, model, duration to `general-estimates.jsonl` via `_log_token_usage()`.
+**Why:** Code tab agents (Claude for Mac desktop app) don't write session JSONL files to `~/.claude/projects/`. The old approach found random stale files or returned 0. The wrapper already has reliable token data parsed from agent output. Single canonical estimates file at repo root.
+**Rejected:** Fixing session file discovery for desktop app (files don't exist). Removing token tracking entirely (need data for CIS and estimation calibration).
+
+## 2026-03-06 — SitDeck vision as first CIS-instrumented build campaign
+
+**Decision:** Run Adrian's SitDeck vision through Superloop as the first campaign with full CIS vector population. ~70 features.
+**Why:** Produces CIS training data for Rounds 5-6. Demonstrates Superloop to Adrian on his own product vision. Professionally relevant (CompStak's product). Fresh project avoids stakd's known architecture issues.
+**Rejected:** Re-running stakd (known transitive import bug, 28 features already built without vectors). Backfilling CRE data (only 3 features, ~40% vector coverage, insufficient for ML model). Synthetic data (validates code but not real-world signal quality).
+
+## 2026-03-07 — Knowledge graph: typed explicit graph over GraphRAG, SQLite over vector-only store
+
+**Decision:** The inter-build knowledge system uses a typed knowledge graph (SQLite + FTS5 + Anthropic embeddings) with explicit edge types written at extraction time. NOT Microsoft GraphRAG, NOT flat RAG.
+**Why:** Flat RAG retrieves similar mistakes (purely reactive). GraphRAG does community detection on unknown document structure (overkill — our structure is already known: universal → framework → technology → instance). Typed edges (instance_of, generalizes_to, requires, conflicts_with, supersedes, caused_by) encode structural relationships that vector search cannot. SQLite is portable, zero-infra, continuously writable without reindexing. BFS on known dependency chain + semantic similarity + BM25 keyword → synthesis call produces prescriptive, not just reactive, injection.
+**Alternatives rejected:** Flat RAG (reactive only, no structural relationships). GraphRAG (designed for unknown structure, community detection overkill). Pure vector store (loses structural edges, can't traverse known dependency graph). Neo4j / graph DB (external infra, adds operational burden for marginal benefit at current scale).
+
+## 2026-03-07 — Write path before read path (knowledge graph implementation order)
+
+**Decision:** Implement knowledge_store.py (write path via eval sidecar extension) before spec_preprocessor.py (read path). Ship write path first, read path second.
+**Why:** A preprocessor with an empty knowledge base is a no-op. Getting data accumulating first means the read path launches with real signal, not synthetic examples. Both paths are independent — write path adds zero latency (async sidecar), read path is a pre-build hook. The write path is also simpler: structured extraction → SQLite writes → embedding calls. The read path requires BFS + semantic + BM25 merge + synthesis call and is more complex to test without real data.
+**Alternatives rejected:** Read path first (nothing to read). Both simultaneously (overcomplicates first agent prompt). Synthetic seeding for read path validation (delays real signal).
+
+## 2026-03-08 — MAX_FEATURES unset means build all pending features
+
+**Decision:** `MAX_FEATURES` env var defaults to `None` in build_loop.py, resolving to `len(features)` at runtime. Absent = no cap.
+**Why:** `MAX_FEATURES` is a runtime limiter ("only build N features this session"), not a project property. A hardcoded default (was 25) silently caps campaigns. Encoding it in project.yaml is wrong for the same reason — it goes stale the moment a feature is added or completed. The correct behavior when unset is to build all pending features, derived from the roadmap at runtime.
+**Alternatives rejected:** Default of 999 (magic number masking absence). Default of 25 (arbitrary, silently caps). Hardcode in project.yaml (stale, wrong layer per L-00209).
+
+## 2026-03-08 — L-00012 demoted from core.md
+
+**Decision:** L-00012 (client→server import chain) removed from core.md, status set to `deprecated` in failure-patterns.md.
+**Why:** Entry is Next.js/stakd-specific. Core.md is for project-wide learnings applicable across all campaigns. At 18 entries (threshold 15), a stakd-specific entry was the clearest demotion candidate. Reinstatement condition: if the pattern recurs across non-Next.js campaigns.
+**Alternatives rejected:** Keep in core with a scope annotation (clutters core for non-Next.js work). Move to domain-knowledge.md (pattern is a failure mode, not domain knowledge).
+
+## 2026-03-08 — Re-detect build cmd after agent, resolve SPEC_FILE against project_dir
+
+**Decision:** Two surgical fixes to build_loop.py post-agent gate logic.
+**Why:** (1) Pre-agent build cmd detection returns "" for F-0 because next.config.ts doesn't exist yet — agent creates it. Moving detection to post-agent ensures the first feature that introduces the build system is gated correctly. (2) SPEC_FILE signal paths are project-relative; resolving against cwd (py/) always fails, silently skipping all drift checks.
+**Alternatives rejected:** BUILD_CHECK_CMD env override (workaround, not fix). Absolute path requirement in agent prompt (shifts burden to agent, fragile).
+
+## 2026-03-09 — Target projects live outside auto-sdd directory tree
+
+**Decision:** Move all target projects (compstak-sitdeck and future) to separate filesystem locations outside `~/auto-sdd/`. Connection via three explicit pipelines: build (PROJECT_DIR), telemetry (LOGS_DIR), knowledge (learnings writer + CIS vectors). Contract in `WIP/project-isolation-contract.md`.
+**Why:** Two git repos overlapping on one filesystem caused cross-contamination (phantom agent commits into auto-sdd), noisy git status (~130 dirty items), and implicit coupling. Gitignore was a patch over a layout problem.
+**Alternatives rejected:** Gitignore entire project dir (hides the problem, doesn't fix coupling). Gitignore only built output (fragile — every new agent-created directory needs a new entry). Keep everything in one tree (status quo that already failed).
+
+## 2026-03-09 — Contamination enforcement defaults to warn mode
+
+**Decision:** `CONTAMINATION_MODE=warn` as default. Post-agent `_check_repo_contamination()` logs warnings but does not fail features. `CONTAMINATION_MODE=fail` available when ready.
+**Why:** Three enforcement layers deployed in one session (prompt boundary, chmod protection, post-agent audit). Need real-world validation before hard-failing builds on contamination detection. False positives from pre-existing dirty state could block legitimate campaigns.
+**Alternatives rejected:** Hard fail as default (too aggressive before validation). No enforcement (unacceptable given prior contamination history).
+
+
+## 2026-03-09 — Two-stage retry: fix-in-place before informed fresh retry
+
+**Decision:** Retry attempts now use a two-stage strategy instead of always resetting. Attempt 1 keeps the agent's code on disk and sends a fix-in-place prompt (`build_fix_prompt`). Attempt 2+ resets the tree and sends an enhanced retry prompt with structured failure context from all prior attempts (`prior_attempts` parameter on `build_retry_prompt`).
+**Why:** The old always-reset approach discarded 90%-correct implementations when the failure was a small test issue. The agent then rebuilt from scratch with only error hints, often making entirely different (not better) mistakes. Fix-in-place preserves working code and tells the agent to diagnose and patch. The fresh retry (attempt 2+) is still available as an escape when the fix agent determines the approach is fundamentally wrong — and now it carries structured "approaches that failed" context so the new attempt avoids repeating the same mistakes.
+**Alternatives rejected:** Fix-only (no fresh retry) — some approaches are fundamentally wrong and can't be patched. Always-reset with better error context only — still wastes the working implementation on fixable failures. Interactive human triage between stages — adds latency, defeats autonomous loop.

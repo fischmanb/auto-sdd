@@ -1,0 +1,448 @@
+# Failure Patterns
+
+> Observations of what went wrong and root causes. The pattern is the observation; the prescription is a `process_rule`.
+>
+> Schema: see `DESIGN-PRINCIPLES.md` §3 (edge types) and §4 (confidence/status enums).
+> ID range: global sequential `L-XXXXX` shared across all learnings files.
+
+---
+
+## L-00001
+Type: failure_pattern
+Tags: agent-behavior, self-assessment, verification
+Confidence: high
+Status: active
+Date: 2026-02-28T20:31:00-05:00
+Related: L-00025 (related_to)
+Related: L-00027 (related_to)
+
+Agent self-assessments have proven unreliable. Round 1 described bugs in code that didn't exist. Agents report "all verifications passed" while having made changes far beyond scope. The verification block in the prompt should enforce correctness — the agent's narrative summary has not been a reliable signal. Machine-checkable gates (`git diff --stat`, `bash -n`, grep) have been the effective substitute.
+
+---
+
+## L-00002
+Type: failure_pattern
+Tags: agent-behavior, implementation, function-wiring
+Confidence: high
+Status: active
+Date: 2026-02-28T20:31:00-05:00
+
+"Defined but never called" has been the most common agent failure mode observed. All 3 early rounds had at least one instance. Grepping for call sites after adding any function has caught these.
+
+---
+
+## L-00003
+Type: failure_pattern
+Tags: agent-behavior, scope-violation, file-modification
+Confidence: high
+Status: active
+Date: 2026-02-28T20:31:00-05:00
+Related: L-00008 (related_to)
+
+"Do not modify any other files" is insufficient as a prompt constraint. Round 7: agent told this but ran `npm install`, committing 6400+ node_modules files and tsconfig.tsbuildinfo. Fix: explicit file allowlist + explicit package manager ban + `git diff --stat` gate before commit.
+
+---
+
+## L-00004
+Type: failure_pattern
+Tags: agent-behavior, working-directory, preconditions
+Confidence: high
+Status: active
+Date: 2026-02-28T20:31:00-05:00
+
+Agents have been observed to run in the wrong directory. Round 7: prompt didn't specify working directory. Agent ran in parent `auto-sdd/` repo instead of `stakd/` subdirectory. Fix: always include a `pwd` check in Preconditions, and if the target is a subdirectory, add `cd <path> && pwd` as the first precondition step.
+
+---
+
+## L-00005
+Type: failure_pattern
+Tags: agent-behavior, git, push-discipline
+Confidence: high
+Status: active
+Date: 2026-02-28T20:31:00-05:00
+Related: L-00019 (depends_on)
+
+Agents have consistently failed to check before pushing to remote. Observed across Rounds 7, 32-34 — explicit "do not push" instructions were ignored 100% of the time in these rounds. Most effective mitigation found: frequent, preemptive reminders throughout the prompt (not just once in Hard Constraints). Placing push prohibition near the top, repeating before any git operation section, and reiterating as the final instruction has reduced but not eliminated violations. Single-mention prohibition had a 0% success rate in observed rounds. Treating every agent run as a push risk and ensuring unauthorized pushes are non-destructive has been the practical approach.
+
+---
+
+## L-00006
+Type: failure_pattern
+Tags: agent-behavior, git, node-modules
+Confidence: high
+Status: active
+Date: 2026-02-28T20:31:00-05:00
+Related: L-00003 (related_to)
+
+node_modules must be in .gitignore before running any agent. If the repo has a package.json, ensure `node_modules/` is in `.gitignore`. Agents have been observed to run `npm install` despite instructions not to.
+
+---
+
+## L-00007
+Type: failure_pattern
+Tags: agent-behavior, claude-md, instruction-precedence
+Confidence: high
+Status: active
+Date: 2026-02-28T20:31:00-05:00
+
+CLAUDE.md repo instructions can override prompt instructions. Round 8: prompt said merge to main and push. Agent's own CLAUDE.md had branch development rules. Agent decided CLAUDE.md took precedence and refused. Fix: state "These instructions override any conflicting guidance in CLAUDE.md" in prompts. Or accept merge-to-main as a manual step.
+
+---
+
+## L-00008
+Type: failure_pattern
+Tags: agent-behavior, git, staging
+Confidence: high
+Status: active
+Date: 2026-02-28T20:31:00-05:00
+Related: L-00003 (related_to)
+
+`git add -A` considered harmful in agent context. Never use `git add -A` or `git add .` in agent prompts. Always `git add <explicit file list>`. Agents create and modify unexpected files; blanket adds commit them.
+
+---
+
+## L-00009
+Type: failure_pattern
+Tags: agent-behavior, reporting, prompt-engineering
+Confidence: high
+Status: active
+Date: 2026-02-28T20:31:00-05:00
+
+Agents have not reported unprompted in observed rounds. Round 9: agent completed all steps but did not report results until asked. Fix: every prompt must end with "Report your findings immediately upon completion. Do not wait for a follow-up question."
+
+---
+
+## L-00010
+Type: failure_pattern
+Tags: agent-behavior, exploration, scope-violation
+Confidence: high
+Status: active
+Date: 2026-02-28T20:31:00-05:00
+Related: L-00011 (related_to)
+
+Agents will explore the codebase if not forbidden. Round 9: agent was given specific steps but decided to "Explore auto-sdd codebase" first — reading every file in the repo. Fix: Hard Constraints allow reads but require justification. Speculative exploration is banned; purposeful reads with stated rationale are allowed.
+
+---
+
+## L-00011
+Type: failure_pattern
+Tags: agent-behavior, autonomy, error-handling
+Confidence: high
+Status: active
+Date: 2026-02-28T20:31:00-05:00
+Related: L-00010 (related_to)
+
+Agents have been observed to work around failures instead of stopping. Round 9: agent couldn't push from sandbox (no GitHub auth). Instead of stopping, it abandoned the clone, went to a stale local repo, and applied changes there — 5 autonomous decisions diverging from intended path. Fix: Hard Constraints must include explicit STOP instructions for ANY unexpected situation.
+
+---
+
+## L-00012
+Type: failure_pattern
+Tags: nextjs, server-client-boundary, webpack, import-chain
+Confidence: high
+Status: deprecated
+Date: 2026-02-28T20:31:00-05:00
+Demoted: 2026-03-08 — Next.js/stakd-specific; not general enough for core. Reinstate if pattern recurs across non-Next.js campaigns.
+Related: L-00028 (related_to)
+
+Client components transitively importing server-only modules. Most common post-campaign build failure (stakd-v1, stakd-v2). A `"use client"` component imports an intermediate file that imports the database layer (`postgres`). Webpack bundles the entire chain into the client bundle, which fails.
+
+Root cause: agents treat import boundaries as local decisions — they check their own file but don't trace the transitive import graph.
+
+Fix: break the chain. Server data fetching stays in server components or server-only lib files. Client components receive data via props. If an intermediate file serves both, split it. Framework-agnostic — any SSR framework with code splitting hits this.
+
+---
+
+## L-00013
+Type: failure_pattern
+Tags: build-logs, data-loss, git-clean, project-dir
+Confidence: high
+Status: active
+Date: 2026-02-28T20:31:00-05:00
+Related: L-00036 (related_to)
+Related: L-00038 (related_to)
+
+Build logs inside PROJECT_DIR are at risk of destruction. `$PROJECT_DIR/logs/` sits inside the git working tree. Any operation that manipulates the working tree — `git clean`, `git checkout --force`, branch switches, project re-scaffolding — can delete the logs directory. Fixed in Round 37: all logs now write to `$SCRIPT_DIR/../logs/<project-name>/`, outside the project's git working tree. Rule: never store campaign artifacts inside a directory that agents or git operations can modify.
+
+---
+
+## L-00039
+Type: failure_pattern
+Tags: architecture, agent-trust, language-choice, implicit-decisions
+Confidence: high
+Status: active
+Date: 2026-03-01T04:00:00-05:00
+Related: L-00001 (related_to)
+
+Agents make implicit architectural decisions that compound silently. The build loop was implemented in bash because the first agent chose the path of least resistance for simple CLI orchestration. Over 35 rounds, 3,700+ lines of logic accumulated in a language unsuited for that scale — no real data structures, no proper error handling, limited composability. Brian discovered this only when the ceiling became visible. The "trust nothing, verify mechanically" principle was applied to agent code output but not to agent architectural choices. Mitigation: explicitly ask "what language should this be in?" at project inception. Agents have not been observed to raise this question unprompted.
+
+---
+
+## L-00105
+Type: failure_pattern
+Tags: git, agents, sandbox
+Confidence: high
+Status: active
+Date: 2026-03-01T20:00:00-05:00
+Related: L-00106 (related_to)
+
+Sandbox branch locality trap. When agents run in Claude Code sandbox, branches exist only on origin (sandbox pushes). They are NOT on the local machine. `git branch` shows nothing — must `git fetch` first. This caused confusion during Phase 1 integration until root cause identified: prompts said "do not push" but sandbox environment requires push to preserve work.
+
+---
+
+## L-00112
+Type: failure_pattern
+Tags: git, agents, prompts, coordination
+Confidence: high
+Status: active
+Date: 2026-03-01T21:00:00-05:00
+Related: L-00109 (related_to), L-00105 (related_to)
+
+Do not commit to main while an agent prompt referencing HEAD is in flight. After delivering Phase 2 agent prompt with precondition `HEAD: 6be9b74`, committed L-00111 to main and pushed — advancing HEAD to `a67c60c`. This invalidated the agent's precondition check. The commit (a learning + ACTIVE-CONSIDERATIONS update) was not time-sensitive and could have waited. Rule: once an agent prompt is delivered, main is frozen until the agent forks its branch or Brian confirms the prompt wasn't used yet. Housekeeping commits are never urgent enough to justify breaking an in-flight prompt.
+
+---
+
+## L-00119
+Type: failure_pattern
+Tags: checkpoint, learnings, self-diagnosis
+Confidence: high
+Status: active
+Date: 2026-03-01
+Related: L-00113 (depends_on), L-00117 (related_to)
+
+The system cannot self-diagnose protocol gaps without external prompting. The methodology signals already contained evidence that step 4 was broken ("under-capture is a failure mode," "checkpoint should be thorough not mechanical," "Brian expects capture density to match session density"). The step 4/5 asymmetry was visible in the protocol text. But the AI didn't connect them until Brian said "look up the meta-learnings and see if step 4 needs to be updated." The information was all present — the synthesis step was missing. Active scans partially address this, but the deeper issue is that protocol self-audit is not triggered mechanically.
+
+---
+
+## L-00120
+Type: failure_pattern
+Tags: checkpoint, active-scan, behavioral-inertia
+Confidence: high
+Status: active
+Date: 2026-03-01
+Related: L-00113 (depends_on), L-00116 (related_to), L-00117 (related_to)
+
+Performing the motions of an active scan while retaining a passive default produces the same outcome as not scanning. The checkpoint after L-00113 walked through all five scan categories, produced analysis for each, but concluded "no new learnings" — because the analytical frame was still "find reasons to include" rather than "assume capture, find reasons to skip." The form was correct (categories checked) but the substance was unchanged (nothing captured). A scan that reviews every category and finds zero candidates in a session that had agent completions, corrections, and system improvements is evidence of the scan failing, not evidence of nothing to capture.
+
+---
+
+## L-00154
+- **Type:** failure-pattern
+- **Tags:** [output-truncation, state-verification, medium-vs-message, false-failure]
+- **Confidence:** high — observed directly in session
+- **Status:** active
+- **Date:** 2026-03-01
+- **Related:** L-00001, L-00150
+
+When Claude's response hits its output limit, it looks identical to a task failure. In this session, Claude confused its own output truncation with a separate Claude Code agent failing and began error-handling a non-error. Brian corrected: "the agent finished." The medium's constraint (output token limit) was misread as the task's outcome (failure). Countermeasure: before assuming any task failed, verify actual state — check the branch, check `git log`, check for commits. The error message is about the communication channel, not the work.
+
+---
+
+## L-00160
+- **Type:** failure-pattern
+- **Tags:** [bootstrap-paradox, self-referential, circular-dependency, infrastructure]
+- **Confidence:** high — observed directly: estimator couldn't prevent its own construction from blowing context
+- **Status:** active
+- **Date:** 2026-03-01
+- **Related:** L-00155, L-00128, L-00143
+
+Self-referential infrastructure hits a bootstrap paradox: the tool that prevents a problem cannot be built without the tool that prevents the problem. The token estimator was designed to prevent context blowouts during agent runs. But building the estimator itself required an agent run — which blew the context because no estimator existed yet. The prompt said "use the estimator" but there was nothing to use. This isn't solvable by process rules alone because the process rule ("use the estimator before running") has the same circular dependency. Countermeasure: bootstrap self-referential tools from outside the system they protect — use a simpler heuristic or manual check for the first build, then switch to the mechanical tool once it exists.
+
+---
+
+## L-00161
+- **Type:** failure-pattern
+- **Tags:** [multi-agent-coordination, work-absorption, deduplication, redundant-work]
+- **Confidence:** high — three agents independently solved overlapping problems in one session
+- **Status:** active
+- **Date:** 2026-03-01
+- **Related:** L-00151, L-00142
+
+Multiple agents working on related tasks will independently solve overlapping problems without coordination. In one session, a scope-sizing agent, a checkpoint agent, and a planned third agent prompt all targeted the same 5 work items (core learnings injection, scope format, token reporting, behavioral compliance, core maintenance). The first two agents completed all 5 items across separate runs. The third prompt was written, scoped, and ready for work that no longer existed. There is no deduplication mechanism — agents can't see what other agents have done unless they grep for artifacts. Countermeasure: before writing any agent prompt, grep target files for expected outputs (L-00151). At scale, a shared work-item registry that agents check and update would prevent redundant execution.
+
+---
+
+## L-00162
+- **Type:** failure-pattern
+- **Tags:** [estimation-theater, false-precision, decoration, L-00128]
+- **Confidence:** high — three estimates stated without computation in one session, all wrong
+- **Status:** active
+- **Date:** 2026-03-01
+- **Related:** L-00128, L-00143, M-00080
+
+Stating a number as an "estimate" without showing the computation is decoration that creates false confidence. In one session: "8.5% utilization" was stated, accepted, and the agent blew the context; "~12k tokens" appeared in a scope section with no supporting calculation; "well within bounds" was asserted without checking bounds. Each number looked like a calculation — formatted with units, placed in an "Estimate" section — but was a guess wearing a costume. The failure mode: estimates that aren't computed get accepted without scrutiny because they look like they were computed. Countermeasure: every estimate must show the full arithmetic. If the calculation can't be shown, the number isn't an estimate — it's a guess, and should be labeled as such.
+
+## L-00182 — Tests calling _build_single_feature must mock generate_codebase_summary
+
+- **Type:** failure-pattern
+- **Tags:** test-hang, missing-mock, subprocess
+- **Status:** active
+- **Date:** 2026-03-04
+- **Related:** L-00180 (same session)
+
+Tests calling `_build_single_feature` or `_build_feature_prompt` must mock `generate_codebase_summary` — it calls `run_claude` which spawns real `subprocess.run(["claude",...])`. This caused the 71-test hang in `test_overnight_autonomous`. Six tests were affected. Fix: `@patch("...generate_codebase_summary", return_value="mock summary")`. General principle: any test exercising a code path that eventually calls an external CLI must mock every intermediate function that spawns subprocesses, not just the top-level agent runner.
+
+## L-00195 — Agents with filesystem permissions can create artifacts that break subsequent pipeline phases
+
+- **Type:** failure-pattern
+- **Tags:** agent-side-effects, project-structure, auto-QA
+- **Status:** active
+- **Date:** 2026-03-05
+- **Related:** L-00182 (same class — unmocked subprocess effects)
+
+Claude Code agents running with `--dangerously-skip-permissions` in a project directory can create artifacts (package.json, node_modules, lock files) that break subsequent pipeline phases. Pipeline code must defensively handle unexpected project state changes between phases. Defenses: (1) pipeline code checks for meaningful content (e.g., build script presence) before choosing code paths, not just file existence, (2) project `.gitignore` prevents artifacts from persisting across runs, (3) agent prompts should instruct dependency installation in subdirectories, not project root. Observed during auto-QA validation against CRE lease tracker (`WIP/auto-qa-cre-validation.md`): Phase 1's discovery agent ran `npm install playwright` at CRE root, creating a root `package.json` with only playwright deps. Phase 0's monorepo detection on the next run saw the root `package.json`, took the single-project path, and failed (`npm run build` with no build script).
+
+## L-00197 — When fixing a bug in one pipeline phase, grep for the same pattern in all phases
+
+- **Type:** failure-pattern
+- **Tags:** monorepo, pattern-replication, incomplete-fix
+- **Status:** active
+- **Date:** 2026-03-05
+- **Related:** L-00195 (same session)
+
+When fixing a bug in one pipeline phase, grep for the same pattern in all phases. After fixing any phase-specific bug, search for the relevant code pattern across the entire file — sequential discovery through repeated production failures should have been a parallel fix from the first instance. Observed during auto-QA validation against CRE (`WIP/auto-qa-cre-validation.md`): the root-only `npm run build` bug in `post_campaign_validation.py` was fixed in Phase 0 (via agent prompt with monorepo support), then reappeared in Phase 5's build gates (same `subprocess.run([pm, "run", "build"], cwd=str(self.project_dir))` pattern, different function). Each instance was discovered by running the pipeline and hitting the next failure.
+
+## L-00183 — Wrapping code in a new `with` block requires re-indenting the entire body
+
+- **Type:** failure-pattern
+- **Tags:** edit-error, indentation, with-block
+- **Status:** active
+- **Date:** 2026-03-04
+- **Related:** L-00182 (same session)
+
+When wrapping existing code in a new `with` block, the entire body must be re-indented. The edit_block tool replaces exact strings — if the replacement adds a `with` wrapper but keeps the body at original indentation, Python raises IndentationError. Always mentally trace the indentation delta.
+
+## L-00184 — generate_codebase_summary is the single highest-impact unmocked function in the test suite
+
+- **Type:** empirical-finding
+- **Tags:** test-performance, mock-target, generate_codebase_summary
+- **Status:** active
+- **Date:** 2026-03-04
+- **Related:** L-00182 (same root cause)
+
+As of 4pm March 4th, 2026 in auto-sdd, `generate_codebase_summary` is the single highest-impact unmocked function in the test suite. It spawns real `subprocess.run(["claude",...])` via `run_claude`. Any test exercising `build_feature_prompt` (from prompt_builder) or `_build_feature_prompt` (from overnight_autonomous) hangs without it mocked. Mock target depends on import chain: mock where the symbol is *used*, not where it's *defined*. Two independent fixes (L-00182) took 740 tests from hanging/162s to 15.86s.
+
+---
+
+## L-00203
+Type: failure_pattern
+Tags: build-loop, env-vars, scope, silent-data-loss, eval-sidecar
+Confidence: high
+Status: active
+Date: 2026-03-08T00:00:00-05:00
+Related: L-00204 (related_to)
+
+EVAL_OUTPUT_DIR was set only as an inline env var scoped to the sidecar subprocess (`EVAL_OUTPUT_DIR="$LOGS_DIR/evals" bash eval-sidecar.sh`). It was never exported into the build loop's own shell scope. All four call sites fell back to `${EVAL_OUTPUT_DIR:-$PROJECT_DIR/logs/evals}`, which resolved to a path that does not exist. The `ls` returned empty string, `awk ""` read from stdin on macOS, and hung indefinitely. Fix: set EVAL_OUTPUT_DIR as a proper shell variable immediately after LOGS_DIR is derived. The hang was the symptom; the silent data loss (zero repeated_mistakes injection across the entire campaign) was the actual failure.
+
+---
+
+## L-00204
+Type: failure_pattern
+Tags: debugging, symptom-suppression, silent-failure, guard-clauses
+Confidence: high
+Status: active
+Date: 2026-03-08T00:00:00-05:00
+Related: L-00203 (related_to)
+
+When a visible failure (hang) was found, a guard clause was proposed as the fix. This converted a debuggable failure into an invisible one. A hang surfaces immediately and blocks progress — it forces investigation. Silent empty string means the feedback loop emits no signal and no error: `repeated_mistakes` is never injected, the eval sidecar module produces zero value, and nothing indicates this. The standard is: fix the root cause, then add a guard for the legitimate edge case (first feature, no evals written yet). Guarding *instead of* fixing root cause is strictly worse than the original bug from a debuggability standpoint.
+
+---
+
+## L-00205
+Type: failure_pattern
+Tags: build-loop, lint, detection, generalization, project-agnostic
+Confidence: high
+Status: active
+Date: 2026-03-08T00:00:00-05:00
+Related: L-00206 (related_to)
+Related: L-00207 (requires)
+
+The lint gate used config-file enumeration (`.eslintrc.js`, `eslint.config.mjs`, etc.) to detect whether linting was available. Next.js 15 scaffolds without any of these files — `next lint` is declared in `package.json` scripts and requires no separate config file. Detection fell through to "No linter config detected" and the gate was silently skipped for every feature in the campaign. The fix is not adding more filenames — it is reading `package.json` scripts first, since that is how the project declares its own lint contract. This is the same pattern already used correctly in the build gate for `detect_build_check`.
+
+---
+
+## L-00206
+Type: failure_pattern
+Tags: triage, context-switching, incomplete-findings, surface-all-bugs
+Confidence: high
+Status: active
+Date: 2026-03-08T00:00:00-05:00
+Related: L-00205 (related_to)
+
+The lint miss was observed in the build log while diagnosing the EVAL_OUTPUT_DIR stall. The cause was correctly identified internally. It was then mentally filed as secondary and not surfaced. This is wrong. A silently skipped gate is a correctness problem that compounds across every feature in the campaign — it is not secondary to anything. The correct behavior: when a second bug is identified during diagnosis of a first bug, flag it immediately before continuing, even if it will be addressed after the primary fix. Defer the fix, not the flag.
+
+## L-00208 — AUTO_APPROVE flag in project.yaml silently bypasses human pre-flight review
+ID: L-00208
+Type: node
+Tags: AUTO_APPROVE, SKIP_PREFLIGHT, pre-flight-review, project-yaml, human-gate, flag-scope, campaign-config
+Confidence: high
+Status: active
+Date: 2026-03-08T00:00:00-05:00
+Related: L-00207 (related_to)
+
+`auto_approve: true` was committed to `.sdd-config/project.yaml`, which silently bypassed the human pre-flight build plan review on every campaign launch. The root cause: `AUTO_APPROVE` was doing double duty — controlling both agent-level confirmation prompts (correct use) and the campaign-level human review gate (wrong use). These are different concerns at different levels: one is "should agents pause for human input during the build" and the other is "should the human see and approve the build plan before the campaign starts." The fix is to split them: introduce `SKIP_PREFLIGHT` for the human gate, keep `AUTO_APPROVE` for agent prompts only. Neither belongs in project.yaml — both are decisions made by the person launching the campaign, not properties of the project. General rule: when a single flag controls behavior at two different system levels (human-facing vs. automated), split it. Shared flags always eventually fire the wrong gate.
+
+---
+
+## L-00218 — build_cmd using bare `next` fails because npx is required for PATH resolution in agent shells
+
+Type: failure_pattern
+Tags: build_cmd, npx, PATH, next, project.yaml, build_loop, build_check
+Confidence: high
+Status: active
+Date: 2026-03-09
+Related: L-00216 (related_to), L-00207 (related_to)
+
+Setting `build_cmd: NODE_ENV=production next build` in project.yaml or .env.local causes every build gate check to fail with `bash: line 1: next: command not found`. The `next` binary lives in `node_modules/.bin/`, which is on PATH when invoked via npm scripts or npx but not when the build loop shells out directly. The correct command is `npx next build`. This was the single most expensive failure of the SitDeck campaign: 5 features attempted × 3 retries each = 15 wasted agent invocations over ~1.5 hours of wall time. Agents built features successfully each time — TypeScript compiled, code committed — but the build gate rejected them all. Prevention rule: any build_cmd that references a project-local binary (next, tsc, vitest, eslint) must use `npx` prefix. The build loop could enforce this mechanically by checking whether the first token of build_cmd exists on PATH before invoking it, but this is not yet implemented.
+
+---
+
+## L-00220 — Shell NODE_ENV=production persists across commands and causes false next dev failures
+
+Type: failure_pattern
+Tags: NODE_ENV, next-dev, shell-environment, next-build, false-failure
+Confidence: high
+Status: active
+Date: 2026-03-09
+Related: L-00218 (related_to)
+
+Running `NODE_ENV=production npx next build` in a shell sets NODE_ENV for the duration of that shell session. A subsequent `npx next dev` in the same shell inherits `NODE_ENV=production`, which causes the dev server to return HTTP 500 — the CSS compilation pipeline (Tailwind v4 via @tailwindcss/postcss) fails under production mode in the dev server path. The error (`Module parse failed: Unexpected character '@' at @import "tailwindcss"`) looks like a dependency or config issue but is actually an environment contamination issue. The production build (`next build`) uses webpack which handles the CSS correctly; the dev server uses a different compilation path that fails. Prevention rule: always prefix NODE_ENV inline (`NODE_ENV=production npx next build`) rather than exporting it, and when diagnosing dev server failures, check `echo $NODE_ENV` first.
+
+---
+
+## L-00222 — general-estimates.jsonl stash conflicts are structural, not incidental
+
+Type: failure_pattern
+Tags: general-estimates.jsonl, git-stash, merge-conflict, append-only-JSONL, agent-dispatch
+Confidence: high
+Status: active
+Date: 2026-03-09
+Related: L-00223 (related_to)
+
+Both the local chat session and remote Claude Code agents append lines to `general-estimates.jsonl`. When local changes are stashed to merge an agent branch, `git stash pop` always conflicts because both sides appended to the end of the same file. This occurred 3 times in one session. Resolution is always "keep both sides" since both are valid telemetry data. Possible mitigations: (1) commit the file immediately before every agent dispatch so there's nothing to stash, (2) gitignore the file and treat it as local-only, (3) automate the "keep both" resolution. Option 1 is simplest and aligns with L-00223 (clean working tree before dispatch).
+
+---
+
+## L-00224 — Agent-executed mv can create unexpected nesting; verify directory structure after move operations
+
+Type: failure_pattern
+Tags: mv, directory-nesting, agent-move, filesystem-structure, compstak-sitdeck
+Confidence: high
+Status: active
+Date: 2026-03-09
+Related: L-00225 (related_to)
+
+When an agent ran `mv ~/auto-sdd/compstak-sitdeck ~/compstak-sitdeck`, the target `~/compstak-sitdeck/` already had content (`.specs`, `_shared-csv-data` from a prior copy). The mv placed the project as a subdirectory: `~/compstak-sitdeck/compstak-sitdeck/`. All path references (`PROJECT_DIR`, slash commands, ACTIVE-CONSIDERATIONS) pointed to `~/compstak-sitdeck/` but the actual `.git` and project code were one level deeper. The build loop would have failed silently — `project.yaml` not found, roadmap not found, no features to build. Prevention rule: after any move operation, verify the target directory contains the expected root marker (`.git`, `package.json`, or whatever identifies the project root) directly, not nested. Run `ls <target>/.git` or equivalent immediately after the move.
+
+---
+
+## L-00225 — Config files tracked only in the parent repo are lost when a project is segregated; commit them in the project's own git
+
+Type: failure_pattern
+Tags: project.yaml, .sdd-config, git-tracking, project-segregation, config-loss, git-rm-cached
+Confidence: high
+Status: active
+Date: 2026-03-09
+Related: L-00224 (related_to), L-00223 (related_to)
+
+`project.yaml` was tracked in auto-sdd's git under `compstak-sitdeck/.sdd-config/project.yaml`. When compstak-sitdeck was moved out of auto-sdd and `git rm --cached -r compstak-sitdeck/` untracked all its files, `project.yaml` ceased to exist — the project's own git repo never tracked it. The build loop reads `project.yaml` from `<project_dir>/.sdd-config/` at init time; without it, build_cmd and test_cmd fall back to auto-detection or empty strings. Prevention rule: any file the build loop reads from `project_dir` at runtime must be committed in the project's own git repo, not only in the parent orchestrator's repo. This applies to `project.yaml`, `CLAUDE.md`, and any future project-scoped config. When segregating a project, verify all config files exist in the project's own git with `git -C <project_dir> ls-files .sdd-config/`.

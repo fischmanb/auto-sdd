@@ -88,6 +88,8 @@ See **`ACTIVE-CONSIDERATIONS.md`** — priority stack, in-flight work, and open 
 
 ## Key Files — What to Read and When
 
+> **Comprehensive organized docs**: `docs/README.md` is the single navigable entry point for all system documentation — architecture, operations, guides, decisions, learnings, plans, and agent history. The table below covers protocol-critical files at repo root.
+
 | File | What it contains | When to read |
 |------|-----------------|--------------|
 | **ONBOARDING.md** (this file) | Full project context for a fresh chat | Always read first |
