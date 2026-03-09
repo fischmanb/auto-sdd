@@ -42,6 +42,10 @@ def write_learning(
     feature_name: str = "",
     project_dir: Path | None = None,
     repo_dir: Path | None = None,
+    pattern: str | None = None,
+    applies_to: list[str] | None = None,
+    detection: str | None = None,
+    prevention: str | None = None,
 ) -> None:
     """Append a learning entry to project-local and repo-level learnings.
 
@@ -54,6 +58,19 @@ def write_learning(
         project_dir: If provided, write to <project_dir>/.specs/learnings/general.md.
         repo_dir: Superloop repo root. Defaults to auto-derived from module path.
             Writes to <repo_dir>/learnings/pending.md.
+        pattern: Abstract failure class, language-agnostic. Used for cross-language
+            scenario matching and future embedding retrieval.
+            Example: "relative path resolution against implicit cwd"
+        applies_to: Scope tags for injection filtering. Supports language tags
+            ("python", "typescript", "rust"), framework tags ("nextjs", "subprocess"),
+            and scenario tags ("implicit-cwd", "path-resolution", "cli-invocation").
+            Use ["all"] for universal applicability.
+            Example: ["python", "subprocess", "implicit-cwd"]
+        detection: How to recognize this pattern in unfamiliar code — grep heuristic
+            or reasoning cue. Used by future semantic injection pipeline.
+            Example: "any subprocess.run / Popen call without explicit cwd= parameter"
+        prevention: Imperative rule that holds regardless of language/framework context.
+            Example: "always pass cwd= explicitly; never rely on implicit working directory"
     """
     ts = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     date_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
@@ -62,6 +79,18 @@ def write_learning(
         repo_dir = _default_repo_dir()
 
     feature_ctx = f" / {feature_name}" if feature_name else ""
+
+    # ── Build optional scenario-matching block (flat KV for grepability) ────
+    scenario_lines: list[str] = []
+    if pattern is not None:
+        scenario_lines.append(f"Pattern: {pattern}")
+    if applies_to is not None:
+        scenario_lines.append(f"Applies-to: {', '.join(applies_to)}")
+    if detection is not None:
+        scenario_lines.append(f"Detection: {detection}")
+    if prevention is not None:
+        scenario_lines.append(f"Prevention: {prevention}")
+    scenario_block = ("\n" + "\n".join(scenario_lines)) if scenario_lines else ""
 
     # ── Project-local entry ──────────────────────────────────────────────────
     if project_dir is not None:
@@ -72,7 +101,8 @@ def write_learning(
             entry = (
                 f"\n### {date_str} — {summary}\n"
                 f"Category: {category}\n"
-                f"Feature: {feature_name or '(campaign-wide)'}\n\n"
+                f"Feature: {feature_name or '(campaign-wide)'}\n"
+                f"{scenario_block}\n"
                 f"{detail.strip()}\n"
             )
             with local_file.open("a") as f:
@@ -96,7 +126,8 @@ def write_learning(
             f"Timestamp: {ts}\n"
             f"Category: {category}\n"
             f"Project: {project_name}\n"
-            f"Feature: {feature_name or '(campaign-wide)'}\n\n"
+            f"Feature: {feature_name or '(campaign-wide)'}\n"
+            f"{scenario_block}\n"
             f"**{summary}**\n\n"
             f"{detail.strip()}\n"
         )
