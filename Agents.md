@@ -1896,6 +1896,16 @@ grep -c "source.*validation.sh" scripts/*.sh  # Should be 1 (generate-mapping.sh
 
 **Verification**: All tests pass. git diff --stat shows only allowed files.
 
+### Round — Integration Pipeline Test (2026-03-09)
+
+**What was asked**: Write an integration test that exercises the full build pipeline with all isolation layers active — prompt boundary, chmod protection, contamination audit, config loading, log derivation — to verify the system works end-to-end after the isolation refactor.
+
+**What changed**: Created `py/tests/test_integration_pipeline.py` — 8 tests covering single-feature build completion, prompt boundary injection, real-filesystem chmod protection + restore, root-level file protection, contamination check on clean and dirty repos, project initialization with config, and log dir derivation.
+
+**What was NOT changed**: No existing source files, tests, or scripts modified.
+
+**Verification**: All 8 new tests pass. All 158 existing tests pass. mypy --strict passes. git diff --stat shows only test_integration_pipeline.py and Agents.md.
+
 ## Questions?
 
 See [ARCHITECTURE.md](./ARCHITECTURE.md) for deeper design rationale.

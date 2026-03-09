@@ -135,3 +135,4 @@
 {"timestamp":"2026-03-08T23:45:42Z","activity_type":"agent_call","source":"claude_wrapper","input_tokens":1668,"output_tokens":27654,"active_tokens":29322,"cost_usd":2.969149499999999,"model":"claude-sonnet-4-6","exit_code":0,"duration_ms":425447}
 {"timestamp":"2026-03-09T00:02:13Z","activity_type":"agent_call","source":"claude_wrapper","input_tokens":60,"output_tokens":21145,"active_tokens":21205,"cost_usd":2.317029,"model":"claude-sonnet-4-6","exit_code":0,"duration_ms":350710}
 {"timestamp":"2026-03-09T04:08:36Z","activity_type":"protect-root-files","estimated_tokens_pre":40000,"active_tokens":3704,"cumulative_tokens":1886200}
+{"timestamp":"2026-03-09T04:55:16Z","activity_type":"integration-pipeline-test","estimated_tokens_pre":65000,"active_tokens":455,"cumulative_tokens":2859588}
