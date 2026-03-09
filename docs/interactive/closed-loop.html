@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Superloop — The Closed Loop</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #020617; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+  #root { width: 100%; max-width: 1100px; padding: 20px; }
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
+</head>
+<body>
+<div id="root"></div>
+<script>
+const e = React.createElement;
+const { useState } = React;
+
+const C = {
+  bg:"#020617",card:"#1E293B",accent:"#06B6D4",accentDk:"#0891B2",
+  green:"#10B981",amber:"#F59E0B",white:"#F8FAFC",muted:"#94A3B8",
+  subtle:"#334155",
+};
+
+const PHASES = [
+  {
+    title:"1. Spec → Prompt Builder",
+    desc:"The build loop reads roadmap.md, topo-sorts features by dependency, and picks the next pending one. It constructs a prompt from the feature spec. After the first feature is built, a codebase summary (component map, type exports) and learnings from prior builds are also injected.",
+    boxes:["prompt"], arrows:[],
+  },
+  {
+    title:"2. Build Agent implements the feature",
+    desc:"A fresh agent session receives the prompt in an isolated context window. It reads the codebase, writes implementation code, runs commands, and commits. Zero memory of prior features — only what the prompt injected. Currently Claude Code; moving to local GPT-OSS.",
+    boxes:["prompt","agent"], arrows:["prompt-agent"],
+  },
+  {
+    title:"3. Build Gates verify mechanically",
+    desc:"The orchestrator validates the agent's output with machine checks only — agent self-assessment is discarded. Seven gates: HEAD advanced, tree clean, contamination check, tsc/build, tests (599 passing), dead exports, lint.",
+    boxes:["agent","gates"], arrows:["agent-gates"],
+  },
+  {
+    title:"3R. On failure → two-stage retry",
+    desc:"If any gate fails: Attempt 1 keeps code on disk, injects the exact failure stderr. Attempt 2+ does git reset --hard and rebuilds from scratch with all prior failure context. Two shots before skip.",
+    boxes:["agent","gates"], arrows:["agent-gates","retry"],
+  },
+  {
+    title:"4. Drift Check",
+    desc:"A separate fresh agent compares the feature spec against the actual committed code. Did the builder implement what was specified? Catches scope drift, missing requirements, hallucinated features.",
+    boxes:["gates","drift"], arrows:["gates-drift"],
+  },
+  {
+    title:"5. Auto-QA validates at runtime",
+    desc:"The app is booted, browsed via Playwright, tested against acceptance criteria generated from specs. Failures are cataloged, root-caused, and fix agents are dispatched — all through the same build gates.",
+    boxes:["drift","qa"], arrows:["drift-qa"],
+  },
+  {
+    title:"6. Git Commit → advance to next feature",
+    desc:"Feature is committed. Resume state is written to disk (survives crashes). The loop advances to the next feature in the topo-sorted queue. Merged branches are cleaned up automatically.",
+    boxes:["qa","commit","prompt"], arrows:["qa-commit","next-feature"],
+  },
+  {
+    title:"7. Eval Sidecar runs async on each commit",
+    desc:"After each commit, the eval sidecar wakes up asynchronously — it never blocks the build. It classifies the feature: framework compliance, scope assessment, integration quality. Mistakes are categorized.",
+    boxes:["commit","eval"], arrows:["commit-eval"],
+  },
+  {
+    title:"8. Findings → Learnings Corpus",
+    desc:"Eval findings are written to the learnings corpus — 226+ graph-schema entries with typed edges, IDs, confidence scores. Structured for migration to a queryable knowledge graph.",
+    boxes:["eval","learnings"], arrows:["commit-eval","eval-learnings"],
+  },
+  {
+    title:"9. Feedback loop: learnings + codebase summary → next build",
+    desc:"On the NEXT feature build, the learnings corpus and codebase summary (component map, type exports, import graph — cached on git tree hash) are injected back into the prompt. Past mistakes prevent future repetition. This is the first feedback loop.",
+    boxes:["learnings","codebase","prompt"], arrows:["learnings-prompt","codebase-prompt"],
+  },
+  {
+    title:"10. Knowledge Graph (In Dev)",
+    desc:"Structured learnings flow into a SQLite knowledge graph with FTS5 full-text search and Anthropic embeddings. This makes the entire corpus queryable — BFS traversal, semantic similarity, keyword search.",
+    boxes:["learnings","kg","promo"], arrows:["learnings-kg"], inDev:true,
+  },
+  {
+    title:"11. The full loop closes (In Dev)",
+    desc:"spec_preprocessor.py queries the knowledge graph BEFORE each build: BFS on dependency chains, semantic similarity, BM25 keywords, then a synthesis call. The output — prescriptive build intelligence — is injected into the feature spec before the agent ever sees it. The system teaches itself.",
+    boxes:["kg","preproc","promo","prompt","learnings"], arrows:["learnings-kg","kg-preproc","preproc-promo","return-path"], inDev:true,
+  },
+];
+
+const B = {
+  prompt:   {x:60,y:55,w:130,h:50,label:"Prompt\nBuilder",color:C.accentDk},
+  agent:    {x:222,y:55,w:130,h:50,label:"Build\nAgent",color:C.green},
+  gates:    {x:384,y:55,w:130,h:50,label:"Build\nGates",color:C.amber},
+  drift:    {x:546,y:55,w:130,h:50,label:"Drift\nCheck",color:C.accent},
+  qa:       {x:708,y:55,w:130,h:50,label:"Auto-QA",color:C.green},
+  commit:   {x:870,y:55,w:130,h:50,label:"Git\nCommit",color:C.green},
+  eval:     {x:60,y:210,w:250,h:50,label:"Eval Sidecar",color:C.amber},
+  learnings:{x:350,y:210,w:200,h:50,label:"Learnings\n(226+)",color:C.accent},
+  codebase: {x:590,y:210,w:220,h:50,label:"Codebase\nSummary",color:C.accentDk},
+  kg:       {x:100,y:340,w:230,h:50,label:"Knowledge\nGraph",color:C.accent},
+  preproc:  {x:380,y:340,w:260,h:50,label:"spec_\npreprocessor",color:C.accent},
+  promo:    {x:690,y:340,w:170,h:50,label:"Promotion\nJob",color:C.muted},
+};
+
+const A = {
+  "prompt-agent":     {d:"M190,80 L222,80",color:C.accentDk},
+  "agent-gates":      {d:"M352,80 L384,80",color:C.green},
+  "gates-drift":      {d:"M514,80 L546,80",color:C.amber},
+  "drift-qa":         {d:"M676,80 L708,80",color:C.accent},
+  "qa-commit":        {d:"M838,80 L870,80",color:C.green},
+  "retry":            {d:"M449,105 L449,130 L287,130 L287,105",color:C.amber},
+  "commit-eval":      {d:"M935,105 L935,175 L310,175 L310,210",color:C.muted},
+  "eval-learnings":   {d:"M310,235 L350,235",color:C.amber},
+  "learnings-prompt": {d:"M450,210 L450,165 L125,165 L125,105",color:C.accent,dashed:true},
+  "codebase-prompt":  {d:"M700,210 L700,155 L155,155 L155,105",color:C.accentDk,dashed:true},
+  "learnings-kg":     {d:"M450,260 L450,290 L215,290 L215,340",color:C.accent},
+  "kg-preproc":       {d:"M330,365 L380,365",color:C.accent},
+  "preproc-promo":    {d:"M640,365 L690,365",color:C.muted},
+  "return-path":      {d:"M380,365 L30,365 L30,80 L60,80",color:C.accent,w:4},
+  "next-feature":     {d:"M1000,80 L1020,80 L1020,38 L125,38 L125,55",color:C.green,dashed:true},
+};
+
+const colors = [...new Set(Object.values(A).map(a=>a.color))];
+
+function RBox(props) {
+  const {id, lit} = props;
+  const b = B[id]; const lines = b.label.split("\n");
+  const isDev = ["kg","preproc","promo"].includes(id);
+  const kids = [
+    e("rect",{key:"bg",x:b.x,y:b.y,width:b.w,height:b.h,rx:5,fill:C.card,stroke:lit?b.color:"transparent",strokeWidth:1.5}),
+    e("rect",{key:"bar",x:b.x,y:b.y+b.h-4,width:b.w,height:4,rx:2,fill:b.color,opacity:lit?1:0.3}),
+  ];
+  lines.forEach(function(l,i){
+    kids.push(e("text",{key:"t"+i,x:b.x+b.w/2,y:b.y+b.h/2+(i-(lines.length-1)/2)*14+1,
+      textAnchor:"middle",dominantBaseline:"middle",fill:lit?C.white:C.subtle,
+      fontSize:12,fontWeight:"bold",fontFamily:"Calibri,sans-serif"},l));
+  });
+  if(isDev && lit){
+    kids.push(e("rect",{key:"db",x:b.x+b.w-36,y:b.y-5,width:34,height:12,rx:2,fill:C.amber}));
+    kids.push(e("text",{key:"dt",x:b.x+b.w-19,y:b.y+2,textAnchor:"middle",dominantBaseline:"middle",
+      fill:C.bg,fontSize:7,fontWeight:"bold"},"In Dev"));
+  }
+  return e("g",{style:{transition:"opacity 0.4s",opacity:lit?1:0.12}},kids);
+}
+
+function RArrow(props) {
+  const {id, lit} = props;
+  const a = A[id]; if(!a) return null;
+  return e("path",{d:a.d,fill:"none",stroke:a.color,strokeWidth:a.w||2.5,
+    strokeLinejoin:"round",strokeLinecap:"round",
+    strokeDasharray:a.dashed?"6,4":undefined,
+    markerEnd:"url(#ah-"+a.color.replace("#","")+")",
+    style:{transition:"opacity 0.4s",opacity:lit?1:0.06}});
+}
+
+function FlowLabel(props) {
+  const {show, x, y, text, color} = props;
+  if(!show) return null;
+  return e("text",{x:x,y:y,fill:color,fontSize:9,fontStyle:"italic",fontFamily:"Calibri,sans-serif"},text);
+}
+
+function App() {
+  const [step, setStep] = useState(0);
+  const ph = PHASES[step];
+  const litB = new Set(ph.boxes);
+  const litA = new Set(ph.arrows);
+
+  function onKey(ev) {
+    if(ev.key==="ArrowRight"||ev.key===" ") setStep(function(s){return Math.min(PHASES.length-1,s+1);});
+    if(ev.key==="ArrowLeft") setStep(function(s){return Math.max(0,s-1);});
+  }
+  React.useEffect(function(){document.addEventListener("keydown",onKey);return function(){document.removeEventListener("keydown",onKey);};},[]);
+
+  // SVG markers
+  var markers = colors.map(function(c){
+    return e("marker",{key:c,id:"ah-"+c.replace("#",""),markerWidth:8,markerHeight:6,refX:7,refY:3,orient:"auto"},
+      e("polygon",{points:"0,0 8,3 0,6",fill:c}));
+  });
+
+  // Section labels
+  var sectionLabels = [
+    e("text",{key:"s1",x:60,y:47,fill:C.subtle,fontSize:9,fontStyle:"italic",fontFamily:"Calibri,sans-serif"},"per feature (topo-sorted)"),
+    e("text",{key:"s2",x:60,y:200,fill:C.subtle,fontSize:9,fontStyle:"italic",fontFamily:"Calibri,sans-serif"},"async intelligence — per commit, never blocks"),
+    e("text",{key:"s3",x:100,y:332,fill:C.subtle,fontSize:9,fontStyle:"italic",fontFamily:"Calibri,sans-serif"},"knowledge compounding — closes the loop"),
+  ];
+
+  // Arrows
+  var arrows = Object.keys(A).map(function(id){ return e(RArrow,{key:id,id:id,lit:litA.has(id)}); });
+  // Boxes
+  var boxes = Object.keys(B).map(function(id){ return e(RBox,{key:id,id:id,lit:litB.has(id)}); });
+
+  // Contextual labels
+  var labels = [
+    e(FlowLabel,{key:"fl1",show:litA.has("retry"),x:300,y:143,text:"fix-in-place or git reset + prior failures",color:C.amber}),
+    e(FlowLabel,{key:"fl2",show:litA.has("commit-eval"),x:630,y:172,text:"committed code triggers eval",color:C.muted}),
+    e(FlowLabel,{key:"fl3",show:litA.has("eval-learnings"),x:314,y:228,text:"findings",color:C.amber}),
+    e(FlowLabel,{key:"fl4",show:litA.has("learnings-prompt"),x:260,y:160,text:"past mistakes + patterns",color:C.accent}),
+    e(FlowLabel,{key:"fl5",show:litA.has("codebase-prompt"),x:380,y:150,text:"component map + type exports",color:C.accentDk}),
+    e(FlowLabel,{key:"fl6",show:litA.has("learnings-kg"),x:330,y:286,text:"structured entries",color:C.accent}),
+    e(FlowLabel,{key:"fl7",show:litA.has("kg-preproc"),x:337,y:358,text:"query",color:C.accent}),
+  ];
+
+  // Retry badge
+  var retryBadge = litA.has("retry") ? e("g",{key:"rb"},
+    e("circle",{cx:368,cy:124,r:10,fill:C.amber}),
+    e("text",{x:368,y:127,textAnchor:"middle",dominantBaseline:"middle",fill:C.bg,fontSize:9,fontWeight:"bold"},"R")
+  ) : null;
+
+  // Next feature label
+  var nextLabel = litA.has("next-feature") ?
+    e("text",{key:"nf",x:450,y:33,fill:C.green,fontSize:10,fontStyle:"italic",fontWeight:"bold",textAnchor:"middle",fontFamily:"Calibri,sans-serif"},
+      "repeats for each feature in the topo-sorted queue") : null;
+
+  // Return path label
+  var returnLabel = litA.has("return-path") ?
+    e("text",{key:"rl",x:16,y:230,fill:C.accent,fontSize:10,fontStyle:"italic",fontWeight:"bold",
+      fontFamily:"Calibri,sans-serif",transform:"rotate(-90,16,230)",textAnchor:"middle"},
+      "intelligence feeds back into specs") : null;
+
+  // Build SVG
+  var svg = e("svg",{viewBox:"0 0 1020 410",style:{width:"100%",display:"block"}},
+    e("defs",null,markers), sectionLabels, arrows, boxes, labels, retryBadge, nextLabel, returnLabel);
+
+  // Step dots
+  var dots = PHASES.map(function(_,i){
+    return e("div",{key:i,onClick:function(){setStep(i);},style:{
+      width:i===step?18:8,height:8,borderRadius:4,
+      background:i===step?C.accent:i<step?C.accentDk:C.subtle,
+      cursor:"pointer",transition:"all 0.3s"}});
+  });
+
+  // Back/Next buttons
+  var backBtn = e("button",{onClick:function(){setStep(Math.max(0,step-1));},disabled:step===0,
+    style:{background:step===0?C.card:C.subtle,color:step===0?C.subtle:C.white,
+      border:"none",borderRadius:6,padding:"7px 18px",cursor:step===0?"default":"pointer",
+      fontSize:13,fontWeight:"bold"}},"← Back");
+  var nextBtn = e("button",{onClick:function(){setStep(Math.min(PHASES.length-1,step+1));},
+    disabled:step===PHASES.length-1,
+    style:{background:step===PHASES.length-1?C.card:C.accent,
+      color:step===PHASES.length-1?C.subtle:C.bg,
+      border:"none",borderRadius:6,padding:"7px 18px",
+      cursor:step===PHASES.length-1?"default":"pointer",
+      fontSize:13,fontWeight:"bold"}},"Next →");
+
+  // Title + inDev badge
+  var titleParts = [ph.title];
+  if(ph.inDev) titleParts.push(e("span",{key:"iv",style:{
+    background:C.amber,color:C.bg,fontSize:9,fontWeight:"bold",
+    padding:"2px 6px",borderRadius:3,marginLeft:8,verticalAlign:"middle"}},"In Dev"));
+
+  return e("div",{style:{maxWidth:1060,margin:"0 auto",background:C.bg,borderRadius:12,
+      overflow:"hidden",fontFamily:"Calibri,sans-serif",border:"1px solid "+C.subtle}},
+    svg,
+    e("div",{style:{padding:"14px 24px 18px",borderTop:"1px solid "+C.subtle}},
+      e("div",{style:{display:"flex",alignItems:"center",gap:12,marginBottom:8}},
+        backBtn,
+        e("div",{style:{flex:1,display:"flex",justifyContent:"center",gap:5}},dots),
+        nextBtn),
+      e("div",{style:{minHeight:72}},
+        e("div",{style:{color:C.white,fontSize:16,fontWeight:"bold",marginBottom:3}},titleParts),
+        e("div",{style:{color:C.muted,fontSize:13,lineHeight:"1.5"}},ph.desc))));
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(e(App));
+</script>
+</body>
+</html>
