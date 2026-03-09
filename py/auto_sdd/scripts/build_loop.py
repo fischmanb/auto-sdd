@@ -254,6 +254,8 @@ _EXPECTED_WRITE_PATTERNS: frozenset[str] = frozenset({
     "logs/",
     "learnings/pending.md",
     "general-estimates.jsonl",
+    ".onboarding-state",
+    ".prompt-stash.json",
 })
 
 _PROTECT_DIRS: tuple[str, ...] = (
@@ -591,6 +593,7 @@ class BuildLoop:
         self._last_gate_name: str = ""
         self._last_gate_build_output: str = ""
         self._last_gate_test_output: str = ""
+        self._last_gate_test_count: int | None = None
 
 
         # Paths
@@ -658,6 +661,7 @@ class BuildLoop:
         self.drift_pairs: list[DriftPair] = []
         self.last_feature_branch: str = ""
         self.eval_sidecar_pid: int | None = None
+        self.eval_sidecar_proc: subprocess.Popen[bytes] | None = None
         self.mistake_tracker = MistakeTracker()
         self.script_start: int = int(time.time())
         self._loop_limit: int = 0
@@ -1273,6 +1277,7 @@ class BuildLoop:
                             duration,
                             current_feature_branch,
                             source_files=drift_targets.source_files,
+                            test_count=self._last_gate_test_count,
                             build_output=build_result,
                             vector_id=current_vector_id,
                             injections_received=injections_received,
@@ -1361,6 +1366,7 @@ class BuildLoop:
                             )
                             if build_ok.success:
                                 test_ok = True
+                                gate_test_count: int | None = None
                                 if should_run_step(
                                     "test", self.post_build_steps
                                 ):
@@ -1368,6 +1374,7 @@ class BuildLoop:
                                         self.test_cmd, self.project_dir
                                     )
                                     test_ok = test_result.success
+                                    gate_test_count = test_result.test_count
                                 if test_ok:
                                     logger.warning(
                                         "Inferred success from drift "
@@ -1382,6 +1389,7 @@ class BuildLoop:
                                         model or "default",
                                         duration,
                                         current_feature_branch,
+                                        test_count=gate_test_count,
                                         build_output=build_result,
                                         vector_id=current_vector_id,
                                         injections_received=injections_received,
@@ -1404,6 +1412,7 @@ class BuildLoop:
                         )
                         if build_ok.success:
                             test_ok = True
+                            retry_test_count: int | None = None
                             if should_run_step(
                                 "test", self.post_build_steps
                             ):
@@ -1411,6 +1420,7 @@ class BuildLoop:
                                     self.test_cmd, self.project_dir
                                 )
                                 test_ok = test_result.success
+                                retry_test_count = test_result.test_count
                             if test_ok:
                                 logger.warning(
                                     "Retry produced passing build "
@@ -1426,6 +1436,7 @@ class BuildLoop:
                                     model or "default",
                                     duration,
                                     current_feature_branch,
+                                    test_count=retry_test_count,
                                     build_output=build_result,
                                     vector_id=current_vector_id,
                                     injections_received=injections_received,
@@ -1572,6 +1583,7 @@ class BuildLoop:
         self._last_gate_name = ""
         self._last_gate_build_output = ""
         self._last_gate_test_output = ""
+        self._last_gate_test_count = None
 
         # Gate 0: HEAD must have advanced (agent must have committed)
         if branch_start_commit:
@@ -1613,6 +1625,7 @@ class BuildLoop:
         # Gate 3: Test check
         if should_run_step("test", self.post_build_steps):
             test_result = check_tests(self.test_cmd, gate_dir)
+            self._last_gate_test_count = test_result.test_count
             if not test_result.success:
                 logger.warning(
                     "Agent said FEATURE_BUILT but tests failed"
@@ -1823,6 +1836,7 @@ class BuildLoop:
                 self._record_build_result(
                     fn, "built", model or "default",
                     duration, branch_name,
+                    test_count=self._last_gate_test_count,
                     build_output=build_output,
                 )
             else:
@@ -1996,6 +2010,7 @@ class BuildLoop:
                     env=env,
                 )
             self.eval_sidecar_pid = proc.pid
+            self.eval_sidecar_proc = proc
             logger.info(
                 "Eval sidecar started (PID: %d)",
                 self.eval_sidecar_pid,
@@ -2010,13 +2025,23 @@ class BuildLoop:
         if self.eval_sidecar_pid is None:
             return
 
-        # Check if still running
-        try:
-            os.kill(self.eval_sidecar_pid, 0)
-        except OSError:
+        proc = self.eval_sidecar_proc
+
+        # Check if still running — use proc.poll() to reap zombies
+        if proc is not None and proc.poll() is not None:
             logger.info("Eval sidecar already exited")
             self.eval_sidecar_pid = None
+            self.eval_sidecar_proc = None
             return
+
+        # Fallback: os.kill check if we only have PID (shouldn't happen)
+        if proc is None:
+            try:
+                os.kill(self.eval_sidecar_pid, 0)
+            except OSError:
+                logger.info("Eval sidecar already exited")
+                self.eval_sidecar_pid = None
+                return
 
         # Write drain sentinel
         drain_sentinel = self.project_dir / ".sdd-eval-drain"
@@ -2027,11 +2052,16 @@ class BuildLoop:
         waited = 0
         timeout = 120
         while waited < timeout:
-            try:
-                os.kill(self.eval_sidecar_pid, 0)
-            except OSError:
-                logger.info("Eval sidecar exited cleanly")
-                break
+            if proc is not None:
+                if proc.poll() is not None:
+                    logger.info("Eval sidecar exited cleanly")
+                    break
+            else:
+                try:
+                    os.kill(self.eval_sidecar_pid, 0)
+                except OSError:
+                    logger.info("Eval sidecar exited cleanly")
+                    break
             time.sleep(2)
             waited += 2
         else:
@@ -2039,13 +2069,17 @@ class BuildLoop:
                 "Eval sidecar did not exit within %ds — sending SIGTERM",
                 timeout,
             )
-            try:
-                os.kill(self.eval_sidecar_pid, signal.SIGTERM)
-            except OSError:
-                pass
+            if proc is not None:
+                proc.terminate()
+            else:
+                try:
+                    os.kill(self.eval_sidecar_pid, signal.SIGTERM)
+                except OSError:
+                    pass
 
         drain_sentinel.unlink(missing_ok=True)
         self.eval_sidecar_pid = None
+        self.eval_sidecar_proc = None
 
     # ── Internal helpers ─────────────────────────────────────────────────
 
@@ -2053,15 +2087,22 @@ class BuildLoop:
         """Log a warning if the sidecar process has died."""
         if self.eval_sidecar_pid is None:
             return
-        try:
-            os.kill(self.eval_sidecar_pid, 0)
-        except OSError:
+        exited = False
+        if self.eval_sidecar_proc is not None:
+            exited = self.eval_sidecar_proc.poll() is not None
+        else:
+            try:
+                os.kill(self.eval_sidecar_pid, 0)
+            except OSError:
+                exited = True
+        if exited:
             logger.warning(
                 "EVAL SIDECAR DIED (was PID %d) — no eval coverage "
                 "for remaining features",
                 self.eval_sidecar_pid,
             )
             self.eval_sidecar_pid = None
+            self.eval_sidecar_proc = None
 
     def _cleanup_branch_on_no_features(
         self,
