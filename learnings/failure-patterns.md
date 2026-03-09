@@ -381,3 +381,29 @@ Date: 2026-03-08T00:00:00-05:00
 Related: L-00207 (related_to)
 
 `auto_approve: true` was committed to `.sdd-config/project.yaml`, which silently bypassed the human pre-flight build plan review on every campaign launch. The root cause: `AUTO_APPROVE` was doing double duty — controlling both agent-level confirmation prompts (correct use) and the campaign-level human review gate (wrong use). These are different concerns at different levels: one is "should agents pause for human input during the build" and the other is "should the human see and approve the build plan before the campaign starts." The fix is to split them: introduce `SKIP_PREFLIGHT` for the human gate, keep `AUTO_APPROVE` for agent prompts only. Neither belongs in project.yaml — both are decisions made by the person launching the campaign, not properties of the project. General rule: when a single flag controls behavior at two different system levels (human-facing vs. automated), split it. Shared flags always eventually fire the wrong gate.
+
+---
+
+## L-00218 — build_cmd using bare `next` fails because npx is required for PATH resolution in agent shells
+
+Type: failure_pattern
+Tags: build_cmd, npx, PATH, next, project.yaml, build_loop, build_check
+Confidence: high
+Status: active
+Date: 2026-03-09
+Related: L-00216 (related_to), L-00207 (related_to)
+
+Setting `build_cmd: NODE_ENV=production next build` in project.yaml or .env.local causes every build gate check to fail with `bash: line 1: next: command not found`. The `next` binary lives in `node_modules/.bin/`, which is on PATH when invoked via npm scripts or npx but not when the build loop shells out directly. The correct command is `npx next build`. This was the single most expensive failure of the SitDeck campaign: 5 features attempted × 3 retries each = 15 wasted agent invocations over ~1.5 hours of wall time. Agents built features successfully each time — TypeScript compiled, code committed — but the build gate rejected them all. Prevention rule: any build_cmd that references a project-local binary (next, tsc, vitest, eslint) must use `npx` prefix. The build loop could enforce this mechanically by checking whether the first token of build_cmd exists on PATH before invoking it, but this is not yet implemented.
+
+---
+
+## L-00220 — Shell NODE_ENV=production persists across commands and causes false next dev failures
+
+Type: failure_pattern
+Tags: NODE_ENV, next-dev, shell-environment, next-build, false-failure
+Confidence: high
+Status: active
+Date: 2026-03-09
+Related: L-00218 (related_to)
+
+Running `NODE_ENV=production npx next build` in a shell sets NODE_ENV for the duration of that shell session. A subsequent `npx next dev` in the same shell inherits `NODE_ENV=production`, which causes the dev server to return HTTP 500 — the CSS compilation pipeline (Tailwind v4 via @tailwindcss/postcss) fails under production mode in the dev server path. The error (`Module parse failed: Unexpected character '@' at @import "tailwindcss"`) looks like a dependency or config issue but is actually an environment contamination issue. The production build (`next build`) uses webpack which handles the CSS correctly; the dev server uses a different compilation path that fails. Prevention rule: always prefix NODE_ENV inline (`NODE_ENV=production npx next build`) rather than exporting it, and when diagnosing dev server failures, check `echo $NODE_ENV` first.

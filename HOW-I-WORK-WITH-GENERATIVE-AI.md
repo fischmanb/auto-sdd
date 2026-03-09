@@ -1074,6 +1074,20 @@ When Brian corrects a specific artifact, he diagnoses the systemic implication, 
 
 ---
 
+---
+
+## M-00094
+
+- **Type:** preference
+- **Tags:** chat-session, scope-discipline, response-boundaries, directive-following
+- **Confidence:** high
+- **Status:** active
+- **Date:** 2026-03-09
+- **Related:** L-00219 (related_to), L-00143 (related_to), M-00093 (related_to)
+
+Brian enforces tight scope discipline on chat responses. When asked to do X, he expects exactly X — not X plus adjacent exploration that seems helpful. In one session, a request to "review build logs and report" produced a response that also explored git history, ran the test suite, tallied costs, and assessed project state. Brian corrected this twice in quick succession ("you tried to do way too many things" followed by "JUST REPORT"). The pattern: Brian directs each step explicitly and treats unsolicited expansion as noise, not initiative. A response that does less but matches the request exactly is preferred over one that does more but exceeds it. This is consistent with Brian's general communication style — direct, no excess — applied to the operational boundary between request and response.
+
+
 ## Accumulation (DEPRECATED — see L-00194)
 
 > **Process change (2026-03-04):** New methodology observations go directly into graph-schema M-entries above. This section is a backlog of raw captures that predate the change. Clear by converting to schema entries or discarding. Do NOT add new raw entries here.

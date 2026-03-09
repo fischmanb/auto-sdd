@@ -1,6 +1,6 @@
 {
   "last_check_ts": "2026-03-08T07:00:00.000000Z",
   "last_check_hash": "f6e9314b3530349082197ff3b09bb5c6",
-  "prompt_count": 0,
-  "pending_captures": []
+  "prompt_count": 3,
+  "pending_captures": ["Scope discipline correction: response far exceeded what was requested. Read instructions literally, stop at boundaries, don't extrapolate into git history/tests/costs when asked only for build log review."]
 }

@@ -964,3 +964,16 @@ Date: 2026-03-08
 Related: L-00214 (related_to)
 
 When validating agent-emitted signals that reference file paths (SPEC_FILE, SOURCE_FILES), resolve relative paths against project_dir, not the Python process cwd. The build loop runs from ~/auto-sdd/py/ but agents emit paths relative to the project root (e.g., .specs/features/infrastructure/F-000.feature.md). Path.exists() on an unresolved relative path silently fails, causing drift checks to be skipped for every feature. Fix: in _validate_required_signals, resolve against project_dir before calling .exists(). Extend this pattern to any future signal that emits a project-relative path.
+
+---
+
+## L-00219 — Chat response scope must match request scope exactly
+
+Type: process_rule
+Tags: chat-session, scope, response-boundaries, scope-discipline
+Confidence: high
+Status: active
+Date: 2026-03-09
+Related: L-00143 (related_to)
+
+Chat responses default to expansive exploration unless explicitly constrained. When Brian asks to "review build logs and report," that means read the build logs and report — not also explore git history, run the test suite, tally costs, and check project state. Prevention rule: before the first tool call, enumerate exactly what was requested. If the request names specific artifacts (build logs), read those and stop. Do not extrapolate adjacent work items. If confused about scope, ask — don't guess expansively. This complements L-00143 (scope sizing ritual) but applies specifically to the chat interface where the temptation is to "be helpful" by exploring beyond the request boundary.
