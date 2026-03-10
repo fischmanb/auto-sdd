@@ -446,3 +446,44 @@ Date: 2026-03-09
 Related: L-00224 (related_to), L-00223 (related_to)
 
 `project.yaml` was tracked in auto-sdd's git under `compstak-sitdeck/.sdd-config/project.yaml`. When compstak-sitdeck was moved out of auto-sdd and `git rm --cached -r compstak-sitdeck/` untracked all its files, `project.yaml` ceased to exist — the project's own git repo never tracked it. The build loop reads `project.yaml` from `<project_dir>/.sdd-config/` at init time; without it, build_cmd and test_cmd fall back to auto-detection or empty strings. Prevention rule: any file the build loop reads from `project_dir` at runtime must be committed in the project's own git repo, not only in the parent orchestrator's repo. This applies to `project.yaml`, `CLAUDE.md`, and any future project-scoped config. When segregating a project, verify all config files exist in the project's own git with `git -C <project_dir> ls-files .sdd-config/`.
+
+
+## L-00238 — Auto-QA Phase 3 prompt tells agents VALIDATION_PASS but parser only accepts PASS
+Type: failure_pattern
+Tags: post_campaign_validation.py, parse_playwright_output, _VALID_PLAYWRIGHT_STATUSES, Phase-3, auto-qa, schema-mismatch
+Confidence: high
+Status: active
+Date: 2026-03-10
+Related: L-00231 (instance_of)
+
+The Phase 3 Playwright prompt instructs agents: "Report the result as VALIDATION_PASS, VALIDATION_FAIL, or VALIDATION_BLOCKED." But `_VALID_PLAYWRIGHT_STATUSES` on line 1065 of `post_campaign_validation.py` is `{"PASS", "FAIL", "BLOCKED"}`. When the agent obeys the prompt and returns `"status": "VALIDATION_PASS"`, the parser rejects it as invalid and logs "Failed to parse Playwright output" — on perfectly valid JSON. 3 of 29 sitdeck features failed this way in the first scale run. Fix: either update the prompt to say PASS/FAIL/BLOCKED, or update the parser to strip the `VALIDATION_` prefix. The prompt and parser must agree on the exact enum values.
+
+## L-00239 — Dev-mode build gates miss production-build failures; post-campaign verify should run production build
+Type: failure_pattern
+Tags: next-build, NODE_ENV, production, static-export, useState, server-component, build_loop.py, _post_campaign_verify, build-gates
+Confidence: high
+Status: active
+Date: 2026-03-10
+Related: L-00234 (related_to)
+
+Sitdeck's `app/page.tsx` imports a component that calls `useState` without `"use client"`. In `next dev` this works (no static export). In `next build` (production) it throws `TypeError: Cannot read properties of null (reading 'useState')` during static page generation. The build loop gates run the project's dev-mode build command. Auto-QA Phase 0 catches this because it runs `npm run build`. Gap: `_post_campaign_verify()` reinstalls deps and runs build + test, but uses the same dev-mode `build_cmd` from project.yaml. It should also run the production build command (`NODE_ENV=production npm run build` or equivalent) to catch server/client boundary violations that only surface during static export.
+
+## L-00240 — Map and visualization widgets timeout at 900s; table/form widgets complete in 5-8 min
+Type: empirical_finding
+Tags: Phase-3, Playwright, timeout, AGENT_TIMEOUT, auto-qa, map-widget, visualization, DuckDB, Mapbox
+Confidence: high
+Status: active
+Date: 2026-03-10
+Related: L-00236 (instance_of)
+
+In the sitdeck auto-QA scale run (47 features, 211 criteria), 4 of 29 Phase 3 Playwright agents timed out at 900s. All 4 were map or complex visualization widgets: Adjustable Comps & Weights (F-006), Market Overview (F-009), Terminated Lease Monitor (F-016), Breaking CRE News (F-027). Table/form/list widgets completed in 5-8 minutes. Map widgets require Playwright to wait for tile loading, chart rendering, and async DuckDB queries — significantly more wall time than DOM-only widgets. This is concrete calibration data for adaptive timeouts: table widgets ~400s, map/viz widgets ~1200s+.
+
+## L-00241 — npm ls --all is the mechanical dependency verification command
+Type: empirical_finding
+Tags: npm-ls, check_deps, dependency-health, devDependencies, build_gates.py, package-manager
+Confidence: high
+Status: active
+Date: 2026-03-10
+Related: L-00234 (related_to)
+
+`npm ls --all` exits non-zero when any declared dependency (including devDependencies) is missing from node_modules. This is what `check_deps()` in `build_gates.py` uses as the Gate 1.75 verification command. Equivalent commands: `yarn check --verify-tree` (yarn), `pnpm ls` (pnpm). All three are mechanical, no agent needed, and catch the NODE_ENV=production silent-skip pattern as well as stale lockfiles and corrupted node_modules. The command was identified during the sitdeck @tailwindcss/postcss debugging session where `npm install` reported "up to date" while the package was actually missing.
