@@ -2586,3 +2586,2417 @@ Model: default  Duration: 0s
 Drift check passed: True  Test check passed: True
 Build output tail:
 Error: insufficient_quota
+
+---
+
+## [pending] BUILD-FAILURE — test_failure_updates_tracking0 / auth — 2026-03-09
+Timestamp: 2026-03-09T14:33:23Z
+Category: build-failure
+Project: test_failure_updates_tracking0
+Feature: auth
+
+**Build failure: auth (status=failed, retries=0)**
+
+Model: opus  Duration: 1m 0s
+Drift check passed: True  Test check passed: True
+Build output tail:
+
+---
+
+## [pending] BUILD-FAILURE — test_multiple_builds_accumulat0 / settings — 2026-03-09
+Timestamp: 2026-03-09T14:33:23Z
+Category: build-failure
+Project: test_multiple_builds_accumulat0
+Feature: settings
+
+**Build failure: settings (status=failed, retries=0)**
+
+Model: opus  Duration: 5m 0s
+Drift check passed: True  Test check passed: True
+Build output tail:
+
+---
+
+## [pending] BUILD-FAILURE — test_produces_valid_json0 / dashboard — 2026-03-09
+Timestamp: 2026-03-09T14:33:23Z
+Category: build-failure
+Project: test_produces_valid_json0
+Feature: dashboard
+
+**Build failure: dashboard (status=failed, retries=0)**
+
+Model: sonnet  Duration: 1m 0s
+Drift check passed: True  Test check passed: True
+Build output tail:
+
+---
+
+## [pending] RETRY — test_retry_succeeds_on_second_0 / auth — 2026-03-09
+Timestamp: 2026-03-09T14:33:24Z
+Category: retry
+Project: test_retry_succeeds_on_second_0
+Feature: auth
+
+**auth required 2 attempts before passing gates**
+
+Feature passed on attempt 2. Earlier attempt(s) failed:
+
+---
+
+## [pending] BUILD-FAILURE — test_independent_pass_calls_bu0 / auth — 2026-03-09
+Timestamp: 2026-03-09T14:33:24Z
+Category: build-failure
+Project: test_independent_pass_calls_bu0
+Feature: auth
+
+**Build failure: auth (status=failed, retries=0)**
+
+Model: default  Duration: 0s
+Drift check passed: True  Test check passed: True
+Build output tail:
+BUILD_FAILED: test
+
+---
+
+## [pending] BUILD-FAILURE — test_independent_pass_fails_wh0 / auth — 2026-03-09
+Timestamp: 2026-03-09T14:33:24Z
+Category: build-failure
+Project: test_independent_pass_fails_wh0
+Feature: auth
+
+**Build failure: auth (status=failed, retries=0)**
+
+Model: default  Duration: 0s
+Drift check passed: True  Test check passed: True
+Build output tail:
+FEATURE_BUILT: auth
+SPEC_FILE: spec.md
+
+---
+
+## [pending] DRIFT — test_no_drift_detected0 — 2026-03-09
+Timestamp: 2026-03-09T14:33:25Z
+Category: drift
+Project: test_no_drift_detected0
+Feature: (campaign-wide)
+
+**Drift check: no drift detected for spec.md**
+
+Spec and implementation are aligned.
+Spec: spec.md
+Source files: src.ts
+
+---
+
+## [pending] DRIFT-UNRESOLVABLE — test_unresolvable_drift0 — 2026-03-09
+Timestamp: 2026-03-09T14:33:25Z
+Category: drift-unresolvable
+Project: test_unresolvable_drift0
+Feature: (campaign-wide)
+
+**Drift UNRESOLVABLE for spec.md — needs human review**
+
+Drift agent could not reconcile spec and code.
+Reason: missing schema
+Spec: spec.md
+Source files: src.ts
+
+---
+
+## [pending] BUILD-FAILURE — test-project / Hello World — 2026-03-09
+Timestamp: 2026-03-09T14:33:27Z
+Category: build-failure
+Project: test-project
+Feature: Hello World
+
+**Build failure: Hello World (status=failed, retries=0)**
+
+Model: default  Duration: 0s
+Drift check passed: True  Test check passed: True
+Build output tail:
+BUILD_FAILED: could not compile
+
+---
+
+## [pending] BUILD-FAILURE — test-project / Hello World — 2026-03-09
+Timestamp: 2026-03-09T14:33:30Z
+Category: build-failure
+Project: test-project
+Feature: Hello World
+
+**Build failure: Hello World (status=failed, retries=0)**
+
+Model: default  Duration: 0s
+Drift check passed: True  Test check passed: True
+Build output tail:
+FEATURE_BUILT: Hello World
+SPEC_FILE: .specs/hello-world.md
+SOURCE_FILES: hello-world.ts
+
+---
+
+## [pending] DRIFT — proj — 2026-03-09
+Timestamp: 2026-03-09T14:33:43Z
+Category: drift
+Project: proj
+Feature: (campaign-wide)
+
+**default repo**
+
+detail
+
+---
+
+## [pending] BUILD-FAILURE — test_failure_updates_tracking0 / auth — 2026-03-09
+Timestamp: 2026-03-09T14:34:21Z
+Category: build-failure
+Project: test_failure_updates_tracking0
+Feature: auth
+
+**Build failure: auth (status=failed, retries=0)**
+
+Model: opus  Duration: 1m 0s
+Drift check passed: True  Test check passed: True
+Build output tail:
+
+---
+
+## [pending] BUILD-FAILURE — test_multiple_builds_accumulat0 / settings — 2026-03-09
+Timestamp: 2026-03-09T14:34:21Z
+Category: build-failure
+Project: test_multiple_builds_accumulat0
+Feature: settings
+
+**Build failure: settings (status=failed, retries=0)**
+
+Model: opus  Duration: 5m 0s
+Drift check passed: True  Test check passed: True
+Build output tail:
+
+---
+
+## [pending] BUILD-FAILURE — test_produces_valid_json0 / dashboard — 2026-03-09
+Timestamp: 2026-03-09T14:34:21Z
+Category: build-failure
+Project: test_produces_valid_json0
+Feature: dashboard
+
+**Build failure: dashboard (status=failed, retries=0)**
+
+Model: sonnet  Duration: 1m 0s
+Drift check passed: True  Test check passed: True
+Build output tail:
+
+---
+
+## [pending] RETRY — test_retry_succeeds_on_second_0 / auth — 2026-03-09
+Timestamp: 2026-03-09T14:34:22Z
+Category: retry
+Project: test_retry_succeeds_on_second_0
+Feature: auth
+
+**auth required 2 attempts before passing gates**
+
+Feature passed on attempt 2. Earlier attempt(s) failed:
+
+---
+
+## [pending] BUILD-FAILURE — test_independent_pass_calls_bu0 / auth — 2026-03-09
+Timestamp: 2026-03-09T14:34:22Z
+Category: build-failure
+Project: test_independent_pass_calls_bu0
+Feature: auth
+
+**Build failure: auth (status=failed, retries=0)**
+
+Model: default  Duration: 0s
+Drift check passed: True  Test check passed: True
+Build output tail:
+BUILD_FAILED: test
+
+---
+
+## [pending] BUILD-FAILURE — test_independent_pass_fails_wh0 / auth — 2026-03-09
+Timestamp: 2026-03-09T14:34:22Z
+Category: build-failure
+Project: test_independent_pass_fails_wh0
+Feature: auth
+
+**Build failure: auth (status=failed, retries=0)**
+
+Model: default  Duration: 0s
+Drift check passed: True  Test check passed: True
+Build output tail:
+FEATURE_BUILT: auth
+SPEC_FILE: spec.md
+
+---
+
+## [pending] DRIFT — test_no_drift_detected0 — 2026-03-09
+Timestamp: 2026-03-09T14:34:22Z
+Category: drift
+Project: test_no_drift_detected0
+Feature: (campaign-wide)
+
+**Drift check: no drift detected for spec.md**
+
+Spec and implementation are aligned.
+Spec: spec.md
+Source files: src.ts
+
+---
+
+## [pending] DRIFT-UNRESOLVABLE — test_unresolvable_drift0 — 2026-03-09
+Timestamp: 2026-03-09T14:34:22Z
+Category: drift-unresolvable
+Project: test_unresolvable_drift0
+Feature: (campaign-wide)
+
+**Drift UNRESOLVABLE for spec.md — needs human review**
+
+Drift agent could not reconcile spec and code.
+Reason: missing schema
+Spec: spec.md
+Source files: src.ts
+
+---
+
+## [pending] BUILD-FAILURE — test-project / Hello World — 2026-03-09
+Timestamp: 2026-03-09T14:34:25Z
+Category: build-failure
+Project: test-project
+Feature: Hello World
+
+**Build failure: Hello World (status=failed, retries=0)**
+
+Model: default  Duration: 0s
+Drift check passed: True  Test check passed: True
+Build output tail:
+BUILD_FAILED: could not compile
+
+---
+
+## [pending] BUILD-FAILURE — test-project / Hello World — 2026-03-09
+Timestamp: 2026-03-09T14:34:28Z
+Category: build-failure
+Project: test-project
+Feature: Hello World
+
+**Build failure: Hello World (status=failed, retries=0)**
+
+Model: default  Duration: 0s
+Drift check passed: True  Test check passed: True
+Build output tail:
+FEATURE_BUILT: Hello World
+SPEC_FILE: .specs/hello-world.md
+SOURCE_FILES: hello-world.ts
+
+---
+
+## [pending] DRIFT — proj — 2026-03-09
+Timestamp: 2026-03-09T14:34:41Z
+Category: drift
+Project: proj
+Feature: (campaign-wide)
+
+**default repo**
+
+detail
+
+---
+
+## [pending] BUILD-FAILURE — test_failure_updates_tracking0 / auth — 2026-03-09
+Timestamp: 2026-03-09T14:35:05Z
+Category: build-failure
+Project: test_failure_updates_tracking0
+Feature: auth
+
+**Build failure: auth (status=failed, retries=0)**
+
+Model: opus  Duration: 1m 0s
+Drift check passed: True  Test check passed: True
+Build output tail:
+
+---
+
+## [pending] BUILD-FAILURE — test_multiple_builds_accumulat0 / settings — 2026-03-09
+Timestamp: 2026-03-09T14:35:05Z
+Category: build-failure
+Project: test_multiple_builds_accumulat0
+Feature: settings
+
+**Build failure: settings (status=failed, retries=0)**
+
+Model: opus  Duration: 5m 0s
+Drift check passed: True  Test check passed: True
+Build output tail:
+
+---
+
+## [pending] BUILD-FAILURE — test_produces_valid_json0 / dashboard — 2026-03-09
+Timestamp: 2026-03-09T14:35:05Z
+Category: build-failure
+Project: test_produces_valid_json0
+Feature: dashboard
+
+**Build failure: dashboard (status=failed, retries=0)**
+
+Model: sonnet  Duration: 1m 0s
+Drift check passed: True  Test check passed: True
+Build output tail:
+
+---
+
+## [pending] RETRY — test_retry_succeeds_on_second_0 / auth — 2026-03-09
+Timestamp: 2026-03-09T14:35:06Z
+Category: retry
+Project: test_retry_succeeds_on_second_0
+Feature: auth
+
+**auth required 2 attempts before passing gates**
+
+Feature passed on attempt 2. Earlier attempt(s) failed:
+
+---
+
+## [pending] BUILD-FAILURE — test_independent_pass_calls_bu0 / auth — 2026-03-09
+Timestamp: 2026-03-09T14:35:06Z
+Category: build-failure
+Project: test_independent_pass_calls_bu0
+Feature: auth
+
+**Build failure: auth (status=failed, retries=0)**
+
+Model: default  Duration: 0s
+Drift check passed: True  Test check passed: True
+Build output tail:
+BUILD_FAILED: test
+
+---
+
+## [pending] BUILD-FAILURE — test_independent_pass_fails_wh0 / auth — 2026-03-09
+Timestamp: 2026-03-09T14:35:06Z
+Category: build-failure
+Project: test_independent_pass_fails_wh0
+Feature: auth
+
+**Build failure: auth (status=failed, retries=0)**
+
+Model: default  Duration: 0s
+Drift check passed: True  Test check passed: True
+Build output tail:
+FEATURE_BUILT: auth
+SPEC_FILE: spec.md
+
+---
+
+## [pending] DRIFT — test_no_drift_detected0 — 2026-03-09
+Timestamp: 2026-03-09T14:35:06Z
+Category: drift
+Project: test_no_drift_detected0
+Feature: (campaign-wide)
+
+**Drift check: no drift detected for spec.md**
+
+Spec and implementation are aligned.
+Spec: spec.md
+Source files: src.ts
+
+---
+
+## [pending] DRIFT-UNRESOLVABLE — test_unresolvable_drift0 — 2026-03-09
+Timestamp: 2026-03-09T14:35:06Z
+Category: drift-unresolvable
+Project: test_unresolvable_drift0
+Feature: (campaign-wide)
+
+**Drift UNRESOLVABLE for spec.md — needs human review**
+
+Drift agent could not reconcile spec and code.
+Reason: missing schema
+Spec: spec.md
+Source files: src.ts
+
+---
+
+## [pending] BUILD-FAILURE — test-project / Hello World — 2026-03-09
+Timestamp: 2026-03-09T14:35:09Z
+Category: build-failure
+Project: test-project
+Feature: Hello World
+
+**Build failure: Hello World (status=failed, retries=0)**
+
+Model: default  Duration: 0s
+Drift check passed: True  Test check passed: True
+Build output tail:
+BUILD_FAILED: could not compile
+
+---
+
+## [pending] BUILD-FAILURE — test-project / Hello World — 2026-03-09
+Timestamp: 2026-03-09T14:35:12Z
+Category: build-failure
+Project: test-project
+Feature: Hello World
+
+**Build failure: Hello World (status=failed, retries=0)**
+
+Model: default  Duration: 0s
+Drift check passed: True  Test check passed: True
+Build output tail:
+FEATURE_BUILT: Hello World
+SPEC_FILE: .specs/hello-world.md
+SOURCE_FILES: hello-world.ts
+
+---
+
+## [pending] DRIFT — proj — 2026-03-09
+Timestamp: 2026-03-09T14:35:25Z
+Category: drift
+Project: proj
+Feature: (campaign-wide)
+
+**default repo**
+
+detail
+
+---
+
+## [pending] RETRY — test_retry_succeeds_on_second_0 / auth — 2026-03-09
+Timestamp: 2026-03-09T14:48:18Z
+Category: retry
+Project: test_retry_succeeds_on_second_0
+Feature: auth
+
+**auth required 2 attempts before passing gates**
+
+Feature passed on attempt 2. Earlier attempt(s) failed:
+
+---
+
+## [pending] BUILD-FAILURE — test_independent_pass_calls_bu0 / auth — 2026-03-09
+Timestamp: 2026-03-09T14:48:19Z
+Category: build-failure
+Project: test_independent_pass_calls_bu0
+Feature: auth
+
+**Build failure: auth (status=failed, retries=0)**
+
+Model: default  Duration: 0s
+Drift check passed: True  Test check passed: True
+Build output tail:
+BUILD_FAILED: test
+
+---
+
+## [pending] BUILD-FAILURE — test_independent_pass_fails_wh0 / auth — 2026-03-09
+Timestamp: 2026-03-09T14:48:19Z
+Category: build-failure
+Project: test_independent_pass_fails_wh0
+Feature: auth
+
+**Build failure: auth (status=failed, retries=0)**
+
+Model: default  Duration: 0s
+Drift check passed: True  Test check passed: True
+Build output tail:
+FEATURE_BUILT: auth
+SPEC_FILE: spec.md
+
+---
+
+## [pending] DRIFT — test_no_drift_detected0 — 2026-03-09
+Timestamp: 2026-03-09T14:48:19Z
+Category: drift
+Project: test_no_drift_detected0
+Feature: (campaign-wide)
+
+**Drift check: no drift detected for spec.md**
+
+Spec and implementation are aligned.
+Spec: spec.md
+Source files: src.ts
+
+---
+
+## [pending] DRIFT-UNRESOLVABLE — test_unresolvable_drift0 — 2026-03-09
+Timestamp: 2026-03-09T14:48:19Z
+Category: drift-unresolvable
+Project: test_unresolvable_drift0
+Feature: (campaign-wide)
+
+**Drift UNRESOLVABLE for spec.md — needs human review**
+
+Drift agent could not reconcile spec and code.
+Reason: missing schema
+Spec: spec.md
+Source files: src.ts
+
+---
+
+## [pending] BUILD-FAILURE — test-project / Hello World — 2026-03-09
+Timestamp: 2026-03-09T14:48:22Z
+Category: build-failure
+Project: test-project
+Feature: Hello World
+
+**Build failure: Hello World (status=failed, retries=0)**
+
+Model: default  Duration: 1s
+Drift check passed: True  Test check passed: True
+Build output tail:
+BUILD_FAILED: could not compile
+
+---
+
+## [pending] BUILD-FAILURE — test-project / Hello World — 2026-03-09
+Timestamp: 2026-03-09T14:48:25Z
+Category: build-failure
+Project: test-project
+Feature: Hello World
+
+**Build failure: Hello World (status=failed, retries=0)**
+
+Model: default  Duration: 1s
+Drift check passed: True  Test check passed: True
+Build output tail:
+FEATURE_BUILT: Hello World
+SPEC_FILE: .specs/hello-world.md
+SOURCE_FILES: hello-world.ts
+
+---
+
+## [pending] DRIFT — proj — 2026-03-09
+Timestamp: 2026-03-09T14:48:39Z
+Category: drift
+Project: proj
+Feature: (campaign-wide)
+
+**default repo**
+
+detail
+
+---
+
+## [pending] BUILD-FAILURE — test_failure_updates_tracking0 / auth — 2026-03-09
+Timestamp: 2026-03-09T15:42:59Z
+Category: build-failure
+Project: test_failure_updates_tracking0
+Feature: auth
+
+**Build failure: auth (status=failed, retries=0)**
+
+Model: opus  Duration: 1m 0s
+Drift check passed: True  Test check passed: True
+Build output tail:
+
+---
+
+## [pending] BUILD-FAILURE — test_multiple_builds_accumulat0 / settings — 2026-03-09
+Timestamp: 2026-03-09T15:42:59Z
+Category: build-failure
+Project: test_multiple_builds_accumulat0
+Feature: settings
+
+**Build failure: settings (status=failed, retries=0)**
+
+Model: opus  Duration: 5m 0s
+Drift check passed: True  Test check passed: True
+Build output tail:
+
+---
+
+## [pending] BUILD-FAILURE — test_produces_valid_json0 / dashboard — 2026-03-09
+Timestamp: 2026-03-09T15:42:59Z
+Category: build-failure
+Project: test_produces_valid_json0
+Feature: dashboard
+
+**Build failure: dashboard (status=failed, retries=0)**
+
+Model: sonnet  Duration: 1m 0s
+Drift check passed: True  Test check passed: True
+Build output tail:
+
+---
+
+## [pending] RETRY — test_retry_succeeds_on_second_0 / auth — 2026-03-09
+Timestamp: 2026-03-09T15:42:59Z
+Category: retry
+Project: test_retry_succeeds_on_second_0
+Feature: auth
+
+**auth required 2 attempts before passing gates**
+
+Feature passed on attempt 2. Earlier attempt(s) failed:
+
+Attempt 1: BUILD_FAILED: compile error
+
+---
+
+## [pending] BUILD-FAILURE — test_independent_pass_calls_bu0 / auth — 2026-03-09
+Timestamp: 2026-03-09T15:43:00Z
+Category: build-failure
+Project: test_independent_pass_calls_bu0
+Feature: auth
+
+**Build failure: auth (status=failed, retries=0)**
+
+Model: default  Duration: 0s
+Drift check passed: True  Test check passed: True
+Build output tail:
+BUILD_FAILED: test
+
+---
+
+## [pending] BUILD-FAILURE — test_independent_pass_fails_wh0 / auth — 2026-03-09
+Timestamp: 2026-03-09T15:43:00Z
+Category: build-failure
+Project: test_independent_pass_fails_wh0
+Feature: auth
+
+**Build failure: auth (status=failed, retries=0)**
+
+Model: default  Duration: 0s
+Drift check passed: True  Test check passed: True
+Build output tail:
+FEATURE_BUILT: auth
+SPEC_FILE: spec.md
+
+---
+
+## [pending] BUILD-FAILURE — test_failure_updates_tracking0 / auth — 2026-03-09
+Timestamp: 2026-03-09T15:43:17Z
+Category: build-failure
+Project: test_failure_updates_tracking0
+Feature: auth
+
+**Build failure: auth (status=failed, retries=0)**
+
+Model: opus  Duration: 1m 0s
+Drift check passed: True  Test check passed: True
+Build output tail:
+
+---
+
+## [pending] BUILD-FAILURE — test_multiple_builds_accumulat0 / settings — 2026-03-09
+Timestamp: 2026-03-09T15:43:17Z
+Category: build-failure
+Project: test_multiple_builds_accumulat0
+Feature: settings
+
+**Build failure: settings (status=failed, retries=0)**
+
+Model: opus  Duration: 5m 0s
+Drift check passed: True  Test check passed: True
+Build output tail:
+
+---
+
+## [pending] BUILD-FAILURE — test_produces_valid_json0 / dashboard — 2026-03-09
+Timestamp: 2026-03-09T15:43:17Z
+Category: build-failure
+Project: test_produces_valid_json0
+Feature: dashboard
+
+**Build failure: dashboard (status=failed, retries=0)**
+
+Model: sonnet  Duration: 1m 0s
+Drift check passed: True  Test check passed: True
+Build output tail:
+
+---
+
+## [pending] RETRY — test_retry_succeeds_on_second_0 / auth — 2026-03-09
+Timestamp: 2026-03-09T15:43:18Z
+Category: retry
+Project: test_retry_succeeds_on_second_0
+Feature: auth
+
+**auth required 2 attempts before passing gates**
+
+Feature passed on attempt 2. Earlier attempt(s) failed:
+
+Attempt 1: BUILD_FAILED: compile error
+
+---
+
+## [pending] BUILD-FAILURE — test_independent_pass_calls_bu0 / auth — 2026-03-09
+Timestamp: 2026-03-09T15:43:18Z
+Category: build-failure
+Project: test_independent_pass_calls_bu0
+Feature: auth
+
+**Build failure: auth (status=failed, retries=0)**
+
+Model: default  Duration: 0s
+Drift check passed: True  Test check passed: True
+Build output tail:
+BUILD_FAILED: test
+
+---
+
+## [pending] BUILD-FAILURE — test_independent_pass_fails_wh0 / auth — 2026-03-09
+Timestamp: 2026-03-09T15:43:18Z
+Category: build-failure
+Project: test_independent_pass_fails_wh0
+Feature: auth
+
+**Build failure: auth (status=failed, retries=0)**
+
+Model: default  Duration: 0s
+Drift check passed: True  Test check passed: True
+Build output tail:
+FEATURE_BUILT: auth
+SPEC_FILE: spec.md
+
+---
+
+## [pending] DRIFT — test_no_drift_detected0 — 2026-03-09
+Timestamp: 2026-03-09T15:43:19Z
+Category: drift
+Project: test_no_drift_detected0
+Feature: (campaign-wide)
+
+**Drift check: no drift detected for spec.md**
+
+Spec and implementation are aligned.
+Spec: spec.md
+Source files: src.ts
+
+---
+
+## [pending] DRIFT-UNRESOLVABLE — test_unresolvable_drift0 — 2026-03-09
+Timestamp: 2026-03-09T15:43:19Z
+Category: drift-unresolvable
+Project: test_unresolvable_drift0
+Feature: (campaign-wide)
+
+**Drift UNRESOLVABLE for spec.md — needs human review**
+
+Drift agent could not reconcile spec and code.
+Reason: missing schema
+Spec: spec.md
+Source files: src.ts
+
+---
+
+## [pending] BUILD-FAILURE — test-project / Hello World — 2026-03-09
+Timestamp: 2026-03-09T15:43:21Z
+Category: build-failure
+Project: test-project
+Feature: Hello World
+
+**Build failure: Hello World (status=failed, retries=0)**
+
+Model: default  Duration: 0s
+Drift check passed: True  Test check passed: True
+Build output tail:
+BUILD_FAILED: could not compile
+
+---
+
+## [pending] BUILD-FAILURE — test-project / Hello World — 2026-03-09
+Timestamp: 2026-03-09T15:43:25Z
+Category: build-failure
+Project: test-project
+Feature: Hello World
+
+**Build failure: Hello World (status=failed, retries=0)**
+
+Model: default  Duration: 1s
+Drift check passed: True  Test check passed: True
+Build output tail:
+FEATURE_BUILT: Hello World
+SPEC_FILE: .specs/hello-world.md
+SOURCE_FILES: hello-world.ts
+
+---
+
+## [pending] DRIFT — proj — 2026-03-09
+Timestamp: 2026-03-09T15:43:39Z
+Category: drift
+Project: proj
+Feature: (campaign-wide)
+
+**default repo**
+
+detail
+
+---
+
+## [pending] EVAL-FINDING — compstak-sitdeck / seed _shared-csv-data mock CSVs so all DB tests can resolve read_csv_auto paths — 2026-03-09
+Timestamp: 2026-03-09T16:07:46Z
+Category: eval-finding
+Project: compstak-sitdeck
+Feature: seed _shared-csv-data mock CSVs so all DB tests can resolve read_csv_auto paths
+
+**Eval findings for seed _shared-csv-data mock CSVs so all DB tests can resolve read_csv_auto paths (e5e185a1)**
+
+Repeated mistakes: missing_agents_md_round_entry
+Eval notes: Three related CSV seed files added cleanly, but commit is missing the required Agents.md round entry per Git Discipline rules; no traceability to a spec or roadmap feature.
+
+---
+
+## [pending] DRIFT — compstak-sitdeck / Rent Potential — 2026-03-09
+Timestamp: 2026-03-09T16:10:09Z
+Category: drift
+Project: compstak-sitdeck
+Feature: Rent Potential
+
+**Drift auto-fixed for Rent Potential: Updated spec to match implementation — added 4 filter helper queries, documented all summary return fields, corrected KPI row (4th card = Est. Annual Upside), added Market column to upside table, documented rent validity ceiling ($1000/SF), segment min-comp threshold (≥3 per cohort/LIMIT 12), upside LIMIT 50 + execution age constraint, submarket cascade/reset behavior, and default horizon (24mo). Tests: 599 passed.**
+
+Spec/code misalignment was detected and auto-reconciled.
+Fix summary: Updated spec to match implementation — added 4 filter helper queries, documented all summary return fields, corrected KPI row (4th card = Est. Annual Upside), added Market column to upside table, documented rent validity ceiling ($1000/SF), segment min-comp threshold (≥3 per cohort/LIMIT 12), upside LIMIT 50 + execution age constraint, submarket cascade/reset behavior, and default horizon (24mo). Tests: 599 passed.
+Spec: .specs/features/19-rent-potential.feature.md
+Source files: lib/db/rent-potential.ts,components/widgets/RentPotentialWidget.tsx,_shared-csv-data/snowflake-full-leases-2026-03-04.csv,_shared-csv-data/snowflake-full-sales-2026-03-04.csv,_shared-csv-data/snowflake-full-properties-2025-03-17.csv
+
+---
+
+## [pending] EVAL-FINDING — compstak-sitdeck / reconcile spec drift for rent-potential — 2026-03-09
+Timestamp: 2026-03-09T16:10:57Z
+Category: eval-finding
+Project: compstak-sitdeck
+Feature: reconcile spec drift for rent-potential
+
+**Eval findings for reconcile spec drift for rent-potential (6fa4c243)**
+
+Eval notes: Spec enrichment only — adds concrete return types, row limits, validity constraints, and filter queries; internally consistent, correct location, no code touched; only concern is Agents.md entry not visible in diff
+
+---
+
+## [pending] RETRY — compstak-sitdeck / Rent Potential — 2026-03-09
+Timestamp: 2026-03-09T16:20:11Z
+Category: retry
+Project: compstak-sitdeck
+Feature: Rent Potential
+
+**Rent Potential required 2 attempts before passing gates**
+
+Feature passed on attempt 2. Earlier attempt(s) failed:
+
+Attempt 1: FEATURE_BUILT: Rent Potential
+SPEC_FILE: .specs/features/19-rent-potential.feature.md
+SOURCE_FILES: lib/db/rent-potential.ts,lib/trpc/router.ts,components/widgets/RentPotentialWidget.tsx,app/page.tsx,.specs/features/19-rent-potential.feature.md,.specs/roadmap.md
+
+---
+
+## [pending] BUILD-FAILURE — test_failure_updates_tracking0 / auth — 2026-03-09
+Timestamp: 2026-03-09T16:46:19Z
+Category: build-failure
+Project: test_failure_updates_tracking0
+Feature: auth
+
+**Build failure: auth (status=failed, retries=0)**
+
+Model: opus  Duration: 1m 0s
+Drift check passed: True  Test check passed: True
+Build output tail:
+
+---
+
+## [pending] BUILD-FAILURE — test_multiple_builds_accumulat0 / settings — 2026-03-09
+Timestamp: 2026-03-09T16:46:19Z
+Category: build-failure
+Project: test_multiple_builds_accumulat0
+Feature: settings
+
+**Build failure: settings (status=failed, retries=0)**
+
+Model: opus  Duration: 5m 0s
+Drift check passed: True  Test check passed: True
+Build output tail:
+
+---
+
+## [pending] BUILD-FAILURE — test_produces_valid_json0 / dashboard — 2026-03-09
+Timestamp: 2026-03-09T16:46:19Z
+Category: build-failure
+Project: test_produces_valid_json0
+Feature: dashboard
+
+**Build failure: dashboard (status=failed, retries=0)**
+
+Model: sonnet  Duration: 1m 0s
+Drift check passed: True  Test check passed: True
+Build output tail:
+
+---
+
+## [pending] RETRY — test_retry_succeeds_on_second_0 / auth — 2026-03-09
+Timestamp: 2026-03-09T16:46:20Z
+Category: retry
+Project: test_retry_succeeds_on_second_0
+Feature: auth
+
+**auth required 2 attempts before passing gates**
+
+Feature passed on attempt 2. Earlier attempt(s) failed:
+
+Attempt 1: BUILD_FAILED: compile error
+
+---
+
+## [pending] BUILD-FAILURE — test_independent_pass_calls_bu0 / auth — 2026-03-09
+Timestamp: 2026-03-09T16:46:20Z
+Category: build-failure
+Project: test_independent_pass_calls_bu0
+Feature: auth
+
+**Build failure: auth (status=failed, retries=0)**
+
+Model: default  Duration: 0s
+Drift check passed: True  Test check passed: True
+Build output tail:
+BUILD_FAILED: test
+
+---
+
+## [pending] BUILD-FAILURE — test_independent_pass_fails_wh0 / auth — 2026-03-09
+Timestamp: 2026-03-09T16:46:20Z
+Category: build-failure
+Project: test_independent_pass_fails_wh0
+Feature: auth
+
+**Build failure: auth (status=failed, retries=0)**
+
+Model: default  Duration: 0s
+Drift check passed: True  Test check passed: True
+Build output tail:
+FEATURE_BUILT: auth
+SPEC_FILE: spec.md
+
+---
+
+## [pending] DRIFT — test_no_drift_detected0 — 2026-03-09
+Timestamp: 2026-03-09T16:46:20Z
+Category: drift
+Project: test_no_drift_detected0
+Feature: (campaign-wide)
+
+**Drift check: no drift detected for spec.md**
+
+Spec and implementation are aligned.
+Spec: spec.md
+Source files: src.ts
+
+---
+
+## [pending] DRIFT-UNRESOLVABLE — test_unresolvable_drift0 — 2026-03-09
+Timestamp: 2026-03-09T16:46:20Z
+Category: drift-unresolvable
+Project: test_unresolvable_drift0
+Feature: (campaign-wide)
+
+**Drift UNRESOLVABLE for spec.md — needs human review**
+
+Drift agent could not reconcile spec and code.
+Reason: missing schema
+Spec: spec.md
+Source files: src.ts
+
+---
+
+## [pending] BUILD-FAILURE — test-project / Hello World — 2026-03-09
+Timestamp: 2026-03-09T16:46:23Z
+Category: build-failure
+Project: test-project
+Feature: Hello World
+
+**Build failure: Hello World (status=failed, retries=0)**
+
+Model: default  Duration: 0s
+Drift check passed: True  Test check passed: True
+Build output tail:
+BUILD_FAILED: could not compile
+
+---
+
+## [pending] BUILD-FAILURE — test-project / Hello World — 2026-03-09
+Timestamp: 2026-03-09T16:46:26Z
+Category: build-failure
+Project: test-project
+Feature: Hello World
+
+**Build failure: Hello World (status=failed, retries=0)**
+
+Model: default  Duration: 0s
+Drift check passed: True  Test check passed: True
+Build output tail:
+FEATURE_BUILT: Hello World
+SPEC_FILE: .specs/hello-world.md
+SOURCE_FILES: hello-world.ts
+
+---
+
+## [pending] DRIFT — proj — 2026-03-09
+Timestamp: 2026-03-09T16:46:41Z
+Category: drift
+Project: proj
+Feature: (campaign-wide)
+
+**default repo**
+
+detail
+
+---
+
+## [pending] BUILD-FAILURE — test_failure_updates_tracking0 / auth — 2026-03-09
+Timestamp: 2026-03-09T16:47:18Z
+Category: build-failure
+Project: test_failure_updates_tracking0
+Feature: auth
+
+**Build failure: auth (status=failed, retries=0)**
+
+Model: opus  Duration: 1m 0s
+Drift check passed: True  Test check passed: True
+Build output tail:
+
+---
+
+## [pending] BUILD-FAILURE — test_multiple_builds_accumulat0 / settings — 2026-03-09
+Timestamp: 2026-03-09T16:47:18Z
+Category: build-failure
+Project: test_multiple_builds_accumulat0
+Feature: settings
+
+**Build failure: settings (status=failed, retries=0)**
+
+Model: opus  Duration: 5m 0s
+Drift check passed: True  Test check passed: True
+Build output tail:
+
+---
+
+## [pending] BUILD-FAILURE — test_produces_valid_json0 / dashboard — 2026-03-09
+Timestamp: 2026-03-09T16:47:18Z
+Category: build-failure
+Project: test_produces_valid_json0
+Feature: dashboard
+
+**Build failure: dashboard (status=failed, retries=0)**
+
+Model: sonnet  Duration: 1m 0s
+Drift check passed: True  Test check passed: True
+Build output tail:
+
+---
+
+## [pending] RETRY — test_retry_succeeds_on_second_0 / auth — 2026-03-09
+Timestamp: 2026-03-09T16:47:18Z
+Category: retry
+Project: test_retry_succeeds_on_second_0
+Feature: auth
+
+**auth required 2 attempts before passing gates**
+
+Feature passed on attempt 2. Earlier attempt(s) failed:
+
+Attempt 1: BUILD_FAILED: compile error
+
+---
+
+## [pending] BUILD-FAILURE — test_independent_pass_calls_bu0 / auth — 2026-03-09
+Timestamp: 2026-03-09T16:47:19Z
+Category: build-failure
+Project: test_independent_pass_calls_bu0
+Feature: auth
+
+**Build failure: auth (status=failed, retries=0)**
+
+Model: default  Duration: 0s
+Drift check passed: True  Test check passed: True
+Build output tail:
+BUILD_FAILED: test
+
+---
+
+## [pending] BUILD-FAILURE — test_independent_pass_fails_wh0 / auth — 2026-03-09
+Timestamp: 2026-03-09T16:47:19Z
+Category: build-failure
+Project: test_independent_pass_fails_wh0
+Feature: auth
+
+**Build failure: auth (status=failed, retries=0)**
+
+Model: default  Duration: 0s
+Drift check passed: True  Test check passed: True
+Build output tail:
+FEATURE_BUILT: auth
+SPEC_FILE: spec.md
+
+---
+
+## [pending] DRIFT — test_no_drift_detected0 — 2026-03-09
+Timestamp: 2026-03-09T16:47:19Z
+Category: drift
+Project: test_no_drift_detected0
+Feature: (campaign-wide)
+
+**Drift check: no drift detected for spec.md**
+
+Spec and implementation are aligned.
+Spec: spec.md
+Source files: src.ts
+
+---
+
+## [pending] DRIFT-UNRESOLVABLE — test_unresolvable_drift0 — 2026-03-09
+Timestamp: 2026-03-09T16:47:19Z
+Category: drift-unresolvable
+Project: test_unresolvable_drift0
+Feature: (campaign-wide)
+
+**Drift UNRESOLVABLE for spec.md — needs human review**
+
+Drift agent could not reconcile spec and code.
+Reason: missing schema
+Spec: spec.md
+Source files: src.ts
+
+---
+
+## [pending] BUILD-FAILURE — test-project / Hello World — 2026-03-09
+Timestamp: 2026-03-09T16:47:21Z
+Category: build-failure
+Project: test-project
+Feature: Hello World
+
+**Build failure: Hello World (status=failed, retries=0)**
+
+Model: default  Duration: 0s
+Drift check passed: True  Test check passed: True
+Build output tail:
+BUILD_FAILED: could not compile
+
+---
+
+## [pending] BUILD-FAILURE — test-project / Hello World — 2026-03-09
+Timestamp: 2026-03-09T16:47:24Z
+Category: build-failure
+Project: test-project
+Feature: Hello World
+
+**Build failure: Hello World (status=failed, retries=0)**
+
+Model: default  Duration: 0s
+Drift check passed: True  Test check passed: True
+Build output tail:
+FEATURE_BUILT: Hello World
+SPEC_FILE: .specs/hello-world.md
+SOURCE_FILES: hello-world.ts
+
+---
+
+## [pending] DRIFT — proj — 2026-03-09
+Timestamp: 2026-03-09T16:47:39Z
+Category: drift
+Project: proj
+Feature: (campaign-wide)
+
+**default repo**
+
+detail
+
+---
+
+## [pending] BUILD-FAILURE — test_failure_updates_tracking0 / auth — 2026-03-09
+Timestamp: 2026-03-09T17:10:55Z
+Category: build-failure
+Project: test_failure_updates_tracking0
+Feature: auth
+
+**Build failure: auth (status=failed, retries=0)**
+
+Model: opus  Duration: 1m 0s
+Drift check passed: True  Test check passed: True
+Build output tail:
+
+---
+
+## [pending] BUILD-FAILURE — test_multiple_builds_accumulat0 / settings — 2026-03-09
+Timestamp: 2026-03-09T17:10:55Z
+Category: build-failure
+Project: test_multiple_builds_accumulat0
+Feature: settings
+
+**Build failure: settings (status=failed, retries=0)**
+
+Model: opus  Duration: 5m 0s
+Drift check passed: True  Test check passed: True
+Build output tail:
+
+---
+
+## [pending] BUILD-FAILURE — test_produces_valid_json0 / dashboard — 2026-03-09
+Timestamp: 2026-03-09T17:10:55Z
+Category: build-failure
+Project: test_produces_valid_json0
+Feature: dashboard
+
+**Build failure: dashboard (status=failed, retries=0)**
+
+Model: sonnet  Duration: 1m 0s
+Drift check passed: True  Test check passed: True
+Build output tail:
+
+---
+
+## [pending] RETRY — test_retry_succeeds_on_second_0 / auth — 2026-03-09
+Timestamp: 2026-03-09T17:10:55Z
+Category: retry
+Project: test_retry_succeeds_on_second_0
+Feature: auth
+
+**auth required 2 attempts before passing gates**
+
+Feature passed on attempt 2. Earlier attempt(s) failed:
+
+Attempt 1: BUILD_FAILED: compile error
+
+---
+
+## [pending] BUILD-FAILURE — test_independent_pass_calls_bu0 / auth — 2026-03-09
+Timestamp: 2026-03-09T17:10:56Z
+Category: build-failure
+Project: test_independent_pass_calls_bu0
+Feature: auth
+
+**Build failure: auth (status=failed, retries=0)**
+
+Model: default  Duration: 0s
+Drift check passed: True  Test check passed: True
+Build output tail:
+BUILD_FAILED: test
+
+---
+
+## [pending] BUILD-FAILURE — test_independent_pass_fails_wh0 / auth — 2026-03-09
+Timestamp: 2026-03-09T17:10:56Z
+Category: build-failure
+Project: test_independent_pass_fails_wh0
+Feature: auth
+
+**Build failure: auth (status=failed, retries=0)**
+
+Model: default  Duration: 0s
+Drift check passed: True  Test check passed: True
+Build output tail:
+FEATURE_BUILT: auth
+SPEC_FILE: spec.md
+
+---
+
+## [pending] BUILD-FAILURE — test_failure_updates_tracking0 / auth — 2026-03-09
+Timestamp: 2026-03-09T17:12:04Z
+Category: build-failure
+Project: test_failure_updates_tracking0
+Feature: auth
+
+**Build failure: auth (status=failed, retries=0)**
+
+Model: opus  Duration: 1m 0s
+Drift check passed: True  Test check passed: True
+Build output tail:
+
+---
+
+## [pending] BUILD-FAILURE — test_multiple_builds_accumulat0 / settings — 2026-03-09
+Timestamp: 2026-03-09T17:12:04Z
+Category: build-failure
+Project: test_multiple_builds_accumulat0
+Feature: settings
+
+**Build failure: settings (status=failed, retries=0)**
+
+Model: opus  Duration: 5m 0s
+Drift check passed: True  Test check passed: True
+Build output tail:
+
+---
+
+## [pending] BUILD-FAILURE — test_produces_valid_json0 / dashboard — 2026-03-09
+Timestamp: 2026-03-09T17:12:04Z
+Category: build-failure
+Project: test_produces_valid_json0
+Feature: dashboard
+
+**Build failure: dashboard (status=failed, retries=0)**
+
+Model: sonnet  Duration: 1m 0s
+Drift check passed: True  Test check passed: True
+Build output tail:
+
+---
+
+## [pending] RETRY — test_retry_succeeds_on_second_0 / auth — 2026-03-09
+Timestamp: 2026-03-09T17:12:05Z
+Category: retry
+Project: test_retry_succeeds_on_second_0
+Feature: auth
+
+**auth required 2 attempts before passing gates**
+
+Feature passed on attempt 2. Earlier attempt(s) failed:
+
+Attempt 1: BUILD_FAILED: compile error
+
+---
+
+## [pending] BUILD-FAILURE — test_independent_pass_calls_bu0 / auth — 2026-03-09
+Timestamp: 2026-03-09T17:12:05Z
+Category: build-failure
+Project: test_independent_pass_calls_bu0
+Feature: auth
+
+**Build failure: auth (status=failed, retries=0)**
+
+Model: default  Duration: 0s
+Drift check passed: True  Test check passed: True
+Build output tail:
+BUILD_FAILED: test
+
+---
+
+## [pending] BUILD-FAILURE — test_independent_pass_fails_wh0 / auth — 2026-03-09
+Timestamp: 2026-03-09T17:12:05Z
+Category: build-failure
+Project: test_independent_pass_fails_wh0
+Feature: auth
+
+**Build failure: auth (status=failed, retries=0)**
+
+Model: default  Duration: 0s
+Drift check passed: True  Test check passed: True
+Build output tail:
+FEATURE_BUILT: auth
+SPEC_FILE: spec.md
+
+---
+
+## [pending] DRIFT — test_no_drift_detected0 — 2026-03-09
+Timestamp: 2026-03-09T17:12:05Z
+Category: drift
+Project: test_no_drift_detected0
+Feature: (campaign-wide)
+
+**Drift check: no drift detected for spec.md**
+
+Spec and implementation are aligned.
+Spec: spec.md
+Source files: src.ts
+
+---
+
+## [pending] DRIFT-UNRESOLVABLE — test_unresolvable_drift0 — 2026-03-09
+Timestamp: 2026-03-09T17:12:05Z
+Category: drift-unresolvable
+Project: test_unresolvable_drift0
+Feature: (campaign-wide)
+
+**Drift UNRESOLVABLE for spec.md — needs human review**
+
+Drift agent could not reconcile spec and code.
+Reason: missing schema
+Spec: spec.md
+Source files: src.ts
+
+---
+
+## [pending] BUILD-FAILURE — test-project / Hello World — 2026-03-09
+Timestamp: 2026-03-09T17:12:08Z
+Category: build-failure
+Project: test-project
+Feature: Hello World
+
+**Build failure: Hello World (status=failed, retries=0)**
+
+Model: default  Duration: 0s
+Drift check passed: True  Test check passed: True
+Build output tail:
+BUILD_FAILED: could not compile
+
+---
+
+## [pending] BUILD-FAILURE — test-project / Hello World — 2026-03-09
+Timestamp: 2026-03-09T17:12:11Z
+Category: build-failure
+Project: test-project
+Feature: Hello World
+
+**Build failure: Hello World (status=failed, retries=0)**
+
+Model: default  Duration: 0s
+Drift check passed: True  Test check passed: True
+Build output tail:
+FEATURE_BUILT: Hello World
+SPEC_FILE: .specs/hello-world.md
+SOURCE_FILES: hello-world.ts
+
+---
+
+## [pending] DRIFT — proj — 2026-03-09
+Timestamp: 2026-03-09T17:12:27Z
+Category: drift
+Project: proj
+Feature: (campaign-wide)
+
+**default repo**
+
+detail
+
+---
+
+## [pending] BUILD-FAILURE — test_failure_updates_tracking0 / auth — 2026-03-09
+Timestamp: 2026-03-09T17:15:03Z
+Category: build-failure
+Project: test_failure_updates_tracking0
+Feature: auth
+
+**Build failure: auth (status=failed, retries=0)**
+
+Model: opus  Duration: 1m 0s
+Drift check passed: True  Test check passed: True
+Build output tail:
+
+---
+
+## [pending] BUILD-FAILURE — test_multiple_builds_accumulat0 / settings — 2026-03-09
+Timestamp: 2026-03-09T17:15:03Z
+Category: build-failure
+Project: test_multiple_builds_accumulat0
+Feature: settings
+
+**Build failure: settings (status=failed, retries=0)**
+
+Model: opus  Duration: 5m 0s
+Drift check passed: True  Test check passed: True
+Build output tail:
+
+---
+
+## [pending] BUILD-FAILURE — test_produces_valid_json0 / dashboard — 2026-03-09
+Timestamp: 2026-03-09T17:15:03Z
+Category: build-failure
+Project: test_produces_valid_json0
+Feature: dashboard
+
+**Build failure: dashboard (status=failed, retries=0)**
+
+Model: sonnet  Duration: 1m 0s
+Drift check passed: True  Test check passed: True
+Build output tail:
+
+---
+
+## [pending] RETRY — test_retry_succeeds_on_second_0 / auth — 2026-03-09
+Timestamp: 2026-03-09T17:15:04Z
+Category: retry
+Project: test_retry_succeeds_on_second_0
+Feature: auth
+
+**auth required 2 attempts before passing gates**
+
+Feature passed on attempt 2. Earlier attempt(s) failed:
+
+Attempt 1: BUILD_FAILED: compile error
+
+---
+
+## [pending] BUILD-FAILURE — test_independent_pass_calls_bu0 / auth — 2026-03-09
+Timestamp: 2026-03-09T17:15:04Z
+Category: build-failure
+Project: test_independent_pass_calls_bu0
+Feature: auth
+
+**Build failure: auth (status=failed, retries=0)**
+
+Model: default  Duration: 0s
+Drift check passed: True  Test check passed: True
+Build output tail:
+BUILD_FAILED: test
+
+---
+
+## [pending] BUILD-FAILURE — test_independent_pass_fails_wh0 / auth — 2026-03-09
+Timestamp: 2026-03-09T17:15:04Z
+Category: build-failure
+Project: test_independent_pass_fails_wh0
+Feature: auth
+
+**Build failure: auth (status=failed, retries=0)**
+
+Model: default  Duration: 0s
+Drift check passed: True  Test check passed: True
+Build output tail:
+FEATURE_BUILT: auth
+SPEC_FILE: spec.md
+
+---
+
+## [pending] DRIFT — test_no_drift_detected0 — 2026-03-09
+Timestamp: 2026-03-09T17:15:04Z
+Category: drift
+Project: test_no_drift_detected0
+Feature: (campaign-wide)
+
+**Drift check: no drift detected for spec.md**
+
+Spec and implementation are aligned.
+Spec: spec.md
+Source files: src.ts
+
+---
+
+## [pending] DRIFT-UNRESOLVABLE — test_unresolvable_drift0 — 2026-03-09
+Timestamp: 2026-03-09T17:15:04Z
+Category: drift-unresolvable
+Project: test_unresolvable_drift0
+Feature: (campaign-wide)
+
+**Drift UNRESOLVABLE for spec.md — needs human review**
+
+Drift agent could not reconcile spec and code.
+Reason: missing schema
+Spec: spec.md
+Source files: src.ts
+
+---
+
+## [pending] BUILD-FAILURE — test-project / Hello World — 2026-03-09
+Timestamp: 2026-03-09T17:15:07Z
+Category: build-failure
+Project: test-project
+Feature: Hello World
+
+**Build failure: Hello World (status=failed, retries=0)**
+
+Model: default  Duration: 0s
+Drift check passed: True  Test check passed: True
+Build output tail:
+BUILD_FAILED: could not compile
+
+---
+
+## [pending] BUILD-FAILURE — test-project / Hello World — 2026-03-09
+Timestamp: 2026-03-09T17:15:10Z
+Category: build-failure
+Project: test-project
+Feature: Hello World
+
+**Build failure: Hello World (status=failed, retries=0)**
+
+Model: default  Duration: 0s
+Drift check passed: True  Test check passed: True
+Build output tail:
+FEATURE_BUILT: Hello World
+SPEC_FILE: .specs/hello-world.md
+SOURCE_FILES: hello-world.ts
+
+---
+
+## [pending] DRIFT — proj — 2026-03-09
+Timestamp: 2026-03-09T17:15:24Z
+Category: drift
+Project: proj
+Feature: (campaign-wide)
+
+**default repo**
+
+detail
+
+---
+
+## [pending] BUILD-FAILURE — test_failure_updates_tracking0 / auth — 2026-03-09
+Timestamp: 2026-03-09T17:15:43Z
+Category: build-failure
+Project: test_failure_updates_tracking0
+Feature: auth
+
+**Build failure: auth (status=failed, retries=0)**
+
+Model: opus  Duration: 1m 0s
+Drift check passed: True  Test check passed: True
+Build output tail:
+
+---
+
+## [pending] BUILD-FAILURE — test_multiple_builds_accumulat0 / settings — 2026-03-09
+Timestamp: 2026-03-09T17:15:44Z
+Category: build-failure
+Project: test_multiple_builds_accumulat0
+Feature: settings
+
+**Build failure: settings (status=failed, retries=0)**
+
+Model: opus  Duration: 5m 0s
+Drift check passed: True  Test check passed: True
+Build output tail:
+
+---
+
+## [pending] BUILD-FAILURE — test_produces_valid_json0 / dashboard — 2026-03-09
+Timestamp: 2026-03-09T17:15:44Z
+Category: build-failure
+Project: test_produces_valid_json0
+Feature: dashboard
+
+**Build failure: dashboard (status=failed, retries=0)**
+
+Model: sonnet  Duration: 1m 0s
+Drift check passed: True  Test check passed: True
+Build output tail:
+
+---
+
+## [pending] RETRY — test_retry_succeeds_on_second_0 / auth — 2026-03-09
+Timestamp: 2026-03-09T17:15:44Z
+Category: retry
+Project: test_retry_succeeds_on_second_0
+Feature: auth
+
+**auth required 2 attempts before passing gates**
+
+Feature passed on attempt 2. Earlier attempt(s) failed:
+
+Attempt 1: BUILD_FAILED: compile error
+
+---
+
+## [pending] BUILD-FAILURE — test_independent_pass_calls_bu0 / auth — 2026-03-09
+Timestamp: 2026-03-09T17:15:44Z
+Category: build-failure
+Project: test_independent_pass_calls_bu0
+Feature: auth
+
+**Build failure: auth (status=failed, retries=0)**
+
+Model: default  Duration: 0s
+Drift check passed: True  Test check passed: True
+Build output tail:
+BUILD_FAILED: test
+
+---
+
+## [pending] BUILD-FAILURE — test_independent_pass_fails_wh0 / auth — 2026-03-09
+Timestamp: 2026-03-09T17:15:44Z
+Category: build-failure
+Project: test_independent_pass_fails_wh0
+Feature: auth
+
+**Build failure: auth (status=failed, retries=0)**
+
+Model: default  Duration: 0s
+Drift check passed: True  Test check passed: True
+Build output tail:
+FEATURE_BUILT: auth
+SPEC_FILE: spec.md
+
+---
+
+## [pending] DRIFT — test_no_drift_detected0 — 2026-03-09
+Timestamp: 2026-03-09T17:15:45Z
+Category: drift
+Project: test_no_drift_detected0
+Feature: (campaign-wide)
+
+**Drift check: no drift detected for spec.md**
+
+Spec and implementation are aligned.
+Spec: spec.md
+Source files: src.ts
+
+---
+
+## [pending] DRIFT-UNRESOLVABLE — test_unresolvable_drift0 — 2026-03-09
+Timestamp: 2026-03-09T17:15:45Z
+Category: drift-unresolvable
+Project: test_unresolvable_drift0
+Feature: (campaign-wide)
+
+**Drift UNRESOLVABLE for spec.md — needs human review**
+
+Drift agent could not reconcile spec and code.
+Reason: missing schema
+Spec: spec.md
+Source files: src.ts
+
+---
+
+## [pending] BUILD-FAILURE — test-project / Hello World — 2026-03-09
+Timestamp: 2026-03-09T17:15:47Z
+Category: build-failure
+Project: test-project
+Feature: Hello World
+
+**Build failure: Hello World (status=failed, retries=0)**
+
+Model: default  Duration: 0s
+Drift check passed: True  Test check passed: True
+Build output tail:
+BUILD_FAILED: could not compile
+
+---
+
+## [pending] BUILD-FAILURE — test-project / Hello World — 2026-03-09
+Timestamp: 2026-03-09T17:15:50Z
+Category: build-failure
+Project: test-project
+Feature: Hello World
+
+**Build failure: Hello World (status=failed, retries=0)**
+
+Model: default  Duration: 0s
+Drift check passed: True  Test check passed: True
+Build output tail:
+FEATURE_BUILT: Hello World
+SPEC_FILE: .specs/hello-world.md
+SOURCE_FILES: hello-world.ts
+
+---
+
+## [pending] DRIFT — proj — 2026-03-09
+Timestamp: 2026-03-09T17:16:05Z
+Category: drift
+Project: proj
+Feature: (campaign-wide)
+
+**default repo**
+
+detail
+
+---
+
+## [pending] EVAL-FINDING — compstak-sitdeck / restore missing mock CSV seed files for DB tests — 2026-03-09
+Timestamp: 2026-03-09T17:28:54Z
+Category: eval-finding
+Project: compstak-sitdeck
+Feature: restore missing mock CSV seed files for DB tests
+
+**Eval findings for restore missing mock CSV seed files for DB tests (c203c12b)**
+
+Repeated mistakes: missing Agents.md round entry
+Eval notes: Seed data files are permitted by CLAUDE.md, but the commit omits the required Agents.md round entry; also has inconsistent date stamps in file names across the three CSVs.
+
+---
+
+## [pending] DRIFT — compstak-sitdeck / Income Projection — 2026-03-09
+Timestamp: 2026-03-09T17:33:14Z
+Category: drift
+Project: compstak-sitdeck
+Feature: Income Projection
+
+**Drift auto-fixed for Income Projection: Added missing test file (tests/db/income-projection.test.ts, 14 tests), updated spec table scenario to include expiring_count column, added scenarios for current-year highlighting, chart legend, and active SQFT KPI display. Full suite: 613/613 passing.**
+
+Spec/code misalignment was detected and auto-reconciled.
+Fix summary: Added missing test file (tests/db/income-projection.test.ts, 14 tests), updated spec table scenario to include expiring_count column, added scenarios for current-year highlighting, chart legend, and active SQFT KPI display. Full suite: 613/613 passing.
+Spec: .specs/features/portfolio-underwriting/F-021-income-projection.feature.md
+Source files: lib/db/income-projection.ts, components/widgets/IncomeProjectionWidget.tsx, lib/trpc/router.ts, _shared-csv-data/snowflake-full-leases-2026-03-04.csv, _shared-csv-data/snowflake-full-sales-2026-03-04.csv, _shared-csv-data/snowflake-full-properties-2025-03-17.csv
+
+---
+
+## [pending] EVAL-FINDING — compstak-sitdeck / reconcile spec drift for F-021-income-projection — 2026-03-09
+Timestamp: 2026-03-09T17:33:56Z
+Category: eval-finding
+Project: compstak-sitdeck
+Feature: reconcile spec drift for F-021-income-projection
+
+**Eval findings for reconcile spec drift for F-021-income-projection (ef63d773)**
+
+Eval notes: Solid spec+DB-test commit; new rendering scenarios (current-year highlight, legend, SQFT KPI) lack UI-layer test coverage and are misplaced in the spec's filtering section rather than rendering section
+
+---
+
+## [pending] RETRY — compstak-sitdeck / Income Projection — 2026-03-09
+Timestamp: 2026-03-09T17:43:15Z
+Category: retry
+Project: compstak-sitdeck
+Feature: Income Projection
+
+**Income Projection required 2 attempts before passing gates**
+
+Feature passed on attempt 2. Earlier attempt(s) failed:
+
+Attempt 1: ion
+SPEC_FILE: .specs/features/portfolio-underwriting/F-021-income-projection.feature.md
+SOURCE_FILES: lib/db/income-projection.ts,components/widgets/IncomeProjectionWidget.tsx,lib/trpc/router.ts,app/page.tsx,.specs/roadmap.md,.specs/features/portfolio-underwriting/F-021-income-projection.feature.md
+
+---
+
+## [pending] EVAL-FINDING — compstak-sitdeck / Broker Activity Feed widget (Feature #24) — chronological broker deal feed with search and filters — 2026-03-09
+Timestamp: 2026-03-09T17:49:04Z
+Category: eval-finding
+Project: compstak-sitdeck
+Feature: Broker Activity Feed widget (Feature #24) — chronological broker deal feed with search and filters
+
+**Eval findings for Broker Activity Feed widget (Feature #24) — chronological broker deal feed with search and filters (32acc6c4)**
+
+Eval notes: Solid feature with good security hygiene and test coverage; spec is missing required YAML frontmatter and uses prose scenarios instead of Gherkin Given/When/Then format per CLAUDE.md template
+
+---
+
+## [pending] DRIFT-UNRESOLVABLE — compstak-sitdeck / Broker Activity Feed — 2026-03-09
+Timestamp: 2026-03-09T17:49:29Z
+Category: drift-unresolvable
+Project: compstak-sitdeck
+Feature: Broker Activity Feed
+
+**Drift UNRESOLVABLE for Broker Activity Feed — needs human review**
+
+Drift agent could not reconcile spec and code.
+Reason: Feature F-024-broker-activity-feed does not exist in this repository at all. The spec file, all source files, and the test file are absent from `/Users/brianfischman/auto-sdd/py`. This appears to belong to a different project (e.g., stakd, stakd-v2, or stakd-v3) that is not the current working directory. Human attention needed to identify the correct project root before drift checking can proceed.
+Spec: .specs/features/F-024-broker-activity-feed.feature.md
+Source files: lib/db/broker-activity-feed.ts,lib/trpc/router.ts,components/widgets/BrokerActivityFeedWidget.tsx,app/page.tsx,tests/db/broker-activity-feed.test.ts,.specs/roadmap.md,.specs/features/F-024-broker-activity-feed.feature.md
+
+---
+
+## [pending] DRIFT — compstak-sitdeck / Broker Activity Feed — 2026-03-09
+Timestamp: 2026-03-09T17:52:44Z
+Category: drift
+Project: compstak-sitdeck
+Feature: Broker Activity Feed
+
+**Drift auto-fixed for Broker Activity Feed: Updated spec to match code — loading state description (text indicator, not spinner), documented backend limit clamping (1–500) and markets sort/cap (alphabetical, max 200), added 3 missing test coverage entries (non-empty result set, all markets non-empty strings, markets alphabetical order).**
+
+Spec/code misalignment was detected and auto-reconciled.
+Fix summary: Updated spec to match code — loading state description (text indicator, not spinner), documented backend limit clamping (1–500) and markets sort/cap (alphabetical, max 200), added 3 missing test coverage entries (non-empty result set, all markets non-empty strings, markets alphabetical order).
+Spec: .specs/features/F-024-broker-activity-feed.feature.md
+Source files: components/widgets/BrokerActivityFeedWidget.tsx,lib/db/broker-activity-feed.ts,lib/trpc/router.ts,tests/db/broker-activity-feed.test.ts
+
+---
+
+## [pending] EVAL-FINDING — compstak-sitdeck / reconcile spec drift for broker-activity-feed — 2026-03-09
+Timestamp: 2026-03-09T17:53:25Z
+Category: eval-finding
+Project: compstak-sitdeck
+Feature: reconcile spec drift for broker-activity-feed
+
+**Eval findings for reconcile spec drift for broker-activity-feed (c99415cb)**
+
+Eval notes: Spec-only precision update; new test scenarios correctly mirror new documented behaviors — SDD feedback loop operating as intended.
+
+---
+
+## [pending] RETRY — compstak-sitdeck / Broker Activity Feed — 2026-03-09
+Timestamp: 2026-03-09T18:02:46Z
+Category: retry
+Project: compstak-sitdeck
+Feature: Broker Activity Feed
+
+**Broker Activity Feed required 2 attempts before passing gates**
+
+Feature passed on attempt 2. Earlier attempt(s) failed:
+
+Attempt 1: 
+SPEC_FILE: .specs/features/F-024-broker-activity-feed.feature.md
+SOURCE_FILES: lib/db/broker-activity-feed.ts,lib/trpc/router.ts,components/widgets/BrokerActivityFeedWidget.tsx,app/page.tsx,tests/db/broker-activity-feed.test.ts,.specs/roadmap.md,.specs/features/F-024-broker-activity-feed.feature.md
+
+---
+
+## [pending] EVAL-FINDING — compstak-sitdeck / News Alerts widget (Feature #30) — keyword-triggered alert rules over CRE news feed — 2026-03-09
+Timestamp: 2026-03-09T18:11:09Z
+Category: eval-finding
+Project: compstak-sitdeck
+Feature: News Alerts widget (Feature #30) — keyword-triggered alert rules over CRE news feed
+
+**Eval findings for News Alerts widget (Feature #30) — keyword-triggered alert rules over CRE news feed (7e7e8149)**
+
+Eval notes: Feature is well-structured and spec/test/impl are consistent, but spec is missing required YAML frontmatter and ASCII mockup, tests have no store reset causing cumulative state across suites, unused `beforeEach` import, and no Agents.md round entry.
+
+---
+
+## [pending] DRIFT — compstak-sitdeck / News Alerts — 2026-03-09
+Timestamp: 2026-03-09T18:11:55Z
+Category: drift
+Project: compstak-sitdeck
+Feature: News Alerts
+
+**Drift check: no drift detected for News Alerts**
+
+Spec and implementation are aligned.
+Spec: .specs/features/F-030-news-alerts.feature.md
+Source files: lib/db/news-alerts.ts,lib/trpc/router.ts,components/widgets/NewsAlertsWidget.tsx,tests/db/news-alerts.test.ts,app/page.tsx,.specs/features/F-030-news-alerts.feature.md,.specs/roadmap.md
+
+---
+
+## [pending] DRIFT-UNRESOLVABLE — compstak-sitdeck / AI Agent (Chat) — 2026-03-09
+Timestamp: 2026-03-09T18:29:41Z
+Category: drift-unresolvable
+Project: compstak-sitdeck
+Feature: AI Agent (Chat)
+
+**Drift UNRESOLVABLE for AI Agent (Chat) — needs human review**
+
+Drift agent could not reconcile spec and code.
+Reason: All referenced files are missing — spec file `.specs/features/ai-analytics/F-033-ai-agent-chat.feature.md` and all source files (`lib/db/ai-agent-chat.ts`, `tests/db/ai-agent-chat.test.ts`, `components/widgets/AiAgentChatWidget.tsx`, `lib/trpc/router.ts`, `app/page.tsx`) do not exist. This feature has not been implemented yet or was built in a different project directory. Human must verify the correct project root and re-run the drift check.
+Spec: .specs/features/ai-analytics/F-033-ai-agent-chat.feature.md
+Source files: lib/db/ai-agent-chat.ts,tests/db/ai-agent-chat.test.ts,components/widgets/AiAgentChatWidget.tsx,lib/trpc/router.ts,app/page.tsx,.specs/roadmap.md,Agents.md
+
+---
+
+## [pending] EVAL-FINDING — compstak-sitdeck / AI Agent (Chat) widget (Feature #33) — conversational CRE assistant with live DuckDB context — 2026-03-09
+Timestamp: 2026-03-09T18:30:06Z
+Category: eval-finding
+Project: compstak-sitdeck
+Feature: AI Agent (Chat) widget (Feature #33) — conversational CRE assistant with live DuckDB context
+
+**Eval findings for AI Agent (Chat) widget (Feature #33) — conversational CRE assistant with live DuckDB context (8ed60919)**
+
+Eval notes: Full SDD workflow followed — spec, tests, implementation, router, page, roadmap, Agents.md all consistent; SSR boundary clean; SQL injection guarded; one unused tRPC endpoint (context) is minor
+
+---
+
+## [pending] DRIFT — compstak-sitdeck / AI Agent (Chat) — 2026-03-09
+Timestamp: 2026-03-09T18:32:53Z
+Category: drift
+Project: compstak-sitdeck
+Feature: AI Agent (Chat)
+
+**Drift auto-fixed for AI Agent (Chat): Updated spec context snapshot description to include `sale_count` and `median_sale_psf` — the code collects both lease and sales stats from DuckDB but the spec only listed lease-side fields.**
+
+Spec/code misalignment was detected and auto-reconciled.
+Fix summary: Updated spec context snapshot description to include `sale_count` and `median_sale_psf` — the code collects both lease and sales stats from DuckDB but the spec only listed lease-side fields.
+Spec: .specs/features/ai-analytics/F-033-ai-agent-chat.feature.md
+Source files: components/widgets/AiAgentChatWidget.tsx,lib/db/ai-agent-chat.ts,lib/trpc/router.ts,tests/db/ai-agent-chat.test.ts
+
+---
+
+## [pending] EVAL-FINDING — compstak-sitdeck / reconcile spec drift for AI Agent (Chat) — add sale_count and median_sale_psf to context snapshot description — 2026-03-09
+Timestamp: 2026-03-09T18:33:28Z
+Category: eval-finding
+Project: compstak-sitdeck
+Feature: reconcile spec drift for AI Agent (Chat) — add sale_count and median_sale_psf to context snapshot description
+
+**Eval findings for reconcile spec drift for AI Agent (Chat) — add sale_count and median_sale_psf to context snapshot description (23d07ad4)**
+
+Eval notes: Minimal spec-only update adding sale count and median sale PSF to the DuckDB snapshot description; correctly keeps spec in sync, no code touched, no violations detected.
+
+---
+
+## [pending] RETRY — compstak-sitdeck / AI Agent (Chat) — 2026-03-09
+Timestamp: 2026-03-09T18:42:55Z
+Category: retry
+Project: compstak-sitdeck
+Feature: AI Agent (Chat)
+
+**AI Agent (Chat) required 2 attempts before passing gates**
+
+Feature passed on attempt 2. Earlier attempt(s) failed:
+
+Attempt 1: FEATURE_BUILT: AI Agent (Chat)
+SPEC_FILE: .specs/features/ai-analytics/F-033-ai-agent-chat.feature.md
+SOURCE_FILES: lib/db/ai-agent-chat.ts,tests/db/ai-agent-chat.test.ts,components/widgets/AiAgentChatWidget.tsx,lib/trpc/router.ts,app/page.tsx,.specs/roadmap.md,Agents.md
+
+---
+
+## [pending] EVAL-FINDING — compstak-sitdeck / Market Briefing widget (Feature #35) — period-filtered AI briefing with deal metrics, submarket rankings, and notable deals — 2026-03-09
+Timestamp: 2026-03-09T18:50:42Z
+Category: eval-finding
+Project: compstak-sitdeck
+Feature: Market Briefing widget (Feature #35) — period-filtered AI briefing with deal metrics, submarket rankings, and notable deals
+
+**Eval findings for Market Briefing widget (Feature #35) — period-filtered AI briefing with deal metrics, submarket rankings, and notable deals (9d36a4e0)**
+
+Eval notes: Clean F-035 feature build following SDD workflow end-to-end; minor issue with safeLabel regex permitting apostrophes in market names (correctness bug, not injection risk) and sqftLabel duplication across server/client boundary
+
+---
+
+## [pending] DRIFT — compstak-sitdeck / Market Briefing — 2026-03-09
+Timestamp: 2026-03-09T18:52:08Z
+Category: drift
+Project: compstak-sitdeck
+Feature: Market Briefing
+
+**Drift check: no drift detected for Market Briefing**
+
+Spec and implementation are aligned.
+Spec: .specs/features/ai-analytics/F-035-market-briefing.feature.md
+Source files: lib/db/market-briefing.ts,tests/db/market-briefing.test.ts,components/widgets/MarketBriefingWidget.tsx,lib/trpc/router.ts,app/page.tsx,.specs/roadmap.md,Agents.md
+
+---
+
+## [pending] EVAL-FINDING — compstak-sitdeck / Custom Alerts widget (Feature #34) — threshold-based CRE transaction monitoring — 2026-03-09
+Timestamp: 2026-03-09T19:12:21Z
+Category: eval-finding
+Project: compstak-sitdeck
+Feature: Custom Alerts widget (Feature #34) — threshold-based CRE transaction monitoring
+
+**Eval findings for Custom Alerts widget (Feature #34) — threshold-based CRE transaction monitoring (99e50a7e)**
+
+Eval notes: Feature complete and build-verified; spec missing formal Gherkin Given/When/Then blocks (prose rendering scenarios used instead), plus minor test hygiene issues (unused import, trivially-passing large_deal assertion, no store cleanup between tests)
+
+---
+
+## [pending] DRIFT-UNRESOLVABLE — compstak-sitdeck / Custom Alerts — 2026-03-09
+Timestamp: 2026-03-09T21:16:13Z
+Category: drift-unresolvable
+Project: compstak-sitdeck
+Feature: Custom Alerts
+
+**Drift UNRESOLVABLE for Custom Alerts — needs human review**
+
+Drift agent could not reconcile spec and code.
+Reason: All three source files (`lib/db/custom-alerts.ts`, `components/widgets/CustomAlertsWidget.tsx`, `tests/db/market-briefing.test.ts`) and the spec file (`.specs/features/ai-analytics/F-034-custom-alerts.feature.md`) are missing from the codebase entirely. There is nothing to compare or align — feature F-034 has not been created yet. Human must either create the feature files first or remove the drift-check job for this feature.
+Spec: .specs/features/ai-analytics/F-034-custom-alerts.feature.md
+Source files: lib/db/custom-alerts.ts, components/widgets/CustomAlertsWidget.tsx, tests/db/market-briefing.test.ts
+
+---
+
+## [pending] EVAL-FINDING — compstak-sitdeck / Situation Reports widget (Feature #36) — AI-powered structured CRE intelligence report — 2026-03-09
+Timestamp: 2026-03-09T21:24:50Z
+Category: eval-finding
+Project: compstak-sitdeck
+Feature: Situation Reports widget (Feature #36) — AI-powered structured CRE intelligence report
+
+**Eval findings for Situation Reports widget (Feature #36) — AI-powered structured CRE intelligence report (fadd15ff)**
+
+Eval notes: Complete SDD-compliant feature delivery — spec, tests, implementation, router, page integration, roadmap update, and Agents.md all present; type-only client import correctly avoids L-00012 SSR boundary risk; minor sqftLabel duplication is within acceptable scope discipline
+
+---
+
+## [pending] DRIFT — compstak-sitdeck / Situation Reports — 2026-03-09
+Timestamp: 2026-03-09T21:26:52Z
+Category: drift
+Project: compstak-sitdeck
+Feature: Situation Reports
+
+**Drift auto-fixed for Situation Reports: Added two missing Gherkin scenarios to spec — "Copy Report action" (clipboard export with labelled headers) and "OpenAI API error falls back to template" (key set but call fails → template fallback). All 779 tests pass.**
+
+Spec/code misalignment was detected and auto-reconciled.
+Fix summary: Added two missing Gherkin scenarios to spec — "Copy Report action" (clipboard export with labelled headers) and "OpenAI API error falls back to template" (key set but call fails → template fallback). All 779 tests pass.
+Spec: .specs/features/ai-analytics/F-036-situation-reports.feature.md
+Source files: lib/db/situation-reports.ts,tests/db/situation-reports.test.ts,components/widgets/SituationReportsWidget.tsx,lib/trpc/router.ts,app/page.tsx,.specs/features/ai-analytics/F-036-situation-reports.feature.md,.specs/roadmap.md,Agents.md
+
+---
+
+## [pending] EVAL-FINDING — compstak-sitdeck / reconcile spec drift for F-036 Situation Reports — 2026-03-09
+Timestamp: 2026-03-09T21:27:10Z
+Category: eval-finding
+Project: compstak-sitdeck
+Feature: reconcile spec drift for F-036 Situation Reports
+
+**Eval findings for reconcile spec drift for F-036 Situation Reports (979c2050)**
+
+Eval notes: Clean spec-only addition of two well-formed Gherkin scenarios; minor gap is YAML frontmatter updated date not bumped
+
+---
+
+## [pending] BUILD-FAILURE — test_failure_updates_tracking0 / auth — 2026-03-09
+Timestamp: 2026-03-09T22:29:36Z
+Category: build-failure
+Project: test_failure_updates_tracking0
+Feature: auth
+
+**Build failure: auth (status=failed, retries=0)**
+
+Model: opus  Duration: 1m 0s
+Drift check passed: True  Test check passed: True
+Build output tail:
+
+---
+
+## [pending] BUILD-FAILURE — test_multiple_builds_accumulat0 / settings — 2026-03-09
+Timestamp: 2026-03-09T22:29:36Z
+Category: build-failure
+Project: test_multiple_builds_accumulat0
+Feature: settings
+
+**Build failure: settings (status=failed, retries=0)**
+
+Model: opus  Duration: 5m 0s
+Drift check passed: True  Test check passed: True
+Build output tail:
+
+---
+
+## [pending] BUILD-FAILURE — test_produces_valid_json0 / dashboard — 2026-03-09
+Timestamp: 2026-03-09T22:29:36Z
+Category: build-failure
+Project: test_produces_valid_json0
+Feature: dashboard
+
+**Build failure: dashboard (status=failed, retries=0)**
+
+Model: sonnet  Duration: 1m 0s
+Drift check passed: True  Test check passed: True
+Build output tail:
+
+---
+
+## [pending] RETRY — test_retry_succeeds_on_second_0 / auth — 2026-03-09
+Timestamp: 2026-03-09T22:29:37Z
+Category: retry
+Project: test_retry_succeeds_on_second_0
+Feature: auth
+
+**auth required 2 attempts before passing gates**
+
+Feature passed on attempt 2. Earlier attempt(s) failed:
+
+Attempt 1: BUILD_FAILED: compile error
+
+---
+
+## [pending] BUILD-FAILURE — test_independent_pass_calls_bu0 / auth — 2026-03-09
+Timestamp: 2026-03-09T22:29:37Z
+Category: build-failure
+Project: test_independent_pass_calls_bu0
+Feature: auth
+
+**Build failure: auth (status=failed, retries=0)**
+
+Model: default  Duration: 0s
+Drift check passed: True  Test check passed: True
+Build output tail:
+BUILD_FAILED: test
+
+---
+
+## [pending] BUILD-FAILURE — test_independent_pass_fails_wh0 / auth — 2026-03-09
+Timestamp: 2026-03-09T22:29:37Z
+Category: build-failure
+Project: test_independent_pass_fails_wh0
+Feature: auth
+
+**Build failure: auth (status=failed, retries=0)**
+
+Model: default  Duration: 0s
+Drift check passed: True  Test check passed: True
+Build output tail:
+FEATURE_BUILT: auth
+SPEC_FILE: spec.md
+
+---
+
+## [pending] DRIFT — test_no_drift_detected0 — 2026-03-09
+Timestamp: 2026-03-09T22:29:38Z
+Category: drift
+Project: test_no_drift_detected0
+Feature: (campaign-wide)
+
+**Drift check: no drift detected for spec.md**
+
+Spec and implementation are aligned.
+Spec: spec.md
+Source files: src.ts
+
+---
+
+## [pending] DRIFT-UNRESOLVABLE — test_unresolvable_drift0 — 2026-03-09
+Timestamp: 2026-03-09T22:29:38Z
+Category: drift-unresolvable
+Project: test_unresolvable_drift0
+Feature: (campaign-wide)
+
+**Drift UNRESOLVABLE for spec.md — needs human review**
+
+Drift agent could not reconcile spec and code.
+Reason: missing schema
+Spec: spec.md
+Source files: src.ts
+
+---
+
+## [pending] BUILD-FAILURE — test-project / Hello World — 2026-03-09
+Timestamp: 2026-03-09T22:29:42Z
+Category: build-failure
+Project: test-project
+Feature: Hello World
+
+**Build failure: Hello World (status=failed, retries=0)**
+
+Model: default  Duration: 0s
+Drift check passed: True  Test check passed: True
+Build output tail:
+BUILD_FAILED: could not compile
+
+---
+
+## [pending] BUILD-FAILURE — test-project / Hello World — 2026-03-09
+Timestamp: 2026-03-09T22:29:47Z
+Category: build-failure
+Project: test-project
+Feature: Hello World
+
+**Build failure: Hello World (status=failed, retries=0)**
+
+Model: default  Duration: 0s
+Drift check passed: True  Test check passed: True
+Build output tail:
+FEATURE_BUILT: Hello World
+SPEC_FILE: .specs/hello-world.md
+SOURCE_FILES: hello-world.ts
+
+---
+
+## [pending] DRIFT — proj — 2026-03-09
+Timestamp: 2026-03-09T22:30:04Z
+Category: drift
+Project: proj
+Feature: (campaign-wide)
+
+**default repo**
+
+detail
+
+---
+
+## [pending] BUILD-FAILURE — test_failure_updates_tracking0 / auth — 2026-03-09
+Timestamp: 2026-03-09T22:30:53Z
+Category: build-failure
+Project: test_failure_updates_tracking0
+Feature: auth
+
+**Build failure: auth (status=failed, retries=0)**
+
+Model: opus  Duration: 1m 0s
+Drift check passed: True  Test check passed: True
+Build output tail:
+
+---
+
+## [pending] BUILD-FAILURE — test_multiple_builds_accumulat0 / settings — 2026-03-09
+Timestamp: 2026-03-09T22:30:53Z
+Category: build-failure
+Project: test_multiple_builds_accumulat0
+Feature: settings
+
+**Build failure: settings (status=failed, retries=0)**
+
+Model: opus  Duration: 5m 0s
+Drift check passed: True  Test check passed: True
+Build output tail:
+
+---
+
+## [pending] BUILD-FAILURE — test_produces_valid_json0 / dashboard — 2026-03-09
+Timestamp: 2026-03-09T22:30:53Z
+Category: build-failure
+Project: test_produces_valid_json0
+Feature: dashboard
+
+**Build failure: dashboard (status=failed, retries=0)**
+
+Model: sonnet  Duration: 1m 0s
+Drift check passed: True  Test check passed: True
+Build output tail:
+
+---
+
+## [pending] RETRY — test_retry_succeeds_on_second_0 / auth — 2026-03-09
+Timestamp: 2026-03-09T22:30:54Z
+Category: retry
+Project: test_retry_succeeds_on_second_0
+Feature: auth
+
+**auth required 2 attempts before passing gates**
+
+Feature passed on attempt 2. Earlier attempt(s) failed:
+
+Attempt 1: BUILD_FAILED: compile error
+
+---
+
+## [pending] BUILD-FAILURE — test_independent_pass_calls_bu0 / auth — 2026-03-09
+Timestamp: 2026-03-09T22:30:54Z
+Category: build-failure
+Project: test_independent_pass_calls_bu0
+Feature: auth
+
+**Build failure: auth (status=failed, retries=0)**
+
+Model: default  Duration: 0s
+Drift check passed: True  Test check passed: True
+Build output tail:
+BUILD_FAILED: test
+
+---
+
+## [pending] BUILD-FAILURE — test_independent_pass_fails_wh0 / auth — 2026-03-09
+Timestamp: 2026-03-09T22:30:54Z
+Category: build-failure
+Project: test_independent_pass_fails_wh0
+Feature: auth
+
+**Build failure: auth (status=failed, retries=0)**
+
+Model: default  Duration: 0s
+Drift check passed: True  Test check passed: True
+Build output tail:
+FEATURE_BUILT: auth
+SPEC_FILE: spec.md
+
+---
+
+## [pending] DRIFT — test_no_drift_detected0 — 2026-03-09
+Timestamp: 2026-03-09T22:30:54Z
+Category: drift
+Project: test_no_drift_detected0
+Feature: (campaign-wide)
+
+**Drift check: no drift detected for spec.md**
+
+Spec and implementation are aligned.
+Spec: spec.md
+Source files: src.ts
+
+---
+
+## [pending] DRIFT-UNRESOLVABLE — test_unresolvable_drift0 — 2026-03-09
+Timestamp: 2026-03-09T22:30:54Z
+Category: drift-unresolvable
+Project: test_unresolvable_drift0
+Feature: (campaign-wide)
+
+**Drift UNRESOLVABLE for spec.md — needs human review**
+
+Drift agent could not reconcile spec and code.
+Reason: missing schema
+Spec: spec.md
+Source files: src.ts
+
+---
+
+## [pending] BUILD-FAILURE — test-project / Hello World — 2026-03-09
+Timestamp: 2026-03-09T22:30:58Z
+Category: build-failure
+Project: test-project
+Feature: Hello World
+
+**Build failure: Hello World (status=failed, retries=0)**
+
+Model: default  Duration: 0s
+Drift check passed: True  Test check passed: True
+Build output tail:
+BUILD_FAILED: could not compile
+
+---
+
+## [pending] BUILD-FAILURE — test-project / Hello World — 2026-03-09
+Timestamp: 2026-03-09T22:31:03Z
+Category: build-failure
+Project: test-project
+Feature: Hello World
+
+**Build failure: Hello World (status=failed, retries=0)**
+
+Model: default  Duration: 1s
+Drift check passed: True  Test check passed: True
+Build output tail:
+FEATURE_BUILT: Hello World
+SPEC_FILE: .specs/hello-world.md
+SOURCE_FILES: hello-world.ts
+
+---
+
+## [pending] DRIFT — proj — 2026-03-09
+Timestamp: 2026-03-09T22:31:19Z
+Category: drift
+Project: proj
+Feature: (campaign-wide)
+
+**default repo**
+
+detail
