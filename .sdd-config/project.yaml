@@ -1,0 +1,5 @@
+project_name: auto-sdd
+build_cmd: "cd py && .venv/bin/mypy --strict auto_sdd/"
+test_cmd: "cd py && .venv/bin/pytest tests/ -q --tb=short"
+language: python
+framework: none
