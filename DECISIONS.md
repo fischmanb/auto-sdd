@@ -589,3 +589,16 @@
 **Decision:** Retry attempts now use a two-stage strategy instead of always resetting. Attempt 1 keeps the agent's code on disk and sends a fix-in-place prompt (`build_fix_prompt`). Attempt 2+ resets the tree and sends an enhanced retry prompt with structured failure context from all prior attempts (`prior_attempts` parameter on `build_retry_prompt`).
 **Why:** The old always-reset approach discarded 90%-correct implementations when the failure was a small test issue. The agent then rebuilt from scratch with only error hints, often making entirely different (not better) mistakes. Fix-in-place preserves working code and tells the agent to diagnose and patch. The fresh retry (attempt 2+) is still available as an escape when the fix agent determines the approach is fundamentally wrong — and now it carries structured "approaches that failed" context so the new attempt avoids repeating the same mistakes.
 **Alternatives rejected:** Fix-only (no fresh retry) — some approaches are fundamentally wrong and can't be patched. Always-reset with better error context only — still wastes the working implementation on fixable failures. Interactive human triage between stages — adds latency, defeats autonomous loop.
+
+
+## 2026-03-09 — SQLite + FTS5 knowledge store over full knowledge graph
+
+**Decision:** Build the knowledge store as SQLite + FTS5 full-text search first, without embeddings or BFS graph traversal. Use BM25 ranking against tag/body/title fields for per-feature relevance filtering. Add embeddings later as an augmentation layer on the same SQLite database.
+**Why:** Full knowledge graph (embeddings + BFS + synthesis call) requires 3-4 months of work and adds API calls to the critical build path. FTS5 gets 80% of the value at 5% of the cost: zero external dependencies, zero API calls, zero latency. The learnings entries already have curated Tags fields with specific keywords (DuckDB, tsc, npm-install, Next.js) that FTS5 can match against feature spec text directly. Migration from markdown is trivial. Same schema supports future embedding column.
+**Alternatives rejected:** Full knowledge graph first (too much infrastructure before any value). Brute-force dump of all learnings into every prompt (context pollution — a DuckDB learning injected into a CSS widget build degrades quality). Tag intersection filter without store (would work but doesn't scale and can't rank by relevance).
+
+## 2026-03-09 — HTML slide deck replaces PowerPoint permanently
+
+**Decision:** Superloop presentation is a self-contained HTML file hosted on GitHub Pages, not a .pptx file. Interactive closed-loop stepper on slide 3 (12 phases, arrow-key navigation). URL: https://fischmanb.github.io/superloop/interactive/superloop-deck.html
+**Why:** PptxGenJS cannot render real arrows, connectors, or path shapes — six iterations of the architecture diagram all failed. SVG rendered via sharp had text layout issues. HTML gives full CSS/SVG control. The interactive stepper communicates the system 10x better than any static diagram. A URL can be shared with anyone; a .pptx with relative file links breaks when emailed.
+**Alternatives rejected:** PowerPoint with link-out to HTML (two artifacts to maintain, link breaks when shared). Static screenshot slides (loses interactivity). Marp/Reveal.js (overkill for 8 slides, adds build dependencies).

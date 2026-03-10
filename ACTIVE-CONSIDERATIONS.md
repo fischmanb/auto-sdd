@@ -6,24 +6,25 @@
 
 ---
 
-### Priority stack (updated 2026-03-09 — post session 2)
+### Priority stack (updated 2026-03-10 — post session 3)
 
 Ordered by efficiency gain per complexity added:
 
-1. **SitDeck build campaign — 37+/49 features built, pipeline validated, resume for remaining features.**
-   - Feature #19 (Rent Potential) built successfully 2026-03-09 with two-stage retry (fix-in-place on attempt 2). 599 tests passing. Drift auto-fixed.
-   - Build still running — additional features may have completed.
-   - Project at `~/compstak-sitdeck/` with `project.yaml` committed (npx fix applied).
-   - Two-stage retry system live-validated (8533639). Codebase summary timeout fixed (63edac4).
-   - **Run command**: `caffeinate -diw $$ & cd ~/auto-sdd/py && AUTO_APPROVE=true PROJECT_DIR=~/compstak-sitdeck LOGS_DIR=~/auto-sdd/logs/compstak-sitdeck .venv/bin/python -m auto_sdd.scripts.build_loop`
-2. **CIS Rounds 5-6 — need campaign data from #1.**
+1. **Knowledge pipeline fix — 5 agent prompts in .handoff.md (NEXT)**
+   - Audit found 5 broken data flow connections: pending.md write-only, only 1/113 eval JSONs read, repo learnings never injected, MistakeTracker volatile, auto-QA findings dead.
+   - Solution: SQLite + FTS5 knowledge store with relevance-filtered query per feature.
+   - 5 sequential prompts: build store + migrate → wire writes → wire reads → backtest + tune → continuous optimization loop.
+   - Estimated ~60K tokens total across 5 agent calls.
+2. **SitDeck build campaign — 37+/49 features built, auto-QA running.**
+   - Auto-QA scale test in progress (PID 27468). Phase 3 Playwright validation: 25 features completed, 4 timeouts, 3 parse failures. Still running.
+   - Pipeline: build_loop → post-campaign verify → auto-QA now fully wired (Round 39, 7f97dff).
+   - **Resume command**: `caffeinate -diw $$ & cd ~/auto-sdd/py && AUTO_APPROVE=true PROJECT_DIR=~/compstak-sitdeck LOGS_DIR=~/auto-sdd/logs/compstak-sitdeck .venv/bin/python -m auto_sdd.scripts.build_loop`
+3. **CIS Rounds 5-6 — need campaign data from #2.**
    - Campaign data exists (feature-vectors.jsonl in ~/compstak-sitdeck/.sdd-state/). May be unblocked.
    - Full plan: `WIP/campaign-intelligence-system.md`
-3. **Auto-QA validation — run against SitDeck for scale proof.**
-   - Plan: `WIP/auto-qa-cre-validation.md`
 4. **Seed data & distribution** — Blocked on stable vector schema.
 5. **Extract errors.py/signals.py/state.py from reliability.py** — Low urgency.
-6. **Local model integration — GPT-OSS target** — Best coding performance per GB active RAM. Move off cloud API entirely. Not started.
+6. **Local model integration — GPT-OSS target** — Best coding performance per GB active RAM. Move off cloud API entirely. Active priority on roadmap.
 7. **Adaptive routing** — Deprioritized.
 
 ### Knowledge graph build intelligence — DESIGNED, NOT STARTED
