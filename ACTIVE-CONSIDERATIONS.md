@@ -10,11 +10,12 @@
 
 Ordered by efficiency gain per complexity added:
 
-1. **Knowledge pipeline fix — 5 agent prompts in .handoff.md (NEXT)**
-   - Audit found 5 broken data flow connections: pending.md write-only, only 1/113 eval JSONs read, repo learnings never injected, MistakeTracker volatile, auto-QA findings dead.
-   - Solution: SQLite + FTS5 knowledge store with relevance-filtered query per feature.
-   - 5 sequential prompts: build store + migrate → wire writes → wire reads → backtest + tune → continuous optimization loop.
-   - Estimated ~60K tokens total across 5 agent calls.
+1. **Knowledge pipeline — 18 features spec'd, branch ready for build loop**
+   - Branch: `knowledge-pipeline-specs` (2 commits ahead of main at `245eb59`).
+   - 18 feature specs in `.specs/features/knowledge-pipeline/`, roadmap in `.specs/roadmap.md`.
+   - `project.yaml` + CLAUDE.md Python section committed.
+   - Run: `MAX_FEATURES=3 PROJECT_DIR=~/auto-sdd` on `knowledge-pipeline-specs` branch.
+   - Phases: Store (1-3) → Migration (4-7) → Wire Writes (8-11) → Wire Reads (12-13) → Backtest (14-15) → Optimization (16-18).
 2. **SitDeck build campaign — 37+/49 features built, auto-QA running.**
    - Auto-QA scale test in progress (PID 27468). Phase 3 Playwright validation: 25 features completed, 4 timeouts, 3 parse failures. Still running.
    - Pipeline: build_loop → post-campaign verify → auto-QA now fully wired (Round 39, 7f97dff).
