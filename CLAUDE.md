@@ -39,6 +39,45 @@ This project uses a spec-driven development workflow. Follow these rules in all 
 
 ---
 
+## Project Type: Python (auto-sdd orchestrator)
+
+This is a Python project. All source code lives in `py/auto_sdd/`.
+
+### Environment
+
+- **Python venv**: `py/.venv/` — always use `.venv/bin/python` and `.venv/bin/pytest`
+- **Source root**: `py/auto_sdd/` — all imports are `from auto_sdd.lib.X import Y`
+- **Tests**: `py/tests/` — pytest, ~1000+ tests, must stay green
+- **Type checking**: `mypy --strict` must pass on all new and modified files
+- **No external deps**: stdlib only unless explicitly approved in the feature spec
+
+### Build & Test Commands
+
+```bash
+cd py && .venv/bin/pytest tests/ -q --tb=short   # Run tests
+cd py && .venv/bin/mypy --strict auto_sdd/        # Type check
+```
+
+### Self-Modification Awareness
+
+You are modifying the orchestrator that runs you. Key risks:
+- **build_loop.py, overnight_autonomous.py**: Changes here affect future agent runs. The running process won't pick up changes (no hot-reload), but `--resume` after a crash WILL load your modified code.
+- **prompt_builder.py**: Changes affect what future agents see. Broken prompt construction = broken builds.
+- **reliability.py, build_gates.py**: Changes affect all gate checks. A broken gate can pass bad builds silently.
+
+If your change touches any of these files, your verification gates must include running the full test suite (`pytest tests/ -q`), not just tests for your feature.
+
+### Import Conventions
+
+```python
+from auto_sdd.lib.knowledge_store import init_store, insert_entry, query_relevant
+from auto_sdd.lib.claude_wrapper import run_claude, AgentTimeoutError
+```
+
+All imports must be absolute (from `auto_sdd.`), never relative.
+
+---
+
 ## Response & Prompt Scope Discipline (L-00143)
 
 Before every prompt, response, or agent run: count work items, estimate tokens (show your work), check verification isolation. Different verification methods = different work units. Run `source lib/general-estimates.sh && query_estimate_actuals "[type]"` for calibrated estimates before falling back to heuristics.

@@ -1,5 +1,19 @@
+# .sdd-config/project.yaml
+# Project-declared build loop configuration for auto-sdd (knowledge pipeline campaign).
+# Values here are defaults — any env var set at launch time overrides them.
+# Priority: env var > this file > auto-detection > hardcoded default.
+
 project_name: auto-sdd
-build_cmd: "cd py && .venv/bin/mypy --strict auto_sdd/"
-test_cmd: "cd py && .venv/bin/pytest tests/ -q --tb=short"
 language: python
 framework: none
+
+build_cmd: "cd py && .venv/bin/mypy --strict auto_sdd/"
+test_cmd: "cd py && .venv/bin/pytest tests/ -q --tb=short"
+
+build_model: claude-sonnet-4-6
+max_retries: 2
+agent_timeout: 1800
+branch_strategy: chained
+min_retry_delay: 30
+drift_check: true
+post_build_steps: test,dead-code
