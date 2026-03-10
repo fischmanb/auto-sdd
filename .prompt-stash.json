@@ -1,4 +1,173 @@
-{
-  "stashed_at": "2026-03-07",
-  "prompt": "You are picking up an ongoing project. Before doing anything else: 1. Read ~/auto-sdd/ONBOARDING.md (full read — this is a fresh onboard). 2. Read ~/auto-sdd/DESIGN-PRINCIPLES.md. 3. Do NOT read any other files yet besides those which are prescribed in ONBOARDING.md. - List each active consideration (topic: status) in priority order. Today's focus (now top priorities): 1) Validate and improve learning system for larger, current 3-in-1 Human|AI|Repo/Memory system, leaving extensibility for knowledge graph and semantic search. 2) Get the SitDeck build running properly.  3a) finish the CIS 3b) Implement the knowledge graph and integrate."
-}
+# Knowledge Pipeline Fix — 4 Agent Prompts (SQLite + FTS5)
+#
+# Strict sequential: Prompt 1 → 2 → 3 → 4
+#
+# Estimated total: ~48K active tokens
+# Based on: 181 agent calls, median 2097 output, P90 22710
+#
+# What this fixes (from .handoff.md audit):
+#   #1 pending.md write-only         → Prompt 1 (migration) + Prompt 2 (write path)
+#   #2 only 1/113 eval JSONs read    → Prompt 1 (migration) + Prompt 3 (read path)
+#   #3 repo learnings never injected → Prompt 1 (migration) + Prompt 3 (FTS5 query)
+#   #4 MistakeTracker volatile       → Prompt 2 (persistence + store writes)
+#   #5 auto-QA findings dead         → Prompt 2 (writeback to store)
+#
+# Backtest methodology (Prompt 4):
+#   For each sitdeck feature (37+), run the FTS5 query with the feature
+#   name/spec as input. Compare returned learnings against what the eval
+#   sidecar actually found for that feature (113 eval JSONs = ground truth).
+#   Precision: what % of returned learnings relate to actual issues found.
+#   Recall: what % of actual issues had a relevant learning returned.
+#   Tune FTS5 column weights (title vs body vs tags) based on results.
+
+
+===========================================================================
+PROMPT 1 OF 4: Build the Knowledge Store + Migrate All Existing Data
+Estimated: ~14K active tokens
+===========================================================================
+
+## Problem
+
+No queryable knowledge store exists. 300+ learnings in flat markdown, 113 eval JSONs in a logs dir, 128 pending entries in a write-only file. Nothing is searchable or filterable by relevance.
+
+## What to build
+
+`py/auto_sdd/lib/knowledge_store.py` — SQLite database with FTS5 full-text search.
+
+Schema: `learnings` table (id, title, body, tags, type, source, project, date, status, confidence) + `learnings_fts` virtual table on title/body/tags for BM25 ranking.
+
+API: `init_store`, `insert_learning`, `query_relevant` (FTS5 MATCH + BM25 ORDER BY rank), `migrate_from_markdown` (parse all L-series + pending entries), `migrate_from_evals` (parse all eval JSONs), `get_store_path`.
+
+## Where to find the answers
+
+- `learnings/core.md` and `learnings/failure-patterns.md` — entry format: `## L-NNNNN — title` then Type:, Tags:, Confidence:, Status:, Date:, Related:, body text. Parse these.
+- `learnings/pending.md` — entry format: `## [pending] CATEGORY — project / feature — date` then Timestamp:, Category:, Project:, Feature:, body. Parse these.
+- `logs/compstak-sitdeck/evals/eval-*.json` — JSON with `mechanical` and `agent_eval` objects. Fields: framework_compliance, scope_assessment, integration_quality, repeated_mistakes, eval_notes.
+- Python `sqlite3` stdlib — FTS5 is bundled with Python 3.9+.
+
+## Scope
+
+- Create: `py/auto_sdd/lib/knowledge_store.py`, `py/tests/test_knowledge_store.py`
+- Modify: `Agents.md`
+- No other files. No package managers. No push.
+
+
+===========================================================================
+PROMPT 2 OF 4: Wire All Write Paths Into the Store
+Estimated: ~14K active tokens
+===========================================================================
+
+## Problem
+
+12 call sites produce knowledge (write_learning calls, eval sidecar writes, MistakeTracker.track, auto-QA results). None of them feed the store from Prompt 1. Going forward, every data producer must insert into the SQLite store in addition to (not instead of) its current output.
+
+## What to wire
+
+1. `learnings_writer.py` → `write_learning()`: after appending to markdown files, also call `insert_learning()` on the store. The store is the queryable index; markdown remains the human-readable archive.
+
+2. `eval_sidecar.py` → after writing each `eval-*.json`, also insert into the store with type="eval_finding".
+
+3. `build_loop.py` → `MistakeTracker`: add `save()` and `load()` methods that persist to `<project_dir>/.sdd-state/mistake-history.json`. On init, load from disk. After each `track()` call, save. Also insert each tracked mistake into the store.
+
+4. `post_campaign_validation.py` → at end of `run()`, after Phase 5 (or whatever final phase completed): write one learning per root cause from Phase 4b RCA, plus one summary learning with pass/fail/blocked counts. Use `write_learning()` (which now feeds the store via #1 above).
+
+## Where to find the answers
+
+- `py/auto_sdd/lib/learnings_writer.py`: `write_learning()` — understand all parameters. Add store insert after the two existing file writes.
+- `py/auto_sdd/scripts/eval_sidecar.py` line ~575: where eval JSON is written. Add store insert after the JSON write.
+- `py/auto_sdd/scripts/build_loop.py`: search `class MistakeTracker` — understand data structure. Search `self.mistake_tracker = MistakeTracker()` in __init__ — change to load from disk. Search all `mistake_tracker.track()` calls — add save after each.
+- `py/auto_sdd/scripts/post_campaign_validation.py` line ~3617: `run()` — trace where Phase 4b RCA results and Phase 3 pass/fail counts are available. Add `write_learning()` calls there.
+- `py/auto_sdd/lib/knowledge_store.py` (from Prompt 1): `insert_learning()` and `get_store_path()`.
+
+## Scope
+
+- Modify: `learnings_writer.py`, `eval_sidecar.py`, `build_loop.py`, `post_campaign_validation.py`
+- Tests: `test_learnings_writer.py`, `test_eval_sidecar.py`, `test_build_loop.py`, `test_post_campaign_validation.py`
+- Modify: `Agents.md`
+- No new files. No package managers. No push.
+
+
+
+===========================================================================
+PROMPT 3 OF 4: Read Path — FTS5 Query Per Feature, Inject Into Prompt
+Estimated: ~12K active tokens
+===========================================================================
+
+## Problem
+
+The store exists (Prompt 1) and is being fed (Prompt 2). But build agents still don't see relevant learnings. The read side needs to: take a feature spec, query the store for relevant learnings, and inject only the matched results into the build prompt. Not a brute-force dump — a relevance-filtered injection.
+
+## What to build
+
+Replace the three broken readers with one store-backed query:
+
+1. Replace `read_latest_eval_feedback()` in `prompt_builder.py` — currently reads 1 of 113 eval JSONs. Replace with `query_relevant()` call that returns eval findings relevant to this feature.
+
+2. Replace `_read_recent_learnings()` in `codebase_summary.py` — currently reads .specs/learnings with 40-line cap. Replace with `query_relevant()` call that returns project-local learnings relevant to this feature.
+
+3. Add repo-level learnings injection in `build_feature_prompt()` — currently doesn't exist at all. Add `query_relevant()` call for repo-level learnings (L-series + pending entries).
+
+All three converge into a single `## Relevant Knowledge` section in the build prompt, replacing the current separate `## Sidecar Eval Feedback` and `## Recent Learnings` sections.
+
+The query input is: feature name + feature spec text (read from `.specs/features/F-NNN-*.feature.md` if it exists, otherwise just the feature name). This is tokenized by FTS5 and matched against the store.
+
+## Where to find the answers
+
+- `py/auto_sdd/lib/prompt_builder.py` line ~225: `build_feature_prompt()` — where injections happen. Find the eval_feedback and codebase_summary injection points.
+- `py/auto_sdd/lib/prompt_builder.py`: `read_latest_eval_feedback()` — understand interface, then replace.
+- `py/auto_sdd/lib/codebase_summary.py` line ~141: `_read_recent_learnings()` — understand interface, then replace.
+- `py/auto_sdd/lib/knowledge_store.py` (from Prompt 1): `query_relevant(conn, feature_text, limit)` — this is the single query function.
+- `py/auto_sdd/scripts/build_loop.py`: all callers of `read_latest_eval_feedback` — must be updated.
+
+## Scope
+
+- Modify: `prompt_builder.py`, `codebase_summary.py`, `build_loop.py` (caller updates only)
+- Tests: `test_prompt_builder.py`, `test_codebase_summary.py`
+- Modify: `Agents.md`
+- No new files. No package managers. No push.
+
+
+===========================================================================
+PROMPT 4 OF 4: Backtest, Tune, and Verify End-to-End
+Estimated: ~10K active tokens
+===========================================================================
+
+## Problem
+
+Prompts 1-3 built the store, wired writes, and wired reads. But we don't know if the FTS5 queries return RELEVANT results. A query for "Market Map widget with DuckDB submarket aggregation" should return learnings about DuckDB patterns, map rendering, and submarket data — not learnings about authentication or git branching.
+
+Without backtesting, we're trusting that keyword matching works. The eval sidecar data (113 JSONs) is ground truth for what actually went wrong per feature. We can measure whether the store would have surfaced the right knowledge.
+
+## What to build
+
+A `backtest()` function in `knowledge_store.py` that:
+
+1. Takes an evals directory and a specs directory (or project dir).
+2. For each eval JSON:
+   - Extract the feature name from the eval.
+   - Find the matching feature spec in `.specs/features/` if it exists, otherwise use the feature name.
+   - Run `query_relevant(conn, feature_text, limit=20)`.
+   - Extract the `agent_eval` fields from the eval JSON (scope_assessment, framework_compliance, repeated_mistakes, eval_notes).
+   - Score relevance: do any returned learnings' tags or body text overlap with the issues the eval found? A learning tagged "DuckDB" is relevant if the eval_notes mention DuckDB. A learning about "scope_assessment: sprawling" is relevant if the eval found sprawling scope.
+3. Aggregate: precision (relevant returns / total returns) and recall (issues with matching learning / total issues) across all features.
+4. Return a structured report: per-feature hits/misses, aggregate precision/recall, and the worst misses (features where the eval found serious issues but the store returned nothing relevant).
+
+Also: a `tune_weights()` function or guidance on FTS5 column weights. FTS5 supports `rank` with column weights — e.g., tags should be weighted higher than body text because tags are curated keywords. The backtest results tell you what to adjust: if precision is low, increase tag weight (fewer but more targeted results); if recall is low, increase body weight (broader matching).
+
+## Where to find the answers
+
+- `py/auto_sdd/lib/knowledge_store.py` (from Prompts 1-3): `query_relevant()`, `init_store()`.
+- `logs/compstak-sitdeck/evals/eval-*.json` — ground truth. Fields: `agent_eval.scope_assessment`, `agent_eval.framework_compliance`, `agent_eval.repeated_mistakes`, `agent_eval.eval_notes`.
+- `~/compstak-sitdeck/.specs/features/` — feature specs (13 exist; for features without specs, use the feature name from the eval JSON).
+- FTS5 documentation: column weights in `rank` function, e.g. `SELECT *, rank FROM learnings_fts WHERE learnings_fts MATCH ? ORDER BY rank` — the `rank` function accepts a weights array matching column order.
+
+## Scope
+
+- Modify: `knowledge_store.py` (add `backtest()` function)
+- Tests: `test_knowledge_store.py` (add backtest tests)
+- Modify: `.handoff.md` — update the broken connections table to show fixed state for all 5 rows
+- Modify: `Agents.md`
+- Run the actual backtest against sitdeck data and log the results in the commit message.
+- If precision < 50% or recall < 30%, tune FTS5 column weights and re-run. Document what was tuned and why.
+- Commit message must include backtest metrics: precision, recall, features tested, worst misses.
+- No package managers. No push.
