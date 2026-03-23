@@ -9,7 +9,9 @@
       "Bash(.venv/bin/pytest py/tests/test_knowledge_system/ -q --tb=short)",
       "Bash(.venv/bin/pytest py/tests/ -q --tb=short)",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(gh pr:*)"
     ]
   }
 }
