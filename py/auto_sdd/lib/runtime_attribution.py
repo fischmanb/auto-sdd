@@ -214,9 +214,10 @@ def backfill_runtime_signals(
     features_attributed = 0
     for vec in vectors:
         vid = f"{vec.campaign_id}-{vec.feature_id}"
-        rt = vector_id_to_runtime.get(vid)
-        if rt is None:
+        maybe_rt = vector_id_to_runtime.get(vid)
+        if maybe_rt is None:
             continue
+        rt = maybe_rt
 
         # Compute per-feature ac_pass_rate (global rate as best effort)
         ac_pass_rate = 0.0

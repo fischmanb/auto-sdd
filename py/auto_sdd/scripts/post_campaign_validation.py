@@ -2059,17 +2059,17 @@ def run_phase_0(
 
         # Kill any existing process on common dev ports to prevent conflicts.
         # Without this, a lingering dev server from a prior run blocks Phase 0.
-        for port in (3000, 3001, 5173, 8080):
+        for kill_port in (3000, 3001, 5173, 8080):
             try:
                 pids = subprocess.run(
-                    ["lsof", "-t", f"-i:{port}"],
+                    ["lsof", "-t", f"-i:{kill_port}"],
                     capture_output=True, text=True, timeout=5,
                 ).stdout.strip()
                 if pids:
                     for pid_str in pids.split("\n"):
                         try:
                             os.kill(int(pid_str), 9)
-                            logger.info("Killed existing process on port %d (PID %s)", port, pid_str)
+                            logger.info("Killed existing process on port %d (PID %s)", kill_port, pid_str)
                         except (OSError, ValueError):
                             pass
             except (subprocess.TimeoutExpired, OSError):

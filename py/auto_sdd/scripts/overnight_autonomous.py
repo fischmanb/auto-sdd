@@ -844,7 +844,7 @@ class OvernightRunner:
             # ── CIS: record failure ─────────────────────────────────
             if current_vector_id:
                 try:
-                    comp_types = derive_component_types(self.project_dir)
+                    comp_types, _files_touched = derive_component_types(self.project_dir)
                     self.vector_store.update_section(
                         current_vector_id,
                         "build_signals_v1",
@@ -1029,7 +1029,7 @@ class OvernightRunner:
             # ── CIS: record success ─────────────────────────────────
             if vector_id:
                 try:
-                    comp_types = derive_component_types(self.project_dir)
+                    comp_types, _files_touched = derive_component_types(self.project_dir)
                     self.vector_store.update_section(
                         vector_id,
                         "build_signals_v1",

@@ -1,1 +1,17 @@
-{"permissions":{"allow":["*"]}}
+{
+  "permissions": {
+    "allow": [
+      "*",
+      "Bash(sqlite3 /Users/brianfischman/Auto_SDD_v2/.sdd-knowledge/knowledge.db \"SELECT status, COUNT\\(*\\) FROM nodes GROUP BY status\")",
+      "Read(//Users/brianfischman/Auto_SDD_v2/py/**)",
+      "Bash(.venv/bin/pytest tests/test_knowledge_system/ -v --tb=short)",
+      "Bash(.venv/bin/pytest py/tests/test_knowledge_system/ -v --tb=short)",
+      "Bash(.venv/bin/pytest py/tests/test_knowledge_system/ -q --tb=short)",
+      "Bash(.venv/bin/pytest py/tests/ -q --tb=short)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(gh pr:*)"
+    ]
+  }
+}
