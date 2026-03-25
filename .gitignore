@@ -42,3 +42,9 @@ stakd-v2/
 stakd-v3/
 /compstak-sitdeck/
 py/logs/
+
+# TrendX data
+trendx/data/*.db
+trendx/data/*.json
+!trendx/data/.gitkeep
+*.egg-info/
